@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentUserPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function activeUser() {
+      return signedIn()
+        && exists(currentUserPath())
+        && get(currentUserPath()).data.status == 'active';
+    }
+
+    function superadmin() {
+      return activeUser()
+        && get(currentUserPath()).data.platformRole == 'superadmin';
+    }
+
+    function activeMember(tenantId) {
+      return activeUser()
+        && exists(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.status == 'active';
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || superadmin());
+      allow write: if false;
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if superadmin() || activeMember(tenantId);
+      allow write: if false;
+
+      match /members/{memberId} {
+        allow read: if superadmin()
+          || (activeMember(tenantId) && request.auth.uid == memberId);
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

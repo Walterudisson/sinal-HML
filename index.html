@@ -17,90 +17,13 @@
       theme: {
         extend: {
           fontFamily: { sans: ['Geist', 'system-ui', 'sans-serif'] },
-          boxShadow: {
-            soft: '0 24px 80px rgba(15, 23, 42, 0.12)'
-          }
+          boxShadow: { soft: '0 24px 80px rgba(15, 23, 42, 0.12)' }
         }
       }
     };
   </script>
 
-  <style>
-    :root {
-      color-scheme: light;
-    }
-
-    html,
-    body {
-      min-height: 100%;
-      background: #f8fafc;
-    }
-
-    body {
-      min-height: 100dvh;
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-    }
-
-    button,
-    input,
-    a {
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    input {
-      font-size: 16px;
-    }
-
-    .safe-page {
-      padding-top: max(1rem, env(safe-area-inset-top));
-      padding-right: max(1rem, env(safe-area-inset-right));
-      padding-bottom: max(1rem, env(safe-area-inset-bottom));
-      padding-left: max(1rem, env(safe-area-inset-left));
-    }
-
-    .brand-panel {
-      background:
-        radial-gradient(circle at 15% 15%, rgba(255, 255, 255, .16), transparent 30%),
-        radial-gradient(circle at 85% 82%, rgba(56, 189, 248, .18), transparent 28%),
-        linear-gradient(145deg, #0f172a 0%, #172554 54%, #0c4a6e 100%);
-    }
-
-    .signal-mark span {
-      display: block;
-      border: 2px solid currentColor;
-      border-left-color: transparent;
-      border-bottom-color: transparent;
-      border-radius: 9999px;
-      transform: rotate(45deg);
-      position: absolute;
-      inset: 50% auto auto 50%;
-    }
-
-    .signal-mark span:nth-child(1) {
-      width: 10px;
-      height: 10px;
-      margin: -5px 0 0 -5px;
-    }
-
-    .signal-mark span:nth-child(2) {
-      width: 22px;
-      height: 22px;
-      margin: -11px 0 0 -11px;
-      opacity: .78;
-    }
-
-    .signal-mark span:nth-child(3) {
-      width: 34px;
-      height: 34px;
-      margin: -17px 0 0 -17px;
-      opacity: .5;
-    }
-
-    [hidden] {
-      display: none !important;
-    }
-  </style>
+  <link rel="stylesheet" href="./css/app.css" />
 </head>
 
 <body class="font-sans text-slate-900">
@@ -146,7 +69,7 @@
             </div>
             <div>
               <strong class="block text-sm font-bold">Acesso protegido</strong>
-              <span class="mt-1 block text-sm leading-6 text-slate-200">Nesta etapa, o acesso é restrito a contas previamente cadastradas no Sinal.</span>
+              <span class="mt-1 block text-sm leading-6 text-slate-200">O acesso é restrito a contas previamente provisionadas.</span>
             </div>
           </div>
         </div>
@@ -175,16 +98,9 @@
           <form id="login-form" class="space-y-5" novalidate>
             <div>
               <label for="email" class="mb-2 block text-sm font-bold text-slate-800">E-mail</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autocomplete="email"
-                inputmode="email"
-                placeholder="nome@empresa.com.br"
-                required
-                class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
-              />
+              <input id="email" name="email" type="email" autocomplete="email" inputmode="email"
+                placeholder="nome@empresa.com.br" required
+                class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100" />
             </div>
 
             <div>
@@ -196,16 +112,12 @@
               </div>
 
               <div class="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autocomplete="current-password"
-                  placeholder="Digite sua senha"
-                  required
-                  class="min-h-12 w-full rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-14 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
-                />
-                <button id="toggle-password" type="button" class="absolute inset-y-0 right-0 grid min-w-12 place-items-center rounded-r-xl text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-sky-100" aria-label="Mostrar senha" title="Mostrar senha">
+                <input id="password" name="password" type="password" autocomplete="current-password"
+                  placeholder="Digite sua senha" required
+                  class="min-h-12 w-full rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-14 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100" />
+                <button id="toggle-password" type="button"
+                  class="absolute inset-y-0 right-0 grid min-w-12 place-items-center rounded-r-xl text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-sky-100"
+                  aria-label="Mostrar senha" title="Mostrar senha">
                   <svg id="eye-open" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
                     <circle cx="12" cy="12" r="2.5" />
@@ -219,7 +131,8 @@
               </div>
             </div>
 
-            <button id="login-button" type="submit" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">
+            <button id="login-button" type="submit"
+              class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">
               <svg id="login-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
                 <path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path>
@@ -229,7 +142,7 @@
           </form>
 
           <div class="mt-8 border-t border-slate-200 pt-5">
-            <p class="text-center text-xs leading-5 text-slate-400">Não há cadastro público. Contas são provisionadas pela administração do Sinal e da organização.</p>
+            <p class="text-center text-xs leading-5 text-slate-400">Não há cadastro público. Contas são provisionadas pela administração.</p>
           </div>
         </div>
       </section>
@@ -237,217 +150,162 @@
   </main>
 
   <main id="app-view" class="min-h-dvh bg-slate-50" hidden>
-    <header class="border-b border-slate-200 bg-white">
-      <div class="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div class="flex items-center gap-3">
-          <div class="signal-mark relative h-8 w-8 text-sky-700" aria-hidden="true"><span></span><span></span><span></span></div>
-          <span class="text-lg font-extrabold tracking-tight">Sinal.</span>
-          <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-inset ring-amber-200">HML</span>
+    <div class="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
+      <aside class="hidden border-r border-slate-200 bg-slate-950 text-white lg:flex lg:min-h-dvh lg:flex-col">
+        <div class="flex h-20 items-center gap-3 border-b border-white/10 px-6">
+          <div class="signal-mark relative h-9 w-9 text-sky-300" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <div class="text-lg font-extrabold tracking-tight">Sinal.</div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">HML</div>
+          </div>
         </div>
-        <button id="logout-button" type="button" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200">Sair</button>
-      </div>
-    </header>
 
-    <section class="safe-page mx-auto max-w-6xl py-8 sm:px-6 sm:py-12">
-      <div class="max-w-2xl">
-        <span class="text-xs font-extrabold uppercase tracking-[0.16em] text-emerald-700">Autenticação concluída</span>
-        <h1 class="mt-2 text-3xl font-extrabold tracking-[-0.035em] text-slate-950 sm:text-4xl">Você entrou no Sinal.</h1>
-        <p class="mt-3 text-base leading-7 text-slate-500">Esta é a primeira tela funcional da aplicação. Nesta sprint estamos homologando autenticação, sessão e saída.</p>
-      </div>
+        <nav class="flex-1 space-y-1 p-4" aria-label="Navegação principal">
+          <button class="nav-item-desktop is-active" data-view="home">
+            <span class="nav-icon">⌂</span><span>Início</span>
+          </button>
+          <button class="nav-item-desktop" data-view="signals">
+            <span class="nav-icon">◌</span><span>Sinais</span>
+          </button>
+          <button class="nav-item-desktop" data-view="knowledge">
+            <span class="nav-icon">⌘</span><span>Base</span>
+          </button>
+          <button class="nav-item-desktop" data-view="more">
+            <span class="nav-icon">⋯</span><span>Mais</span>
+          </button>
+        </nav>
 
-      <div class="mt-8 grid gap-4 sm:grid-cols-2">
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Usuário autenticado</span>
-          <strong id="user-email" class="mt-2 block break-all text-base text-slate-900"></strong>
-        </article>
+        <div class="border-t border-white/10 p-4">
+          <div class="rounded-2xl bg-white/5 p-4">
+            <div class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Ambiente</div>
+            <div class="mt-1 text-sm font-semibold text-slate-300">Homologação</div>
+          </div>
+        </div>
+      </aside>
 
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">UID Firebase</span>
-          <code id="user-uid" class="mt-2 block break-all text-sm leading-6 text-slate-700"></code>
-        </article>
-      </div>
+      <div class="min-w-0">
+        <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div class="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:min-h-20">
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="signal-mark relative h-8 w-8 shrink-0 text-sky-700 lg:hidden" aria-hidden="true"><span></span><span></span><span></span></div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <strong id="tenant-name" class="truncate text-sm font-extrabold text-slate-950 sm:text-base">Sinal</strong>
+                  <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-inset ring-amber-200 lg:hidden">HML</span>
+                </div>
+                <div id="membership-label" class="truncate text-xs text-slate-500">Carregando contexto...</div>
+              </div>
+            </div>
 
-      <div class="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sky-950">
-        <strong class="block text-sm font-extrabold">Próximo sinal da estrada</strong>
-        <p class="mt-1 text-sm leading-6 text-sky-800">Na próxima sprint carregaremos o contexto do usuário, tenant e papel para começar o shell real da aplicação.</p>
+            <div class="flex items-center gap-2">
+              <div class="hidden text-right sm:block">
+                <div id="header-user-name" class="text-sm font-bold text-slate-900"></div>
+                <div id="header-user-email" class="text-xs text-slate-500"></div>
+              </div>
+              <button id="logout-button" type="button"
+                class="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 sm:px-4">
+                Sair
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <section class="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:pb-10">
+          <div id="context-error" class="hidden rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
+            <strong class="block text-sm font-extrabold">Não foi possível carregar seu contexto.</strong>
+            <p id="context-error-message" class="mt-2 text-sm leading-6 text-rose-800"></p>
+          </div>
+
+          <section id="view-home" data-app-view>
+            <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <span id="platform-badge" class="hidden rounded-full bg-violet-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-violet-700 ring-1 ring-inset ring-violet-200">Superadmin</span>
+                <h1 id="welcome-title" class="mt-3 text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl">Olá.</h1>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">Acompanhe seus sinais e peça ajuda quando precisar.</p>
+              </div>
+
+              <button id="send-signal-button" type="button"
+                class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 sm:w-auto">
+                <span class="text-lg leading-none">+</span>
+                Mandar um sinal
+              </button>
+            </div>
+
+            <div class="mt-8 grid gap-4 md:grid-cols-3">
+              <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Meus sinais</span>
+                <strong class="mt-3 block text-3xl font-extrabold tracking-tight text-slate-950">0</strong>
+                <span class="mt-1 block text-sm text-slate-500">Nenhum sinal aberto.</span>
+              </article>
+              <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Organização</span>
+                <strong id="card-tenant-name" class="mt-3 block truncate text-lg font-extrabold text-slate-950"></strong>
+                <span id="card-role" class="mt-1 block text-sm text-slate-500"></span>
+              </article>
+              <article class="rounded-2xl border border-sky-100 bg-sky-50 p-5">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-sky-700">Próximo passo</span>
+                <strong class="mt-3 block text-base font-extrabold text-sky-950">Abertura de sinais</strong>
+                <span class="mt-1 block text-sm leading-6 text-sky-800">O botão já está no lugar. A criação real entra na Sprint 1.0.</span>
+              </article>
+            </div>
+
+            <div class="mt-6 rounded-2xl border border-slate-200 bg-white">
+              <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h2 class="font-extrabold text-slate-950">Meus sinais</h2>
+                  <p class="mt-1 text-sm text-slate-500">Seus pedidos aparecerão aqui.</p>
+                </div>
+              </div>
+              <div class="grid min-h-48 place-items-center px-5 py-10 text-center">
+                <div>
+                  <div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-xl text-slate-500">◌</div>
+                  <strong class="mt-4 block text-sm font-extrabold text-slate-800">Tudo tranquilo por enquanto.</strong>
+                  <p class="mt-1 text-sm text-slate-500">Você ainda não mandou nenhum sinal.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="view-signals" class="hidden" data-app-view>
+            <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Sinais</h1>
+            <p class="mt-2 text-sm leading-6 text-slate-500">A Central de sinais será construída nas próximas sprints.</p>
+            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">Nenhum sinal para exibir.</div>
+          </section>
+
+          <section id="view-knowledge" class="hidden" data-app-view>
+            <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Base</h1>
+            <p class="mt-2 text-sm leading-6 text-slate-500">A Base de conhecimento já tem seu espaço reservado no shell.</p>
+          </section>
+
+          <section id="view-more" class="hidden" data-app-view>
+            <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Mais</h1>
+            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+              <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Usuário</span>
+                <strong id="more-user-email" class="mt-2 block break-all text-sm text-slate-900"></strong>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">UID HML</span>
+                <code id="more-user-uid" class="mt-2 block break-all text-xs leading-5 text-slate-700"></code>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Navegação móvel">
+          <div class="grid grid-cols-4">
+            <button class="nav-item-mobile is-active" data-view="home"><span class="text-lg">⌂</span><span>Início</span></button>
+            <button class="nav-item-mobile" data-view="signals"><span class="text-lg">◌</span><span>Sinais</span></button>
+            <button class="nav-item-mobile" data-view="knowledge"><span class="text-lg">⌘</span><span>Base</span></button>
+            <button class="nav-item-mobile" data-view="more"><span class="text-lg">⋯</span><span>Mais</span></button>
+          </div>
+        </nav>
       </div>
-    </section>
+    </div>
+
+    <div id="toast" class="pointer-events-none fixed bottom-24 left-1/2 z-50 hidden w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-xl lg:bottom-6" role="status" aria-live="polite"></div>
   </main>
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import {
-      getAuth,
-      browserLocalPersistence,
-      onAuthStateChanged,
-      sendPasswordResetEmail,
-      setPersistence,
-      signInWithEmailAndPassword,
-      signOut
-    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-    const firebaseConfig = {
-      apiKey: 'AIzaSyDmpeBPs7AEhUr_I8KU1boRXVQKsMKnhVQ',
-      authDomain: 'sinaldesk-hml.firebaseapp.com',
-      projectId: 'sinaldesk-hml',
-      storageBucket: 'sinaldesk-hml.firebasestorage.app',
-      messagingSenderId: '338438459376',
-      appId: '1:338438459376:web:f30d427998aadeb6659735',
-      measurementId: 'G-1YCX97FZK1'
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    const loadingScreen = document.querySelector('#loading-screen');
-    const authView = document.querySelector('#auth-view');
-    const appView = document.querySelector('#app-view');
-    const loginForm = document.querySelector('#login-form');
-    const emailInput = document.querySelector('#email');
-    const passwordInput = document.querySelector('#password');
-    const togglePasswordButton = document.querySelector('#toggle-password');
-    const eyeOpen = document.querySelector('#eye-open');
-    const eyeClosed = document.querySelector('#eye-closed');
-    const forgotPasswordButton = document.querySelector('#forgot-password');
-    const loginButton = document.querySelector('#login-button');
-    const loginButtonLabel = document.querySelector('#login-button-label');
-    const loginSpinner = document.querySelector('#login-spinner');
-    const authMessage = document.querySelector('#auth-message');
-    const logoutButton = document.querySelector('#logout-button');
-    const userEmail = document.querySelector('#user-email');
-    const userUid = document.querySelector('#user-uid');
-
-    const errorMessages = {
-      'auth/invalid-email': 'Informe um endereço de e-mail válido.',
-      'auth/invalid-credential': 'E-mail ou senha inválidos.',
-      'auth/user-disabled': 'Esta conta está desativada. Procure o administrador.',
-      'auth/too-many-requests': 'Muitas tentativas foram realizadas. Aguarde um pouco e tente novamente.',
-      'auth/network-request-failed': 'Não foi possível acessar o serviço de autenticação. Verifique sua conexão.',
-      'auth/missing-password': 'Informe sua senha.'
-    };
-
-    function showMessage(message, type = 'error') {
-      const variants = {
-        error: 'border-rose-200 bg-rose-50 text-rose-800',
-        success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-        info: 'border-sky-200 bg-sky-50 text-sky-800'
-      };
-
-      authMessage.className = `mb-5 rounded-xl border px-4 py-3 text-sm leading-5 ${variants[type] ?? variants.info}`;
-      authMessage.textContent = message;
-      authMessage.classList.remove('hidden');
-    }
-
-    function clearMessage() {
-      authMessage.textContent = '';
-      authMessage.classList.add('hidden');
-    }
-
-    function setLoginLoading(isLoading) {
-      loginButton.disabled = isLoading;
-      loginSpinner.classList.toggle('hidden', !isLoading);
-      loginButtonLabel.textContent = isLoading ? 'Entrando...' : 'Entrar';
-    }
-
-    function renderSignedOut() {
-      appView.hidden = true;
-      authView.hidden = false;
-      loadingScreen.hidden = true;
-      userEmail.textContent = '';
-      userUid.textContent = '';
-      window.setTimeout(() => emailInput.focus(), 50);
-    }
-
-    function renderSignedIn(user) {
-      clearMessage();
-      authView.hidden = true;
-      appView.hidden = false;
-      loadingScreen.hidden = true;
-      userEmail.textContent = user.email ?? 'E-mail não informado';
-      userUid.textContent = user.uid;
-    }
-
-    togglePasswordButton.addEventListener('click', () => {
-      const showingPassword = passwordInput.type === 'text';
-      passwordInput.type = showingPassword ? 'password' : 'text';
-      eyeOpen.classList.toggle('hidden', !showingPassword);
-      eyeClosed.classList.toggle('hidden', showingPassword);
-      togglePasswordButton.setAttribute('aria-label', showingPassword ? 'Mostrar senha' : 'Ocultar senha');
-      togglePasswordButton.title = showingPassword ? 'Mostrar senha' : 'Ocultar senha';
-      passwordInput.focus();
-    });
-
-    loginForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      clearMessage();
-
-      if (!loginForm.reportValidity()) return;
-
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      try {
-        setLoginLoading(true);
-        await setPersistence(auth, browserLocalPersistence);
-        await signInWithEmailAndPassword(auth, email, password);
-        passwordInput.value = '';
-      } catch (error) {
-        console.error('[Sinal][Auth] Falha no login:', error);
-        showMessage(errorMessages[error.code] ?? 'Não foi possível entrar no Sinal. Tente novamente.');
-      } finally {
-        setLoginLoading(false);
-      }
-    });
-
-    forgotPasswordButton.addEventListener('click', async () => {
-      clearMessage();
-      const email = emailInput.value.trim();
-
-      if (!email) {
-        showMessage('Informe seu e-mail acima para solicitar a redefinição de senha.', 'info');
-        emailInput.focus();
-        return;
-      }
-
-      if (!emailInput.checkValidity()) {
-        showMessage('Informe um endereço de e-mail válido.', 'error');
-        emailInput.focus();
-        return;
-      }
-
-      try {
-        forgotPasswordButton.disabled = true;
-        await sendPasswordResetEmail(auth, email);
-        showMessage('Se a conta estiver disponível para redefinição, as instruções foram enviadas para o e-mail informado.', 'success');
-      } catch (error) {
-        console.error('[Sinal][Auth] Falha na redefinição:', error);
-        showMessage(errorMessages[error.code] ?? 'Não foi possível solicitar a redefinição de senha agora. Tente novamente.', 'error');
-      } finally {
-        forgotPasswordButton.disabled = false;
-      }
-    });
-
-    logoutButton.addEventListener('click', async () => {
-      logoutButton.disabled = true;
-      logoutButton.textContent = 'Saindo...';
-
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error('[Sinal][Auth] Falha ao sair:', error);
-      } finally {
-        logoutButton.disabled = false;
-        logoutButton.textContent = 'Sair';
-      }
-    });
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        renderSignedIn(user);
-      } else {
-        renderSignedOut();
-      }
-    });
-  </script>
+  <script type="module" src="./js/main.js"></script>
 </body>
 </html>

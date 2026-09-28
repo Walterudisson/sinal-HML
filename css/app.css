@@ -1,0 +1,84 @@
+:root { color-scheme: light; }
+
+html, body { min-height: 100%; background: #f8fafc; }
+
+body {
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button, input, a { -webkit-tap-highlight-color: transparent; }
+input { font-size: 16px; }
+
+.safe-page {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.brand-panel {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.16), transparent 30%),
+    radial-gradient(circle at 85% 82%, rgba(56,189,248,.18), transparent 28%),
+    linear-gradient(145deg, #0f172a 0%, #172554 54%, #0c4a6e 100%);
+}
+
+.signal-mark span {
+  display: block;
+  border: 2px solid currentColor;
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 9999px;
+  transform: rotate(45deg);
+  position: absolute;
+  inset: 50% auto auto 50%;
+}
+
+.signal-mark span:nth-child(1) { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+.signal-mark span:nth-child(2) { width: 22px; height: 22px; margin: -11px 0 0 -11px; opacity: .78; }
+.signal-mark span:nth-child(3) { width: 34px; height: 34px; margin: -17px 0 0 -17px; opacity: .5; }
+
+[hidden] { display: none !important; }
+
+.nav-item-desktop {
+  display: flex;
+  min-height: 46px;
+  width: 100%;
+  align-items: center;
+  gap: .75rem;
+  border-radius: .75rem;
+  padding: .65rem .8rem;
+  text-align: left;
+  font-size: .875rem;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: .18s ease;
+}
+
+.nav-item-desktop:hover { background: rgba(255,255,255,.06); color: #fff; }
+.nav-item-desktop.is-active { background: rgba(255,255,255,.1); color: #fff; }
+.nav-icon { display: grid; width: 1.35rem; place-items: center; font-size: 1.05rem; }
+
+.nav-item-mobile {
+  display: flex;
+  min-height: 62px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  color: #64748b;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.nav-item-mobile.is-active { color: #0369a1; }
+
+@media (min-width: 1024px) {
+  .nav-item-desktop:focus-visible,
+  .nav-item-mobile:focus-visible {
+    outline: 3px solid rgba(56, 189, 248, .35);
+    outline-offset: 2px;
+  }
+}

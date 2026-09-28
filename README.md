@@ -1,9 +1,25 @@
 # Sinal — HML
 
-Repositório de **desenvolvimento e homologação** do Sinal.
+Ambiente de desenvolvimento e homologação do Sinal.
 
-- Firebase: `sinaldesk-hml`
-- Ambiente: HML
-- Produção: `Walterudisson/sinal`
+## Sprint atual
 
-> Não utilizar este repositório como fonte direta do domínio `sinal.app.br`.
+`0.3 — Shell autenticado + contexto multi-tenant`
+
+## Backend
+
+Firebase HML:
+
+`projectId: sinaldesk-hml`
+
+## Produção
+
+O ambiente de produção permanece isolado no repositório:
+
+`Walterudisson/sinal`
+
+e utiliza:
+
+`projectId: sinaldesk`
+
+O domínio `sinal.app.br` é exclusivo de PRD.
