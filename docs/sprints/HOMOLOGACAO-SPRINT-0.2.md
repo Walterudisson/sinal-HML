@@ -212,9 +212,9 @@ ____________________________________________________________________
 - [ ] A aplicação apresenta confirmação da solicitação.
 - [ ] O Firebase envia a mensagem de redefinição, conforme configuração do projeto.
 
-**Resultado:** [ ] APROVADO  [ ] REPROVADO
+**Resultado:** [ ] APROVADO  [X] REPROVADO
 
-Observações:
+Observações: e-mail de recuperação não enviado
 
 ____________________________________________________________________
 
