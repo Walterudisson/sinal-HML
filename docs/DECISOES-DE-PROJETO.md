@@ -108,41 +108,54 @@ Bibliotecas adicionais somente deverão ser incorporadas quando houver necessida
 
 ---
 
-## DP-006 — Ambiente de desenvolvimento
+## DP-006 — Repositórios e ambiente de desenvolvimento
 
 **Status:** Aprovada
 
 O ambiente oficial de desenvolvimento será o **GitHub Codespaces**.
 
-Isso permite independência da máquina física utilizada e maior mobilidade no desenvolvimento.
+O Sinal utilizará dois repositórios independentes:
 
-O repositório oficial é:
+- `Walterudisson/sinal-HML` — desenvolvimento e homologação.
+- `Walterudisson/sinal` — produção.
 
-`Walterudisson/sinal`
+A branch principal de ambos é `main`.
 
-A branch principal é:
-
-`main`
+O repositório de produção não será utilizado para experimentos ou desenvolvimento corrente.
 
 ---
 
-## DP-007 — Backend
+## DP-007 — Backend Firebase
 
 **Status:** Aprovada
 
-O backend/BaaS do Sinal será o Firebase.
+O Sinal utilizará dois projetos Firebase independentes:
 
-Projeto Firebase:
+### HML
 
-`sinaldesk`
+`projectId: sinaldesk-hml`
 
-Serviços inicialmente previstos:
+Serviços:
 
 - Authentication
 - Cloud Firestore
 - Storage
 - Analytics
 - Cloud Functions quando necessárias
+
+### PRD
+
+`projectId: sinaldesk`
+
+Serviços:
+
+- Authentication
+- Cloud Firestore
+- Storage
+- Analytics
+- Cloud Functions quando necessárias
+
+Dados, usuários de teste, regras e recursos de HML não devem compartilhar o mesmo ambiente de produção.
 
 ---
 
@@ -211,9 +224,18 @@ A homologação funcional faz parte da definição de pronto.
 
 **Status:** Aprovada
 
-Alterações deverão ser validadas em ambiente de homologação antes da promoção para produção.
+Toda funcionalidade será desenvolvida e testada primeiro em HML.
 
-Experimentos e funcionalidades ainda não homologadas não deverão alterar deliberadamente o ambiente de produção.
+Somente versões explicitamente homologadas poderão ser promovidas para PRD.
+
+Mapeamento oficial:
+
+| Ambiente | Repositório | Firebase | Endereço |
+|---|---|---|---|
+| HML | `Walterudisson/sinal-HML` | `sinaldesk-hml` | GitHub Pages do repositório HML |
+| PRD | `Walterudisson/sinal` | `sinaldesk` | `https://sinal.app.br` |
+
+O domínio personalizado `sinal.app.br` será exclusivo de PRD.
 
 ---
 
@@ -227,8 +249,34 @@ A conversa com ferramentas de IA não será considerada a única fonte de conhec
 
 ---
 
+## DP-013 — Entrega de arquivos e uso de terminal
+
+**Status:** Aprovada
+
+Arquivos novos ou alterações extensas serão preferencialmente entregues prontos e organizados na mesma estrutura de pastas esperada no repositório.
+
+Alterações pequenas em arquivos existentes poderão ser fornecidas como conteúdo pronto para copiar e colar.
+
+GitHub Codespaces e Firebase Console serão utilizados quando houver necessidade técnica real, evitando comandos de terminal para operações simples de edição e upload de arquivos.
+
+---
+
+## DP-014 — Homologação manual por sprint
+
+**Status:** Aprovada
+
+Sempre que uma sprint introduzir ou alterar funcionalidade testável, será fornecido um roteiro de homologação manual.
+
+Os testes deverão se concentrar nas alterações da sprint atual.
+
+Funcionalidades de sprints anteriores somente entrarão em regressão manual quando a mudança atual puder impactá-las.
+
+---
+
 ## Histórico
 
 | Data | Decisão | Evento |
 |---|---|---|
 | 2026-09-28 | DP-001 a DP-012 | Fundação inicial do projeto |
+| 2026-09-28 | DP-006, DP-007 e DP-011 | Separação física entre HML e PRD |
+| 2026-09-28 | DP-013 e DP-014 | Processo de entrega e homologação incremental |

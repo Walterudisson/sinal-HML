@@ -2,33 +2,40 @@
 
 ## Primeiro acesso ao Sinal
 
-**Status:** Em homologação  
+**Status:** Homologada  
+**Ambiente de homologação:** HML  
 **Data:** 2026-09-28
 
 ## Objetivo
 
 Disponibilizar a primeira experiência funcional e palpável do Sinal, conectada ao Firebase Authentication, permitindo autenticação real de usuário previamente cadastrado.
 
-## Escopo entregue
+## Escopo homologado
 
 - Tela de login mobile-first.
-- Identidade provisória do Sinal aplicada à experiência de autenticação.
-- Ambiente claramente identificado como HML.
-- Firebase Authentication conectado ao projeto `sinaldesk`.
+- Identidade visual inicial do Sinal.
+- Identificação visual do ambiente HML.
 - Login com e-mail e senha.
 - Persistência local da sessão.
 - Recuperação de senha por e-mail.
-- Exibição de erros de autenticação em linguagem compreensível.
-- Alternância mostrar/ocultar senha.
-- Estado autenticado mínimo para comprovação da sessão.
-- Exibição do e-mail e UID do usuário autenticado.
+- Tratamento de erros de autenticação.
+- Mostrar/ocultar senha.
+- Estado autenticado mínimo.
+- Exibição do e-mail e UID autenticados.
 - Logout.
 - Ausência de cadastro público.
 - Layout responsivo para smartphone e desktop.
 
+## Ajuste pós-homologação de ambiente
+
+Após a homologação funcional, o repositório HML passou a apontar exclusivamente para:
+
+`projectId: sinaldesk-hml`
+
+A mudança não altera a funcionalidade da Sprint 0.2. Ela estabelece o isolamento definitivo entre HML e PRD.
+
 ## Fora do escopo desta sprint
 
-- Firestore.
 - Tenant ativo.
 - Papéis e permissões.
 - Superadmin.
@@ -37,14 +44,9 @@ Disponibilizar a primeira experiência funcional e palpável do Sinal, conectada
 - Abertura de sinal.
 - App shell definitivo.
 - PWA e Service Worker.
-- Produção (PRD).
 
-## Decisão de implementação
+## Resultado
 
-Para reduzir o tempo até a primeira experiência funcional, esta sprint utiliza uma página estática autocontida com HTML5, Tailwind CSS via CDN, JavaScript ES Modules e Firebase Web SDK 10.8.0 via ESM.
+**SPRINT 0.2 HOMOLOGADA.**
 
-A modularização em `config`, `controllers`, `core`, `services` e `ui` será iniciada junto ao shell da aplicação nas próximas sprints, preservando a arquitetura adotada no CMAPP.
-
-## Critério de pronto
-
-A sprint somente poderá ser aprovada após execução do roteiro `HOMOLOGACAO-SPRINT-0.2.md` e aprovação explícita do responsável pelo produto.
+A versão homologada está autorizada para promoção a PRD, respeitando a configuração Firebase própria do ambiente de produção.

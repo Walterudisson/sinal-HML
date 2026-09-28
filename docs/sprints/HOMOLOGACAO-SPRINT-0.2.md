@@ -3,8 +3,8 @@
 ## Primeiro acesso ao Sinal
 
 **Ambiente:** HML  
-**Data da execução:** ____________________  
-**Responsável:** ____________________  
+**Data da execução:** 2026-09-28  
+**Responsável:** Walter Udisson  
 **URL testada:** ____________________
 
 ---
@@ -212,9 +212,9 @@ ____________________________________________________________________
 - [ ] A aplicação apresenta confirmação da solicitação.
 - [ ] O Firebase envia a mensagem de redefinição, conforme configuração do projeto.
 
-**Resultado:** [ ] APROVADO  [X] REPROVADO
+**Resultado:** [ ] APROVADO  [ ] REPROVADO
 
-Observações: e-mail de recuperação não enviado
+Observações:
 
 ____________________________________________________________________
 
@@ -254,7 +254,7 @@ ____________________________________________________________________
 
 # Resultado geral
 
-- [ ] SPRINT 0.2 APROVADA
+- [X] SPRINT 0.2 APROVADA
 - [ ] SPRINT 0.2 REPROVADA
 - [ ] APROVADA COM CORREÇÕES PENDENTES
 
@@ -273,3 +273,8 @@ ____________________________________________________________________
 ____________________________________________________________________
 
 ____________________________________________________________________
+
+
+## Encerramento
+
+Sprint 0.2 homologada explicitamente em 2026-09-28.
