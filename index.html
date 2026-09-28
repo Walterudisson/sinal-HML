@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Sinal | HML</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'system-ui', 'sans-serif'] },
+          boxShadow: {
+            soft: '0 24px 80px rgba(15, 23, 42, 0.12)'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      background: #f8fafc;
+    }
+
+    body {
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button,
+    input,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    input {
+      font-size: 16px;
+    }
+
+    .safe-page {
+      padding-top: max(1rem, env(safe-area-inset-top));
+      padding-right: max(1rem, env(safe-area-inset-right));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+      padding-left: max(1rem, env(safe-area-inset-left));
+    }
+
+    .brand-panel {
+      background:
+        radial-gradient(circle at 15% 15%, rgba(255, 255, 255, .16), transparent 30%),
+        radial-gradient(circle at 85% 82%, rgba(56, 189, 248, .18), transparent 28%),
+        linear-gradient(145deg, #0f172a 0%, #172554 54%, #0c4a6e 100%);
+    }
+
+    .signal-mark span {
+      display: block;
+      border: 2px solid currentColor;
+      border-left-color: transparent;
+      border-bottom-color: transparent;
+      border-radius: 9999px;
+      transform: rotate(45deg);
+      position: absolute;
+      inset: 50% auto auto 50%;
+    }
+
+    .signal-mark span:nth-child(1) {
+      width: 10px;
+      height: 10px;
+      margin: -5px 0 0 -5px;
+    }
+
+    .signal-mark span:nth-child(2) {
+      width: 22px;
+      height: 22px;
+      margin: -11px 0 0 -11px;
+      opacity: .78;
+    }
+
+    .signal-mark span:nth-child(3) {
+      width: 34px;
+      height: 34px;
+      margin: -17px 0 0 -17px;
+      opacity: .5;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body class="font-sans text-slate-900">
+  <div id="loading-screen" class="fixed inset-0 z-50 grid place-items-center bg-slate-950 text-white">
+    <div class="flex flex-col items-center gap-4">
+      <div class="signal-mark relative h-12 w-12 text-sky-300" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="text-sm font-semibold tracking-wide">Sinal.</div>
+    </div>
+  </div>
+
+  <main id="auth-view" class="safe-page min-h-dvh lg:grid lg:place-items-center" hidden>
+    <div class="mx-auto grid min-h-[calc(100dvh-2rem)] w-full max-w-6xl overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-soft lg:min-h-[720px] lg:grid-cols-[0.95fr_1.05fr]">
+      <aside class="brand-panel relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div class="relative z-10 flex items-center gap-3">
+          <div class="signal-mark relative h-10 w-10 text-sky-200" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div>
+            <div class="text-lg font-extrabold tracking-tight">Sinal.</div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/70">Homologação</div>
+          </div>
+        </div>
+
+        <div class="relative z-10 max-w-lg py-12">
+          <span class="text-xs font-extrabold uppercase tracking-[0.18em] text-sky-200/80">Seu suporte começa aqui</span>
+          <h1 class="mt-4 text-5xl font-extrabold leading-[0.98] tracking-[-0.04em] xl:text-6xl">
+            Quando precisar,<br />mande um sinal.
+          </h1>
+          <p class="mt-6 max-w-md text-base leading-7 text-slate-200">
+            Um espaço simples para pedir ajuda, acompanhar o atendimento e manter cada conversa no lugar certo.
+          </p>
+        </div>
+
+        <div class="relative z-10 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-sky-100">
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+            <div>
+              <strong class="block text-sm font-bold">Acesso protegido</strong>
+              <span class="mt-1 block text-sm leading-6 text-slate-200">Nesta etapa, o acesso é restrito a contas previamente cadastradas no Sinal.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="flex items-center justify-center px-5 py-8 sm:px-8 lg:p-12 xl:p-16">
+        <div class="w-full max-w-md">
+          <div class="mb-9 flex items-center justify-between lg:hidden">
+            <div class="flex items-center gap-3">
+              <div class="signal-mark relative h-9 w-9 text-sky-700" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <span class="text-xl font-extrabold tracking-tight">Sinal.</span>
+            </div>
+            <span class="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-inset ring-amber-200">HML</span>
+          </div>
+
+          <div class="mb-8">
+            <span class="hidden text-xs font-extrabold uppercase tracking-[0.16em] text-sky-700 lg:block">Acesso ao Sinal</span>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-[-0.035em] text-slate-950 sm:text-4xl">Bem-vindo.</h2>
+            <p class="mt-3 text-sm leading-6 text-slate-500 sm:text-base">Entre com as credenciais cadastradas pela sua organização.</p>
+          </div>
+
+          <div id="auth-message" class="mb-5 hidden rounded-xl border px-4 py-3 text-sm leading-5" role="status" aria-live="polite"></div>
+
+          <form id="login-form" class="space-y-5" novalidate>
+            <div>
+              <label for="email" class="mb-2 block text-sm font-bold text-slate-800">E-mail</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="nome@empresa.com.br"
+                required
+                class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+
+            <div>
+              <div class="mb-2 flex items-center justify-between gap-4">
+                <label for="password" class="block text-sm font-bold text-slate-800">Senha</label>
+                <button id="forgot-password" type="button" class="min-h-11 px-1 text-sm font-semibold text-sky-700 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-100">
+                  Esqueci minha senha
+                </button>
+              </div>
+
+              <div class="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Digite sua senha"
+                  required
+                  class="min-h-12 w-full rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-14 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+                />
+                <button id="toggle-password" type="button" class="absolute inset-y-0 right-0 grid min-w-12 place-items-center rounded-r-xl text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-sky-100" aria-label="Mostrar senha" title="Mostrar senha">
+                  <svg id="eye-open" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+                    <circle cx="12" cy="12" r="2.5" />
+                  </svg>
+                  <svg id="eye-closed" viewBox="0 0 24 24" class="hidden h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m3 3 18 18" />
+                    <path d="M10.6 6.2A10.4 10.4 0 0 1 12 6c6.5 0 10 6 10 6a18 18 0 0 1-2 2.6" />
+                    <path d="M6.6 6.6C3.6 8.3 2 12 2 12s3.5 6 10 6c1.5 0 2.9-.3 4-.8" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <button id="login-button" type="submit" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">
+              <svg id="login-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path>
+              </svg>
+              <span id="login-button-label">Entrar</span>
+            </button>
+          </form>
+
+          <div class="mt-8 border-t border-slate-200 pt-5">
+            <p class="text-center text-xs leading-5 text-slate-400">Não há cadastro público. Contas são provisionadas pela administração do Sinal e da organização.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main id="app-view" class="min-h-dvh bg-slate-50" hidden>
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div class="flex items-center gap-3">
+          <div class="signal-mark relative h-8 w-8 text-sky-700" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span class="text-lg font-extrabold tracking-tight">Sinal.</span>
+          <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-inset ring-amber-200">HML</span>
+        </div>
+        <button id="logout-button" type="button" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200">Sair</button>
+      </div>
+    </header>
+
+    <section class="safe-page mx-auto max-w-6xl py-8 sm:px-6 sm:py-12">
+      <div class="max-w-2xl">
+        <span class="text-xs font-extrabold uppercase tracking-[0.16em] text-emerald-700">Autenticação concluída</span>
+        <h1 class="mt-2 text-3xl font-extrabold tracking-[-0.035em] text-slate-950 sm:text-4xl">Você entrou no Sinal.</h1>
+        <p class="mt-3 text-base leading-7 text-slate-500">Esta é a primeira tela funcional da aplicação. Nesta sprint estamos homologando autenticação, sessão e saída.</p>
+      </div>
+
+      <div class="mt-8 grid gap-4 sm:grid-cols-2">
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Usuário autenticado</span>
+          <strong id="user-email" class="mt-2 block break-all text-base text-slate-900"></strong>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">UID Firebase</span>
+          <code id="user-uid" class="mt-2 block break-all text-sm leading-6 text-slate-700"></code>
+        </article>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-5 text-sky-950">
+        <strong class="block text-sm font-extrabold">Próximo sinal da estrada</strong>
+        <p class="mt-1 text-sm leading-6 text-sky-800">Na próxima sprint carregaremos o contexto do usuário, tenant e papel para começar o shell real da aplicação.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import {
+      getAuth,
+      browserLocalPersistence,
+      onAuthStateChanged,
+      sendPasswordResetEmail,
+      setPersistence,
+      signInWithEmailAndPassword,
+      signOut
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: 'AIzaSyDjwcE12ncz9xhbsZVH6dFGMdgBsMi63Ng',
+      authDomain: 'sinaldesk.firebaseapp.com',
+      projectId: 'sinaldesk',
+      storageBucket: 'sinaldesk.firebasestorage.app',
+      messagingSenderId: '181418178471',
+      appId: '1:181418178471:web:f263a7102ba5700757a882',
+      measurementId: 'G-J4M3T2JMV9'
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const loadingScreen = document.querySelector('#loading-screen');
+    const authView = document.querySelector('#auth-view');
+    const appView = document.querySelector('#app-view');
+    const loginForm = document.querySelector('#login-form');
+    const emailInput = document.querySelector('#email');
+    const passwordInput = document.querySelector('#password');
+    const togglePasswordButton = document.querySelector('#toggle-password');
+    const eyeOpen = document.querySelector('#eye-open');
+    const eyeClosed = document.querySelector('#eye-closed');
+    const forgotPasswordButton = document.querySelector('#forgot-password');
+    const loginButton = document.querySelector('#login-button');
+    const loginButtonLabel = document.querySelector('#login-button-label');
+    const loginSpinner = document.querySelector('#login-spinner');
+    const authMessage = document.querySelector('#auth-message');
+    const logoutButton = document.querySelector('#logout-button');
+    const userEmail = document.querySelector('#user-email');
+    const userUid = document.querySelector('#user-uid');
+
+    const errorMessages = {
+      'auth/invalid-email': 'Informe um endereço de e-mail válido.',
+      'auth/invalid-credential': 'E-mail ou senha inválidos.',
+      'auth/user-disabled': 'Esta conta está desativada. Procure o administrador.',
+      'auth/too-many-requests': 'Muitas tentativas foram realizadas. Aguarde um pouco e tente novamente.',
+      'auth/network-request-failed': 'Não foi possível acessar o serviço de autenticação. Verifique sua conexão.',
+      'auth/missing-password': 'Informe sua senha.'
+    };
+
+    function showMessage(message, type = 'error') {
+      const variants = {
+        error: 'border-rose-200 bg-rose-50 text-rose-800',
+        success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+        info: 'border-sky-200 bg-sky-50 text-sky-800'
+      };
+
+      authMessage.className = `mb-5 rounded-xl border px-4 py-3 text-sm leading-5 ${variants[type] ?? variants.info}`;
+      authMessage.textContent = message;
+      authMessage.classList.remove('hidden');
+    }
+
+    function clearMessage() {
+      authMessage.textContent = '';
+      authMessage.classList.add('hidden');
+    }
+
+    function setLoginLoading(isLoading) {
+      loginButton.disabled = isLoading;
+      loginSpinner.classList.toggle('hidden', !isLoading);
+      loginButtonLabel.textContent = isLoading ? 'Entrando...' : 'Entrar';
+    }
+
+    function renderSignedOut() {
+      appView.hidden = true;
+      authView.hidden = false;
+      loadingScreen.hidden = true;
+      userEmail.textContent = '';
+      userUid.textContent = '';
+      window.setTimeout(() => emailInput.focus(), 50);
+    }
+
+    function renderSignedIn(user) {
+      clearMessage();
+      authView.hidden = true;
+      appView.hidden = false;
+      loadingScreen.hidden = true;
+      userEmail.textContent = user.email ?? 'E-mail não informado';
+      userUid.textContent = user.uid;
+    }
+
+    togglePasswordButton.addEventListener('click', () => {
+      const showingPassword = passwordInput.type === 'text';
+      passwordInput.type = showingPassword ? 'password' : 'text';
+      eyeOpen.classList.toggle('hidden', !showingPassword);
+      eyeClosed.classList.toggle('hidden', showingPassword);
+      togglePasswordButton.setAttribute('aria-label', showingPassword ? 'Mostrar senha' : 'Ocultar senha');
+      togglePasswordButton.title = showingPassword ? 'Mostrar senha' : 'Ocultar senha';
+      passwordInput.focus();
+    });
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage();
+
+      if (!loginForm.reportValidity()) return;
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      try {
+        setLoginLoading(true);
+        await setPersistence(auth, browserLocalPersistence);
+        await signInWithEmailAndPassword(auth, email, password);
+        passwordInput.value = '';
+      } catch (error) {
+        console.error('[Sinal][Auth] Falha no login:', error);
+        showMessage(errorMessages[error.code] ?? 'Não foi possível entrar no Sinal. Tente novamente.');
+      } finally {
+        setLoginLoading(false);
+      }
+    });
+
+    forgotPasswordButton.addEventListener('click', async () => {
+      clearMessage();
+      const email = emailInput.value.trim();
+
+      if (!email) {
+        showMessage('Informe seu e-mail acima para solicitar a redefinição de senha.', 'info');
+        emailInput.focus();
+        return;
+      }
+
+      if (!emailInput.checkValidity()) {
+        showMessage('Informe um endereço de e-mail válido.', 'error');
+        emailInput.focus();
+        return;
+      }
+
+      try {
+        forgotPasswordButton.disabled = true;
+        await sendPasswordResetEmail(auth, email);
+        showMessage('Se a conta estiver disponível para redefinição, as instruções foram enviadas para o e-mail informado.', 'success');
+      } catch (error) {
+        console.error('[Sinal][Auth] Falha na redefinição:', error);
+        showMessage(errorMessages[error.code] ?? 'Não foi possível solicitar a redefinição de senha agora. Tente novamente.', 'error');
+      } finally {
+        forgotPasswordButton.disabled = false;
+      }
+    });
+
+    logoutButton.addEventListener('click', async () => {
+      logoutButton.disabled = true;
+      logoutButton.textContent = 'Saindo...';
+
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error('[Sinal][Auth] Falha ao sair:', error);
+      } finally {
+        logoutButton.disabled = false;
+        logoutButton.textContent = 'Sair';
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        renderSignedIn(user);
+      } else {
+        renderSignedOut();
+      }
+    });
+  </script>
+</body>
+</html>
