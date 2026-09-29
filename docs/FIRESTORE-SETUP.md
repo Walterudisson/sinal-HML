@@ -1,60 +1,34 @@
 # Sinal — Firestore Setup HML
 
-## Sprint 1.1 — Central de atendimento
+## Sprint 1.2 — Atendimento e conversa
 
-Ambiente:
+Ambiente: `sinaldesk-hml`
 
-`Firebase projectId: sinaldesk-hml`
+Não há documentos manuais novos.
 
-## 1. Nenhum documento novo obrigatório
+Publique o `firestore.rules` desta sprint.
 
-A estrutura criada nas Sprints 0.3 e 1.0 continua válida.
+A primeira mensagem criará automaticamente:
 
-Esta sprint não exige criação manual de novas coleções ou documentos.
+`tenants/{tenantId}/tickets/{ticketId}/messages/{messageId}`
 
-## 2. Atualizar Security Rules
+Cada mensagem possui:
 
-No Firebase Console:
+- `body`
+- `visibility: public`
+- `authorUid`
+- `authorName`
+- `authorEmail`
+- `authorRole`
+- `createdAt`
 
-**Firestore Database → Rules**
+### Permissões
 
-Substitua as regras atuais pelo conteúdo do arquivo:
+Solicitante:
+- lê e responde no próprio sinal.
 
-`firestore.rules`
+Admin/Supervisor/Agente:
+- lê os sinais do tenant;
+- somente responde quando for o responsável (`assigneeUid`).
 
-e clique em **Publish**.
-
-## 3. O que muda nas regras
-
-Papéis `admin`, `supervisor` e `agente` podem:
-
-- ler os sinais do tenant;
-- assumir um sinal ainda aberto e sem responsável.
-
-Ao assumir, somente estes campos podem mudar:
-
-- `status`: `open` → `in_progress`
-- `assigneeUid`
-- `assigneeName`
-- `assigneeEmail`
-- `updatedAt`
-
-O frontend não recebe permissão genérica para editar o ticket.
-
-## 4. Dados adicionados automaticamente ao assumir
-
-Exemplo:
-
-```text
-status: in_progress
-assigneeUid: rSbmd9g17XckHd87pxgsNjH1im12
-assigneeName: Walter Udisson
-assigneeEmail: walter.udisson@gmail.com
-updatedAt: <timestamp servidor>
-```
-
-## 5. Observação de concorrência
-
-Se dois atendentes tentarem assumir o mesmo sinal, somente o primeiro deverá conseguir.
-
-Após a primeira atribuição, as regras recusam nova tentativa porque o ticket deixa de estar `open` e `assigneeUid` deixa de ser `null`.
+Mensagens não podem ser editadas ou excluídas nesta sprint.

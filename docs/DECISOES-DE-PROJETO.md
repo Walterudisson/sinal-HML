@@ -340,3 +340,22 @@ A implementação utiliza `history.pushState` / `popstate`.
 Ela mostra a fila do tenant e permite iniciar o atendimento.
 
 `Meus sinais` continua representando os sinais que o próprio usuário criou como solicitante.
+
+
+---
+
+## DP-019 — Conversa pública do sinal
+
+**Status:** Implementada na Sprint 1.2
+
+Mensagens ficam em:
+
+`tenants/{tenantId}/tickets/{ticketId}/messages/{messageId}`
+
+Regras iniciais:
+- somente mensagens públicas;
+- solicitante responde no próprio sinal;
+- somente o atendente responsável responde pela equipe;
+- outros atendentes podem ler, mas não escrever;
+- mensagens não são editáveis/excluíveis;
+- notas internas ficam para sprint futura.
