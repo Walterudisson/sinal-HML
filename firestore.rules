@@ -3,27 +3,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function userPath() {
-      return /databases/$(database)/documents/users/$(request.auth.uid);
-    }
-
-    function memberPath(tenantId) {
-      return /databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid);
-    }
+    function signedIn() { return request.auth != null; }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function memberPath(tenantId) { return /databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid); }
+    function ticketPath(tenantId, ticketId) { return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId); }
 
     function activeUser() {
-      return signedIn()
-        && exists(userPath())
-        && get(userPath()).data.status == 'active';
+      return signedIn() && exists(userPath()) && get(userPath()).data.status == 'active';
     }
 
     function superadmin() {
-      return activeUser()
-        && get(userPath()).data.platformRole == 'superadmin';
+      return activeUser() && get(userPath()).data.platformRole == 'superadmin';
     }
 
     function activeMember(tenantId) {
@@ -37,6 +27,25 @@ service cloud.firestore {
         && get(memberPath(tenantId)).data.role in ['admin', 'supervisor', 'agente'];
     }
 
+    function canReadTicket(tenantId, ticketId) {
+      return activeMember(tenantId)
+        && (
+          get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
+          || supportMember(tenantId)
+        );
+    }
+
+    function canReplyToTicket(tenantId, ticketId) {
+      return activeMember(tenantId)
+        && (
+          get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
+          || (
+            supportMember(tenantId)
+            && get(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
+          )
+        );
+    }
+
     match /users/{userId} {
       allow read: if signedIn() && (request.auth.uid == userId || superadmin());
       allow write: if false;
@@ -47,35 +56,19 @@ service cloud.firestore {
       allow write: if false;
 
       match /members/{memberId} {
-        allow read: if superadmin()
-          || (activeMember(tenantId) && request.auth.uid == memberId);
+        allow read: if superadmin() || (activeMember(tenantId) && request.auth.uid == memberId);
         allow write: if false;
       }
 
       match /tickets/{ticketId} {
         allow read: if activeMember(tenantId)
-          && (
-            resource.data.requesterUid == request.auth.uid
-            || supportMember(tenantId)
-          );
+          && (resource.data.requesterUid == request.auth.uid || supportMember(tenantId));
 
         allow create: if activeMember(tenantId)
           && request.resource.data.keys().hasOnly([
-            'code',
-            'title',
-            'description',
-            'category',
-            'priority',
-            'status',
-            'requesterUid',
-            'requesterName',
-            'requesterEmail',
-            'createdByUid',
-            'source',
-            'assigneeUid',
-            'teamId',
-            'createdAt',
-            'updatedAt'
+            'code','title','description','category','priority','status',
+            'requesterUid','requesterName','requesterEmail','createdByUid',
+            'source','assigneeUid','teamId','createdAt','updatedAt'
           ])
           && request.resource.data.code is string
           && request.resource.data.code.size() >= 3
@@ -86,8 +79,8 @@ service cloud.firestore {
           && request.resource.data.description is string
           && request.resource.data.description.size() >= 3
           && request.resource.data.description.size() <= 4000
-          && request.resource.data.category in ['acesso', 'equipamento', 'rede', 'sistemas', 'outro']
-          && request.resource.data.priority in ['baixa', 'normal', 'alta', 'urgente']
+          && request.resource.data.category in ['acesso','equipamento','rede','sistemas','outro']
+          && request.resource.data.priority in ['baixa','normal','alta','urgente']
           && request.resource.data.status == 'open'
           && request.resource.data.requesterUid == request.auth.uid
           && request.resource.data.createdByUid == request.auth.uid
@@ -108,14 +101,31 @@ service cloud.firestore {
           && request.resource.data.assigneeEmail == get(userPath()).data.email
           && request.resource.data.updatedAt == request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status',
-            'assigneeUid',
-            'assigneeName',
-            'assigneeEmail',
-            'updatedAt'
+            'status','assigneeUid','assigneeName','assigneeEmail','updatedAt'
           ]);
 
         allow delete: if false;
+
+        match /messages/{messageId} {
+          allow read: if canReadTicket(tenantId, ticketId);
+
+          allow create: if canReplyToTicket(tenantId, ticketId)
+            && request.resource.data.keys().hasOnly([
+              'body','visibility','authorUid','authorName',
+              'authorEmail','authorRole','createdAt'
+            ])
+            && request.resource.data.body is string
+            && request.resource.data.body.size() >= 1
+            && request.resource.data.body.size() <= 4000
+            && request.resource.data.visibility == 'public'
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorName == get(userPath()).data.displayName
+            && request.resource.data.authorEmail == get(userPath()).data.email
+            && request.resource.data.authorRole == get(memberPath(tenantId)).data.role
+            && request.resource.data.createdAt == request.time;
+
+          allow update, delete: if false;
+        }
       }
     }
 

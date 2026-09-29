@@ -1,32 +1,13 @@
 # Sinal — HML
 
-Ambiente de desenvolvimento e homologação do Sinal.
-
 ## Sprint atual
 
-`1.1 — Central de atendimento e assumir um sinal`
+`1.2 — Atendimento e conversa`
 
-## Fluxo disponível
+Fluxo disponível:
 
-```text
-Mandar um sinal
-→ Sinal recebido
-→ Central
-→ Abrir
-→ Assumir sinal
-→ Em atendimento
-```
+`Mandar um sinal → Central → Assumir → Conversar`
 
-## Backend
+Firebase HML: `sinaldesk-hml`
 
-Firebase HML:
-
-`projectId: sinaldesk-hml`
-
-## Produção
-
-PRD permanece isolado em:
-
-`Walterudisson/sinal`
-
-O domínio `sinal.app.br` é exclusivo de PRD.
+PRD permanece isolado em `Walterudisson/sinal`.

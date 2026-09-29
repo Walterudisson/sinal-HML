@@ -390,11 +390,11 @@
       </section>
     </div>
 
-    <!-- Detail -->
+    <!-- Detail / Conversation -->
     <div id="ticket-detail" class="fixed inset-0 z-[55] hidden" aria-hidden="true">
       <div data-close-ticket-detail class="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"></div>
-      <section class="ticket-detail-panel absolute inset-x-0 bottom-0 max-h-[96dvh] overflow-y-auto rounded-t-[1.75rem] bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:w-[min(92vw,720px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem]" role="dialog" aria-modal="true" aria-labelledby="ticket-detail-title">
-        <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+      <section class="ticket-detail-panel absolute inset-x-0 bottom-0 flex max-h-[96dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[min(90dvh,760px)] sm:w-[min(94vw,760px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem]" role="dialog" aria-modal="true" aria-labelledby="ticket-detail-title">
+        <div class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
           <div class="min-w-0">
             <span id="detail-code" class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400"></span>
             <h2 id="ticket-detail-title" class="mt-1 truncate text-xl font-extrabold tracking-[-0.02em] text-slate-950">Sinal</h2>
@@ -402,44 +402,78 @@
           <button data-close-ticket-detail type="button" class="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
         </div>
 
-        <div class="space-y-6 px-5 py-6 sm:px-6">
-          <div class="flex flex-wrap gap-2">
-            <span id="detail-status" class="ticket-badge"></span>
-            <span id="detail-priority" class="ticket-badge"></span>
-            <span id="detail-category" class="ticket-badge bg-slate-100 text-slate-700"></span>
-          </div>
-
-          <div>
-            <h3 class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Descrição</h3>
-            <p id="detail-description" class="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700"></p>
-          </div>
-
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Solicitante</span>
-              <strong id="detail-requester-name" class="mt-2 block text-sm text-slate-900"></strong>
-              <span id="detail-requester-email" class="mt-1 block break-all text-xs text-slate-500"></span>
+        <div class="min-h-0 flex-1 overflow-y-auto" id="ticket-detail-scroll">
+          <div class="space-y-6 px-5 py-6 sm:px-6">
+            <div class="flex flex-wrap gap-2">
+              <span id="detail-status" class="ticket-badge"></span>
+              <span id="detail-priority" class="ticket-badge"></span>
+              <span id="detail-category" class="ticket-badge bg-slate-100 text-slate-700"></span>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Responsável</span>
-              <strong id="detail-assignee" class="mt-2 block text-sm text-slate-900"></strong>
-              <span id="detail-created-at" class="mt-1 block text-xs text-slate-500"></span>
-            </div>
-          </div>
 
-          <div id="detail-action-area" class="border-t border-slate-200 pt-5">
-            <button id="claim-ticket-button" type="button"
-              class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 text-sm font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44">
-              <svg id="claim-ticket-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle><path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path></svg>
-              <span id="claim-ticket-label">Assumir sinal</span>
+            <div>
+              <h3 class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Descrição inicial</h3>
+              <p id="detail-description" class="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700"></p>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Solicitante</span>
+                <strong id="detail-requester-name" class="mt-2 block text-sm text-slate-900"></strong>
+                <span id="detail-requester-email" class="mt-1 block break-all text-xs text-slate-500"></span>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Responsável</span>
+                <strong id="detail-assignee" class="mt-2 block text-sm text-slate-900"></strong>
+                <span id="detail-created-at" class="mt-1 block text-xs text-slate-500"></span>
+              </div>
+            </div>
+
+            <div id="detail-action-area" class="border-t border-slate-200 pt-5">
+              <button id="claim-ticket-button" type="button"
+                class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 text-sm font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44">
+                <svg id="claim-ticket-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle><path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path></svg>
+                <span id="claim-ticket-label">Assumir sinal</span>
+              </button>
+              <p id="detail-action-help" class="mt-2 text-xs leading-5 text-slate-500"></p>
+            </div>
+
+            <section class="border-t border-slate-200 pt-6">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <h3 class="font-extrabold text-slate-950">Conversa</h3>
+                  <p class="mt-1 text-sm text-slate-500">Mensagens públicas entre solicitante e atendimento.</p>
+                </div>
+                <span id="conversation-count" class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-extrabold text-slate-600">0</span>
+              </div>
+
+              <div id="conversation-list" class="mt-5 space-y-4"></div>
+              <div id="conversation-empty" class="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+                <strong class="block text-sm font-extrabold text-slate-800">A conversa começa aqui.</strong>
+                <p class="mt-1 text-sm text-slate-500">Envie a primeira mensagem sobre este sinal.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="shrink-0 border-t border-slate-200 bg-white px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+          <form id="message-form" class="flex items-end gap-3">
+            <div class="min-w-0 flex-1">
+              <label for="message-body" class="sr-only">Escrever mensagem</label>
+              <textarea id="message-body" rows="2" maxlength="4000" required placeholder="Escreva uma mensagem..."
+                class="max-h-36 min-h-12 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-base leading-6 outline-none placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"></textarea>
+            </div>
+            <button id="message-submit-button" type="submit"
+              class="flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-extrabold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5">
+              <svg id="message-submit-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle><path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path></svg>
+              <span id="message-submit-label">Enviar</span>
             </button>
-            <p id="detail-action-help" class="mt-2 text-xs leading-5 text-slate-500">Ao assumir, o sinal entra em atendimento e fica atribuído a você.</p>
-          </div>
+          </form>
+          <p id="message-permission-help" class="mt-2 hidden text-xs leading-5 text-slate-500"></p>
         </div>
       </section>
     </div>
 
-    <div id="toast-container" class="pointer-events-none fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[70] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6" aria-live="polite" aria-atomic="false"></div>
+    <div id="toast-container"  class="pointer-events-none fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[70] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6" aria-live="polite" aria-atomic="false"></div>
   </main>
 
   <script type="module" src="./js/main.js"></script>
