@@ -4,15 +4,18 @@ Ambiente de desenvolvimento e homologação do Sinal.
 
 ## Sprint atual
 
-`1.0 — Mandar um sinal`
+`1.1 — Central de atendimento e assumir um sinal`
 
-## Entrega funcional
+## Fluxo disponível
 
-Nesta sprint o usuário já pode:
-
-- abrir um sinal;
-- gravá-lo no Firestore HML;
-- vê-lo imediatamente em `Meus sinais`.
+```text
+Mandar um sinal
+→ Sinal recebido
+→ Central
+→ Abrir
+→ Assumir sinal
+→ Em atendimento
+```
 
 ## Backend
 
@@ -25,9 +28,5 @@ Firebase HML:
 PRD permanece isolado em:
 
 `Walterudisson/sinal`
-
-com Firebase:
-
-`projectId: sinaldesk`
 
 O domínio `sinal.app.br` é exclusivo de PRD.

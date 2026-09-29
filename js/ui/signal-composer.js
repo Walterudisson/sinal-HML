@@ -1,3 +1,5 @@
+import { openOverlayHistory, requestOverlayClose } from './overlay-history.js';
+
 const categoryLabels = Object.freeze({
   acesso: 'Acesso',
   equipamento: 'Equipamento',
@@ -21,7 +23,7 @@ const priorityClasses = Object.freeze({
 });
 
 const statusLabels = Object.freeze({
-  open: 'Recebido',
+  open: 'Sinal recebido',
   in_progress: 'Em atendimento',
   waiting_requester: 'Aguardando você',
   resolved: 'Resolvido'
@@ -59,20 +61,28 @@ export function initSignalComposer({ onSubmit }) {
     submitLabel.textContent = isSubmitting ? 'Enviando...' : 'Enviar sinal';
   }
 
+  function finalizeClose() {
+    composer.classList.add('hidden');
+    composer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('overlay-open');
+    lastFocusedElement?.focus?.();
+  }
+
   function openComposer() {
+    if (!composer.classList.contains('hidden')) return;
+
     lastFocusedElement = document.activeElement;
     clearError();
     composer.classList.remove('hidden');
     composer.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('composer-open');
+    document.body.classList.add('overlay-open');
+
+    openOverlayHistory('composer', finalizeClose);
     window.setTimeout(() => titleInput.focus(), 40);
   }
 
   function closeComposer() {
-    composer.classList.add('hidden');
-    composer.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('composer-open');
-    lastFocusedElement?.focus?.();
+    requestOverlayClose('composer', finalizeClose);
   }
 
   function resetComposer() {
@@ -141,7 +151,7 @@ function ticketMarkup(ticket, compact = false) {
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
-  const status = statusLabels[ticket.status] ?? ticket.status ?? 'Recebido';
+  const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
 
   return `
     <article class="${compact ? 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm' : 'ticket-card'}">
@@ -185,11 +195,13 @@ export function renderTickets(tickets) {
   secondaryList.innerHTML = tickets.map((ticket) => ticketMarkup(ticket, true)).join('');
 }
 
-function escapeHtml(value) {
-  return String(value)
+export function escapeHtml(value) {
+  return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 }
+
+export { categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate };

@@ -130,3 +130,63 @@ body.composer-open { overflow: hidden; }
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+
+body.overlay-open { overflow: hidden; }
+
+.central-stat {
+  display: flex;
+  min-height: 7.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: white;
+  padding: 1rem 1.1rem;
+  text-align: left;
+  transition: .16s ease;
+}
+
+.central-stat:hover { border-color: #cbd5e1; background: #f8fafc; }
+.central-stat-active { border-color: #c7d2fe; background: #eef2ff; }
+.central-stat-label { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: #64748b; }
+.central-stat-number { margin-top: .35rem; font-size: 1.9rem; line-height: 1; color: #0f172a; }
+.central-stat-help { margin-top: .45rem; font-size: .76rem; color: #64748b; }
+
+.central-filter {
+  min-height: 2.5rem;
+  border-radius: .75rem;
+  border: 1px solid #e2e8f0;
+  background: white;
+  padding: .45rem .8rem;
+  font-size: .78rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.central-filter.is-active {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.central-ticket {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  transition: background-color .15s ease;
+}
+
+.central-ticket:hover { background: #f8fafc; }
+
+@media (min-width: 640px) {
+  .central-ticket {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+
+.ticket-detail-panel {
+  padding-bottom: env(safe-area-inset-bottom);
+}

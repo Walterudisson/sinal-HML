@@ -5,8 +5,14 @@ const roleLabels = Object.freeze({
   solicitante: 'Solicitante'
 });
 
+const supportRoles = new Set(['admin', 'supervisor', 'agente']);
+
 export function roleLabel(role) {
   return roleLabels[role] ?? role ?? 'Perfil não definido';
+}
+
+export function isSupportRole(role) {
+  return supportRoles.has(role);
 }
 
 export function renderContext(context) {
@@ -26,6 +32,17 @@ export function renderContext(context) {
 
   const platformBadge = document.querySelector('#platform-badge');
   platformBadge.classList.toggle('hidden', userProfile.platformRole !== 'superadmin');
+
+  const support = isSupportRole(membership.role);
+
+  document.querySelectorAll('[data-support-nav], [data-support-only]').forEach((element) => {
+    element.classList.toggle('hidden', !support);
+  });
+
+  const mobileGrid = document.querySelector('#mobile-nav-grid');
+  mobileGrid.style.gridTemplateColumns = support
+    ? 'repeat(5, minmax(0, 1fr))'
+    : 'repeat(4, minmax(0, 1fr))';
 }
 
 export function initNavigation() {
@@ -33,9 +50,7 @@ export function initNavigation() {
   const views = [...document.querySelectorAll('[data-app-view]')];
 
   function activate(viewName) {
-    views.forEach((view) => {
-      view.classList.toggle('hidden', view.id !== `view-${viewName}`);
-    });
+    views.forEach((view) => view.classList.toggle('hidden', view.id !== `view-${viewName}`));
 
     buttons.forEach((button) => {
       button.classList.toggle('is-active', button.dataset.view === viewName);
@@ -49,6 +64,8 @@ export function initNavigation() {
   });
 
   activate('home');
+
+  return { activate };
 }
 
 export function showToast(message, type = 'info', options = {}) {
@@ -56,21 +73,9 @@ export function showToast(message, type = 'info', options = {}) {
   if (!container) return;
 
   const variants = {
-    success: {
-      shell: 'border-emerald-200 bg-white text-slate-900',
-      icon: 'bg-emerald-50 text-emerald-700',
-      symbol: '✓'
-    },
-    error: {
-      shell: 'border-rose-200 bg-white text-slate-900',
-      icon: 'bg-rose-50 text-rose-700',
-      symbol: '!'
-    },
-    info: {
-      shell: 'border-sky-200 bg-white text-slate-900',
-      icon: 'bg-sky-50 text-sky-700',
-      symbol: 'i'
-    }
+    success: { shell: 'border-emerald-200 bg-white text-slate-900', icon: 'bg-emerald-50 text-emerald-700', symbol: '✓' },
+    error: { shell: 'border-rose-200 bg-white text-slate-900', icon: 'bg-rose-50 text-rose-700', symbol: '!' },
+    info: { shell: 'border-sky-200 bg-white text-slate-900', icon: 'bg-sky-50 text-sky-700', symbol: 'i' }
   };
 
   const variant = variants[type] ?? variants.info;

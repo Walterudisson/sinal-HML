@@ -1,8 +1,9 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { createTicket, observeMyTickets } from './services/tickets.service.js';
-import { initNavigation, renderContext, showToast } from './ui/app-shell.js';
+import { createTicket, claimTicket, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
+import { initCentral, updateCentralTickets } from './ui/central.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
 const authView = document.querySelector('#auth-view');
@@ -24,8 +25,10 @@ const authMessage = document.querySelector('#auth-message');
 const logoutButton = document.querySelector('#logout-button');
 
 let currentContext = null;
-let unsubscribeTickets = null;
+let unsubscribeMyTickets = null;
+let unsubscribeCentralTickets = null;
 let uiInitialized = false;
+let centralInitialized = false;
 
 const authErrorMessages = {
   'auth/invalid-email': 'Informe um endereço de e-mail válido.',
@@ -59,16 +62,17 @@ function setLoginLoading(isLoading) {
   loginButtonLabel.textContent = isLoading ? 'Entrando...' : 'Entrar';
 }
 
-function stopTicketObserver() {
-  if (typeof unsubscribeTickets === 'function') {
-    unsubscribeTickets();
-  }
-  unsubscribeTickets = null;
+function stopObservers() {
+  unsubscribeMyTickets?.();
+  unsubscribeCentralTickets?.();
+  unsubscribeMyTickets = null;
+  unsubscribeCentralTickets = null;
   renderTickets([]);
+  updateCentralTickets([]);
 }
 
 function renderSignedOut() {
-  stopTicketObserver();
+  stopObservers();
   currentContext = null;
   appView.hidden = true;
   contextError.classList.add('hidden');
@@ -84,9 +88,7 @@ function initAuthenticatedUi() {
 
   initSignalComposer({
     onSubmit: async (payload) => {
-      if (!currentContext) {
-        throw new Error('Seu contexto de usuário ainda não foi carregado.');
-      }
+      if (!currentContext) throw new Error('Seu contexto de usuário ainda não foi carregado.');
 
       const ticket = await createTicket(currentContext, payload);
       showToast(
@@ -100,28 +102,70 @@ function initAuthenticatedUi() {
   uiInitialized = true;
 }
 
+function ensureCentralInitialized(context) {
+  if (centralInitialized) return;
+
+  initCentral({
+    context,
+    onClaim: async (ticket) => {
+      try {
+        await claimTicket(currentContext, ticket);
+        showToast(
+          `${ticket.code} agora está em atendimento por você.`,
+          'success',
+          { title: 'Sinal assumido' }
+        );
+      } catch (error) {
+        console.error('[Sinal][Central] Falha ao assumir sinal:', error);
+        showToast(
+          'Não foi possível assumir este sinal. Ele pode ter sido assumido por outra pessoa.',
+          'error',
+          { title: 'Atendimento não iniciado' }
+        );
+        throw error;
+      }
+    }
+  });
+
+  centralInitialized = true;
+}
+
 async function renderSignedIn(user) {
   clearAuthMessage();
   authView.hidden = true;
   appView.hidden = false;
   loadingScreen.hidden = false;
   contextError.classList.add('hidden');
-  stopTicketObserver();
+  stopObservers();
 
   try {
     const context = await loadUserContext(user);
     currentContext = context;
+
     renderContext(context);
     initAuthenticatedUi();
 
-    unsubscribeTickets = observeMyTickets(
+    unsubscribeMyTickets = observeMyTickets(
       context,
       (tickets) => renderTickets(tickets),
       (error) => {
-        console.error('[Sinal][Tickets] Falha ao acompanhar sinais:', error);
+        console.error('[Sinal][Tickets] Falha ao acompanhar Meus sinais:', error);
         showToast('Não foi possível atualizar sua lista de sinais.', 'error');
       }
     );
+
+    if (isSupportRole(context.membership.role)) {
+      ensureCentralInitialized(context);
+
+      unsubscribeCentralTickets = observeCentralTickets(
+        context,
+        (tickets) => updateCentralTickets(tickets),
+        (error) => {
+          console.error('[Sinal][Central] Falha ao acompanhar Central:', error);
+          showToast('Não foi possível atualizar a Central.', 'error');
+        }
+      );
+    }
   } catch (error) {
     console.error('[Sinal][Context] Falha ao carregar contexto:', error);
     contextErrorMessage.textContent = error?.message || 'Erro inesperado ao carregar os dados do usuário.';
@@ -202,9 +246,6 @@ logoutButton.addEventListener('click', async () => {
 });
 
 observeAuth((user) => {
-  if (user) {
-    renderSignedIn(user);
-  } else {
-    renderSignedOut();
-  }
+  if (user) renderSignedIn(user);
+  else renderSignedOut();
 });

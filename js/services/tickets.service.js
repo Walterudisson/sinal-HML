@@ -6,6 +6,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
@@ -36,11 +37,20 @@ export async function createTicket(context, input) {
 
   await setDoc(ticketRef, payload);
 
-  return {
-    id: ticketRef.id,
-    code,
-    ...payload
-  };
+  return { id: ticketRef.id, code, ...payload };
+}
+
+export async function claimTicket(context, ticket) {
+  const { firebaseUser, userProfile, tenant } = context;
+  const ticketRef = doc(db, 'tenants', tenant.id, 'tickets', ticket.id);
+
+  await updateDoc(ticketRef, {
+    status: 'in_progress',
+    assigneeUid: firebaseUser.uid,
+    assigneeName: userProfile.displayName || firebaseUser.displayName || firebaseUser.email || 'Atendente',
+    assigneeEmail: firebaseUser.email || userProfile.email || '',
+    updatedAt: serverTimestamp()
+  });
 }
 
 export function observeMyTickets(context, onData, onError) {
@@ -53,20 +63,30 @@ export function observeMyTickets(context, onData, onError) {
 
   return onSnapshot(
     myTicketsQuery,
-    (snapshot) => {
-      const tickets = snapshot.docs.map((item) => ({
-        id: item.id,
-        ...item.data()
-      }));
-
-      tickets.sort((a, b) => {
-        const aMillis = a.createdAt?.toMillis?.() ?? 0;
-        const bMillis = b.createdAt?.toMillis?.() ?? 0;
-        return bMillis - aMillis;
-      });
-
-      onData(tickets);
-    },
+    (snapshot) => onData(sortTickets(snapshot.docs.map(toTicket))),
     onError
   );
+}
+
+export function observeCentralTickets(context, onData, onError) {
+  const ticketsRef = collection(db, 'tenants', context.tenant.id, 'tickets');
+  const centralQuery = query(ticketsRef, limit(100));
+
+  return onSnapshot(
+    centralQuery,
+    (snapshot) => onData(sortTickets(snapshot.docs.map(toTicket))),
+    onError
+  );
+}
+
+function toTicket(item) {
+  return { id: item.id, ...item.data() };
+}
+
+function sortTickets(tickets) {
+  return tickets.sort((a, b) => {
+    const aMillis = a.createdAt?.toMillis?.() ?? 0;
+    const bMillis = b.createdAt?.toMillis?.() ?? 0;
+    return bMillis - aMillis;
+  });
 }

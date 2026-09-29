@@ -11,6 +11,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
+    function memberPath(tenantId) {
+      return /databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid);
+    }
+
     function activeUser() {
       return signedIn()
         && exists(userPath())
@@ -22,14 +26,15 @@ service cloud.firestore {
         && get(userPath()).data.platformRole == 'superadmin';
     }
 
-    function memberPath(tenantId) {
-      return /databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid);
-    }
-
     function activeMember(tenantId) {
       return activeUser()
         && exists(memberPath(tenantId))
         && get(memberPath(tenantId)).data.status == 'active';
+    }
+
+    function supportMember(tenantId) {
+      return activeMember(tenantId)
+        && get(memberPath(tenantId)).data.role in ['admin', 'supervisor', 'agente'];
     }
 
     match /users/{userId} {
@@ -49,7 +54,10 @@ service cloud.firestore {
 
       match /tickets/{ticketId} {
         allow read: if activeMember(tenantId)
-          && resource.data.requesterUid == request.auth.uid;
+          && (
+            resource.data.requesterUid == request.auth.uid
+            || supportMember(tenantId)
+          );
 
         allow create: if activeMember(tenantId)
           && request.resource.data.keys().hasOnly([
@@ -91,7 +99,23 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && request.resource.data.updatedAt == request.time;
 
-        allow update, delete: if false;
+        allow update: if supportMember(tenantId)
+          && resource.data.status == 'open'
+          && resource.data.assigneeUid == null
+          && request.resource.data.status == 'in_progress'
+          && request.resource.data.assigneeUid == request.auth.uid
+          && request.resource.data.assigneeName == get(userPath()).data.displayName
+          && request.resource.data.assigneeEmail == get(userPath()).data.email
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'assigneeUid',
+            'assigneeName',
+            'assigneeEmail',
+            'updatedAt'
+          ]);
+
+        allow delete: if false;
       }
     }
 
