@@ -1,16 +1,17 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
 import { createTicket, claimTicket, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
 import { initCentral, updateCentralTickets } from './ui/central.js';
+import { initTicketDetail, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
 const authView = document.querySelector('#auth-view');
 const appView = document.querySelector('#app-view');
 const contextError = document.querySelector('#context-error');
 const contextErrorMessage = document.querySelector('#context-error-message');
-
 const loginForm = document.querySelector('#login-form');
 const emailInput = document.querySelector('#email');
 const passwordInput = document.querySelector('#password');
@@ -29,6 +30,7 @@ let unsubscribeMyTickets = null;
 let unsubscribeCentralTickets = null;
 let uiInitialized = false;
 let centralInitialized = false;
+let detailInitialized = false;
 
 const authErrorMessages = {
   'auth/invalid-email': 'Informe um endereço de e-mail válido.',
@@ -40,26 +42,22 @@ const authErrorMessages = {
 };
 
 function showAuthMessage(message, type = 'error') {
-  const variants = {
+  const v = {
     error: 'border-rose-200 bg-rose-50 text-rose-800',
     success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
     info: 'border-sky-200 bg-sky-50 text-sky-800'
   };
-
-  authMessage.className = `mb-5 rounded-xl border px-4 py-3 text-sm leading-5 ${variants[type] ?? variants.info}`;
+  authMessage.className = `mb-5 rounded-xl border px-4 py-3 text-sm leading-5 ${v[type] ?? v.info}`;
   authMessage.textContent = message;
   authMessage.classList.remove('hidden');
 }
 
-function clearAuthMessage() {
-  authMessage.textContent = '';
-  authMessage.classList.add('hidden');
-}
+function clearAuthMessage() { authMessage.textContent = ''; authMessage.classList.add('hidden'); }
 
-function setLoginLoading(isLoading) {
-  loginButton.disabled = isLoading;
-  loginSpinner.classList.toggle('hidden', !isLoading);
-  loginButtonLabel.textContent = isLoading ? 'Entrando...' : 'Entrar';
+function setLoginLoading(value) {
+  loginButton.disabled = value;
+  loginSpinner.classList.toggle('hidden', !value);
+  loginButtonLabel.textContent = value ? 'Entrando...' : 'Entrar';
 }
 
 function stopObservers() {
@@ -78,55 +76,54 @@ function renderSignedOut() {
   contextError.classList.add('hidden');
   authView.hidden = false;
   loadingScreen.hidden = true;
-  window.setTimeout(() => emailInput.focus(), 50);
 }
 
 function initAuthenticatedUi() {
   if (uiInitialized) return;
-
   initNavigation();
-
   initSignalComposer({
     onSubmit: async (payload) => {
-      if (!currentContext) throw new Error('Seu contexto de usuário ainda não foi carregado.');
-
       const ticket = await createTicket(currentContext, payload);
-      showToast(
-        `${ticket.code} foi enviado e já aparece em Meus sinais.`,
-        'success',
-        { title: 'Sinal recebido' }
-      );
+      showToast(`${ticket.code} foi enviado e já aparece em Meus sinais.`, 'success', { title: 'Sinal recebido' });
     }
   });
-
   uiInitialized = true;
 }
 
-function ensureCentralInitialized(context) {
-  if (centralInitialized) return;
-
-  initCentral({
+function ensureDetailInitialized(context) {
+  if (detailInitialized) return;
+  initTicketDetail({
     context,
     onClaim: async (ticket) => {
       try {
         await claimTicket(currentContext, ticket);
-        showToast(
-          `${ticket.code} agora está em atendimento por você.`,
-          'success',
-          { title: 'Sinal assumido' }
-        );
+        showToast(`${ticket.code} agora está em atendimento por você.`, 'success', { title: 'Sinal assumido' });
       } catch (error) {
-        console.error('[Sinal][Central] Falha ao assumir sinal:', error);
-        showToast(
-          'Não foi possível assumir este sinal. Ele pode ter sido assumido por outra pessoa.',
-          'error',
-          { title: 'Atendimento não iniciado' }
-        );
+        showToast('Não foi possível assumir este sinal.', 'error', { title: 'Atendimento não iniciado' });
+        throw error;
+      }
+    },
+    onSendMessage: async (ticket, body) => {
+      try {
+        await sendMessage(currentContext, ticket, body);
+      } catch (error) {
+        showToast('Não foi possível enviar a mensagem agora.', 'error', { title: 'Mensagem não enviada' });
         throw error;
       }
     }
   });
+  detailInitialized = true;
+}
 
+function openConversation(ticket) {
+  openTicketDetail(ticket, (selectedTicket, onData, onError) =>
+    observeMessages(currentContext, selectedTicket.id, onData, onError)
+  );
+}
+
+function ensureCentralInitialized(context) {
+  if (centralInitialized) return;
+  initCentral({ context, onOpenTicket: openConversation });
   centralInitialized = true;
 }
 
@@ -141,33 +138,31 @@ async function renderSignedIn(user) {
   try {
     const context = await loadUserContext(user);
     currentContext = context;
-
     renderContext(context);
     initAuthenticatedUi();
+    ensureDetailInitialized(context);
 
     unsubscribeMyTickets = observeMyTickets(
       context,
-      (tickets) => renderTickets(tickets),
-      (error) => {
-        console.error('[Sinal][Tickets] Falha ao acompanhar Meus sinais:', error);
-        showToast('Não foi possível atualizar sua lista de sinais.', 'error');
-      }
+      (tickets) => {
+        renderTickets(tickets, openConversation);
+        tickets.forEach(updateSelectedTicket);
+      },
+      () => showToast('Não foi possível atualizar sua lista de sinais.', 'error')
     );
 
     if (isSupportRole(context.membership.role)) {
       ensureCentralInitialized(context);
-
       unsubscribeCentralTickets = observeCentralTickets(
         context,
-        (tickets) => updateCentralTickets(tickets),
-        (error) => {
-          console.error('[Sinal][Central] Falha ao acompanhar Central:', error);
-          showToast('Não foi possível atualizar a Central.', 'error');
-        }
+        (tickets) => {
+          updateCentralTickets(tickets);
+          tickets.forEach(updateSelectedTicket);
+        },
+        () => showToast('Não foi possível atualizar a Central.', 'error')
       );
     }
   } catch (error) {
-    console.error('[Sinal][Context] Falha ao carregar contexto:', error);
     contextErrorMessage.textContent = error?.message || 'Erro inesperado ao carregar os dados do usuário.';
     contextError.classList.remove('hidden');
   } finally {
@@ -176,19 +171,16 @@ async function renderSignedIn(user) {
 }
 
 togglePasswordButton.addEventListener('click', () => {
-  const showingPassword = passwordInput.type === 'text';
-  passwordInput.type = showingPassword ? 'password' : 'text';
-  eyeOpen.classList.toggle('hidden', !showingPassword);
-  eyeClosed.classList.toggle('hidden', showingPassword);
-  togglePasswordButton.setAttribute('aria-label', showingPassword ? 'Mostrar senha' : 'Ocultar senha');
-  togglePasswordButton.title = showingPassword ? 'Mostrar senha' : 'Ocultar senha';
-  passwordInput.focus();
+  const showing = passwordInput.type === 'text';
+  passwordInput.type = showing ? 'password' : 'text';
+  eyeOpen.classList.toggle('hidden', !showing);
+  eyeClosed.classList.toggle('hidden', showing);
+  togglePasswordButton.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
 });
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   clearAuthMessage();
-
   if (!loginForm.reportValidity()) return;
 
   try {
@@ -196,7 +188,6 @@ loginForm.addEventListener('submit', async (event) => {
     await login(emailInput.value.trim(), passwordInput.value);
     passwordInput.value = '';
   } catch (error) {
-    console.error('[Sinal][Auth] Falha no login:', error);
     showAuthMessage(authErrorMessages[error.code] ?? 'Não foi possível entrar no Sinal. Tente novamente.');
   } finally {
     setLoginLoading(false);
@@ -209,23 +200,15 @@ forgotPasswordButton.addEventListener('click', async () => {
 
   if (!email) {
     showAuthMessage('Informe seu e-mail acima para solicitar a redefinição de senha.', 'info');
-    emailInput.focus();
-    return;
-  }
-
-  if (!emailInput.checkValidity()) {
-    showAuthMessage('Informe um endereço de e-mail válido.');
-    emailInput.focus();
     return;
   }
 
   try {
     forgotPasswordButton.disabled = true;
     await requestPasswordReset(email);
-    showAuthMessage('Se a conta estiver disponível para redefinição, as instruções foram enviadas para o e-mail informado.', 'success');
+    showAuthMessage('Se a conta estiver disponível para redefinição, as instruções foram enviadas.', 'success');
   } catch (error) {
-    console.error('[Sinal][Auth] Falha na redefinição:', error);
-    showAuthMessage(authErrorMessages[error.code] ?? 'Não foi possível solicitar a redefinição de senha agora. Tente novamente.');
+    showAuthMessage(authErrorMessages[error.code] ?? 'Não foi possível solicitar a redefinição de senha agora.');
   } finally {
     forgotPasswordButton.disabled = false;
   }
@@ -234,18 +217,11 @@ forgotPasswordButton.addEventListener('click', async () => {
 logoutButton.addEventListener('click', async () => {
   logoutButton.disabled = true;
   logoutButton.textContent = 'Saindo...';
-
-  try {
-    await logout();
-  } catch (error) {
-    console.error('[Sinal][Auth] Falha ao sair:', error);
-  } finally {
+  try { await logout(); }
+  finally {
     logoutButton.disabled = false;
     logoutButton.textContent = 'Sair';
   }
 });
 
-observeAuth((user) => {
-  if (user) renderSignedIn(user);
-  else renderSignedOut();
-});
+observeAuth((user) => user ? renderSignedIn(user) : renderSignedOut());
