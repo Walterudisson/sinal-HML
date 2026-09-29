@@ -1,124 +1,87 @@
 # Sinal — Firestore Setup HML
 
-## Sprint 0.3
+## Sprint 1.0 — Mandar um sinal
 
-Este roteiro configura somente o ambiente:
+Esta sprint utiliza somente:
 
 `Firebase projectId: sinaldesk-hml`
 
-Não execute estes passos no Firebase de produção nesta sprint.
+---
+
+## 1. Dados da Sprint 0.3
+
+Os documentos abaixo devem continuar existentes:
+
+```text
+users/rSbmd9g17XckHd87pxgsNjH1im12
+
+tenants/sinal-interno
+
+tenants/sinal-interno/members/rSbmd9g17XckHd87pxgsNjH1im12
+```
+
+Não é necessário recriá-los se a Sprint 0.3 já está homologada.
 
 ---
 
-## 1. Publicar as regras
+## 2. Atualizar as Security Rules
 
 No Firebase Console:
 
 **Firestore Database → Rules**
 
-Substitua o conteúdo atual pelo arquivo `firestore.rules` entregue nesta sprint e clique em **Publish**.
+Substitua as regras atuais pelo conteúdo de:
 
-As regras desta etapa permitem somente leituras necessárias para o contexto autenticado. Escritas da aplicação continuam bloqueadas.
+`firestore.rules`
 
----
+e clique em **Publish**.
 
-## 2. Criar o perfil global do usuário
+A mudança desta sprint permite:
 
-Em:
-
-**Firestore Database → Data**
-
-Crie a coleção:
-
-`users`
-
-Crie o documento com ID exato:
-
-`rSbmd9g17XckHd87pxgsNjH1im12`
-
-Campos:
-
-| Campo | Tipo | Valor |
-|---|---|---|
-| `displayName` | string | `Walter Udisson` |
-| `email` | string | `walter.udisson@gmail.com` |
-| `platformRole` | string | `superadmin` |
-| `status` | string | `active` |
-| `defaultTenantId` | string | `sinal-interno` |
-| `createdAt` | timestamp | data/hora atual |
-| `updatedAt` | timestamp | data/hora atual |
+- leitura do próprio perfil/contexto;
+- criação de um sinal pelo usuário autenticado e ativo;
+- leitura somente dos sinais em que o próprio usuário é o solicitante;
+- nenhuma atualização ou exclusão de sinal ainda.
 
 ---
 
-## 3. Criar o tenant inicial
+## 3. Coleção criada automaticamente
 
-Crie a coleção:
+Não crie manualmente a coleção de tickets.
 
-`tenants`
-
-Crie o documento:
-
-`sinal-interno`
-
-Campos:
-
-| Campo | Tipo | Valor |
-|---|---|---|
-| `name` | string | `Sinal` |
-| `slug` | string | `sinal-interno` |
-| `status` | string | `active` |
-| `plan` | string | `internal` |
-| `createdAt` | timestamp | data/hora atual |
-| `updatedAt` | timestamp | data/hora atual |
-
----
-
-## 4. Criar o vínculo do usuário com o tenant
-
-Dentro do documento:
-
-`tenants/sinal-interno`
-
-Crie a subcoleção:
-
-`members`
-
-Crie o documento com ID:
-
-`rSbmd9g17XckHd87pxgsNjH1im12`
-
-Campos:
-
-| Campo | Tipo | Valor |
-|---|---|---|
-| `displayName` | string | `Walter Udisson` |
-| `email` | string | `walter.udisson@gmail.com` |
-| `role` | string | `admin` |
-| `status` | string | `active` |
-| `joinedAt` | timestamp | data/hora atual |
-
----
-
-## 5. Estrutura esperada
+Ao executar o primeiro teste de abertura, o frontend criará:
 
 ```text
-users/
-└── rSbmd9g17XckHd87pxgsNjH1im12
-    ├── displayName: Walter Udisson
-    ├── email: walter.udisson@gmail.com
-    ├── platformRole: superadmin
-    ├── status: active
-    └── defaultTenantId: sinal-interno
-
 tenants/
-└── sinal-interno
-    ├── name: Sinal
-    ├── status: active
-    ├── plan: internal
-    └── members/
-        └── rSbmd9g17XckHd87pxgsNjH1im12
-            ├── role: admin
-            └── status: active
+└── sinal-interno/
+    └── tickets/
+        └── {ticketId}
 ```
 
-Depois disso, publique os arquivos da Sprint 0.3 no repositório `Walterudisson/sinal-HML` e execute o roteiro de homologação.
+O documento deverá conter:
+
+- `code`
+- `title`
+- `description`
+- `category`
+- `priority`
+- `status: open`
+- `requesterUid`
+- `requesterName`
+- `requesterEmail`
+- `createdByUid`
+- `source: web`
+- `assigneeUid: null`
+- `teamId: null`
+- `createdAt`
+- `updatedAt`
+
+---
+
+## 4. Identificador do sinal
+
+Nesta sprint o Sinal utiliza um código curto derivado do ID seguro do documento Firestore, por exemplo:
+
+`S-A1B2C3`
+
+Numeração sequencial global por tenant será tratada posteriormente, quando introduzirmos backend transacional/Cloud Functions para evitar colisões e condições de corrida.

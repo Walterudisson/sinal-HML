@@ -280,3 +280,37 @@ Funcionalidades de sprints anteriores somente entrarão em regressão manual qua
 | 2026-09-28 | DP-001 a DP-012 | Fundação inicial do projeto |
 | 2026-09-28 | DP-006, DP-007 e DP-011 | Separação física entre HML e PRD |
 | 2026-09-28 | DP-013 e DP-014 | Processo de entrega e homologação incremental |
+
+---
+
+## DP-015 — Toasts e feedback visual
+
+**Status:** Aprovada
+
+Notificações temporárias do Sinal utilizarão toast no canto superior direito da interface.
+
+Regras:
+
+- desktop: canto superior direito;
+- mobile: topo à direita, respeitando safe areas e largura disponível;
+- múltiplos toasts deverão empilhar verticalmente;
+- mensagens informativas e de sucesso desaparecem automaticamente;
+- usuário pode fechar manualmente;
+- mensagens persistentes serão usadas somente quando a ação exigir atenção explícita.
+
+---
+
+## DP-016 — Primeira abertura de sinal
+
+**Status:** Aprovada
+
+A Sprint 1.0 introduz o ticket como primeira entidade operacional do Sinal.
+
+Estrutura:
+
+`tenants/{tenantId}/tickets/{ticketId}`
+
+O código visível inicial do sinal será derivado do ID Firestore (`S-XXXXXX`).
+
+Numeração sequencial por tenant fica adiada até existir mecanismo transacional seguro no backend.
+

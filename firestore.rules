@@ -7,25 +7,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function currentUserPath() {
+    function userPath() {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
     function activeUser() {
       return signedIn()
-        && exists(currentUserPath())
-        && get(currentUserPath()).data.status == 'active';
+        && exists(userPath())
+        && get(userPath()).data.status == 'active';
     }
 
     function superadmin() {
       return activeUser()
-        && get(currentUserPath()).data.platformRole == 'superadmin';
+        && get(userPath()).data.platformRole == 'superadmin';
+    }
+
+    function memberPath(tenantId) {
+      return /databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid);
     }
 
     function activeMember(tenantId) {
       return activeUser()
-        && exists(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.status == 'active';
+        && exists(memberPath(tenantId))
+        && get(memberPath(tenantId)).data.status == 'active';
     }
 
     match /users/{userId} {
@@ -41,6 +45,53 @@ service cloud.firestore {
         allow read: if superadmin()
           || (activeMember(tenantId) && request.auth.uid == memberId);
         allow write: if false;
+      }
+
+      match /tickets/{ticketId} {
+        allow read: if activeMember(tenantId)
+          && resource.data.requesterUid == request.auth.uid;
+
+        allow create: if activeMember(tenantId)
+          && request.resource.data.keys().hasOnly([
+            'code',
+            'title',
+            'description',
+            'category',
+            'priority',
+            'status',
+            'requesterUid',
+            'requesterName',
+            'requesterEmail',
+            'createdByUid',
+            'source',
+            'assigneeUid',
+            'teamId',
+            'createdAt',
+            'updatedAt'
+          ])
+          && request.resource.data.code is string
+          && request.resource.data.code.size() >= 3
+          && request.resource.data.code.size() <= 20
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.description is string
+          && request.resource.data.description.size() >= 3
+          && request.resource.data.description.size() <= 4000
+          && request.resource.data.category in ['acesso', 'equipamento', 'rede', 'sistemas', 'outro']
+          && request.resource.data.priority in ['baixa', 'normal', 'alta', 'urgente']
+          && request.resource.data.status == 'open'
+          && request.resource.data.requesterUid == request.auth.uid
+          && request.resource.data.createdByUid == request.auth.uid
+          && request.resource.data.requesterName is string
+          && request.resource.data.requesterEmail is string
+          && request.resource.data.source == 'web'
+          && request.resource.data.assigneeUid == null
+          && request.resource.data.teamId == null
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+
+        allow update, delete: if false;
       }
     }
 

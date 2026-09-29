@@ -4,7 +4,15 @@ Ambiente de desenvolvimento e homologação do Sinal.
 
 ## Sprint atual
 
-`0.3 — Shell autenticado + contexto multi-tenant`
+`1.0 — Mandar um sinal`
+
+## Entrega funcional
+
+Nesta sprint o usuário já pode:
+
+- abrir um sinal;
+- gravá-lo no Firestore HML;
+- vê-lo imediatamente em `Meus sinais`.
 
 ## Backend
 
@@ -14,11 +22,11 @@ Firebase HML:
 
 ## Produção
 
-O ambiente de produção permanece isolado no repositório:
+PRD permanece isolado em:
 
 `Walterudisson/sinal`
 
-e utiliza:
+com Firebase:
 
 `projectId: sinaldesk`
 

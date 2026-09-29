@@ -161,18 +161,10 @@
         </div>
 
         <nav class="flex-1 space-y-1 p-4" aria-label="Navegação principal">
-          <button class="nav-item-desktop is-active" data-view="home">
-            <span class="nav-icon">⌂</span><span>Início</span>
-          </button>
-          <button class="nav-item-desktop" data-view="signals">
-            <span class="nav-icon">◌</span><span>Sinais</span>
-          </button>
-          <button class="nav-item-desktop" data-view="knowledge">
-            <span class="nav-icon">⌘</span><span>Base</span>
-          </button>
-          <button class="nav-item-desktop" data-view="more">
-            <span class="nav-icon">⋯</span><span>Mais</span>
-          </button>
+          <button class="nav-item-desktop is-active" data-view="home"><span class="nav-icon">⌂</span><span>Início</span></button>
+          <button class="nav-item-desktop" data-view="signals"><span class="nav-icon">◌</span><span>Sinais</span></button>
+          <button class="nav-item-desktop" data-view="knowledge"><span class="nav-icon">⌘</span><span>Base</span></button>
+          <button class="nav-item-desktop" data-view="more"><span class="nav-icon">⋯</span><span>Mais</span></button>
         </nav>
 
         <div class="border-t border-white/10 p-4">
@@ -224,7 +216,7 @@
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">Acompanhe seus sinais e peça ajuda quando precisar.</p>
               </div>
 
-              <button id="send-signal-button" type="button"
+              <button data-open-signal-composer type="button"
                 class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 sm:w-auto">
                 <span class="text-lg leading-none">+</span>
                 Mandar um sinal
@@ -234,8 +226,8 @@
             <div class="mt-8 grid gap-4 md:grid-cols-3">
               <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Meus sinais</span>
-                <strong class="mt-3 block text-3xl font-extrabold tracking-tight text-slate-950">0</strong>
-                <span class="mt-1 block text-sm text-slate-500">Nenhum sinal aberto.</span>
+                <strong id="ticket-count" class="mt-3 block text-3xl font-extrabold tracking-tight text-slate-950">0</strong>
+                <span id="ticket-count-label" class="mt-1 block text-sm text-slate-500">Nenhum sinal enviado.</span>
               </article>
               <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Organização</span>
@@ -243,20 +235,26 @@
                 <span id="card-role" class="mt-1 block text-sm text-slate-500"></span>
               </article>
               <article class="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-sky-700">Próximo passo</span>
-                <strong class="mt-3 block text-base font-extrabold text-sky-950">Abertura de sinais</strong>
-                <span class="mt-1 block text-sm leading-6 text-sky-800">O botão já está no lugar. A criação real entra na Sprint 1.0.</span>
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-sky-700">Agora é real</span>
+                <strong class="mt-3 block text-base font-extrabold text-sky-950">Mandar um sinal</strong>
+                <span class="mt-1 block text-sm leading-6 text-sky-800">Nesta sprint, novos sinais já são gravados no Firestore HML.</span>
               </article>
             </div>
 
             <div class="mt-6 rounded-2xl border border-slate-200 bg-white">
-              <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div class="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
                 <div>
                   <h2 class="font-extrabold text-slate-950">Meus sinais</h2>
-                  <p class="mt-1 text-sm text-slate-500">Seus pedidos aparecerão aqui.</p>
+                  <p class="mt-1 text-sm text-slate-500">Seus pedidos mais recentes.</p>
                 </div>
+                <button data-open-signal-composer type="button" class="hidden min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 sm:block">
+                  Novo sinal
+                </button>
               </div>
-              <div class="grid min-h-48 place-items-center px-5 py-10 text-center">
+
+              <div id="ticket-list" class="divide-y divide-slate-100"></div>
+
+              <div id="ticket-empty-state" class="grid min-h-48 place-items-center px-5 py-10 text-center">
                 <div>
                   <div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-xl text-slate-500">◌</div>
                   <strong class="mt-4 block text-sm font-extrabold text-slate-800">Tudo tranquilo por enquanto.</strong>
@@ -267,14 +265,24 @@
           </section>
 
           <section id="view-signals" class="hidden" data-app-view>
-            <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Sinais</h1>
-            <p class="mt-2 text-sm leading-6 text-slate-500">A Central de sinais será construída nas próximas sprints.</p>
-            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">Nenhum sinal para exibir.</div>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Sinais</h1>
+                <p class="mt-2 text-sm leading-6 text-slate-500">Aqui ficam os sinais enviados por você.</p>
+              </div>
+              <button data-open-signal-composer type="button" class="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">
+                <span class="text-lg">+</span> Mandar um sinal
+              </button>
+            </div>
+            <div id="ticket-list-secondary" class="mt-6 space-y-3"></div>
+            <div id="ticket-empty-state-secondary" class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+              Nenhum sinal enviado.
+            </div>
           </section>
 
           <section id="view-knowledge" class="hidden" data-app-view>
             <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Base</h1>
-            <p class="mt-2 text-sm leading-6 text-slate-500">A Base de conhecimento já tem seu espaço reservado no shell.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-500">A Base de conhecimento será construída em uma sprint futura.</p>
           </section>
 
           <section id="view-more" class="hidden" data-app-view>
@@ -303,7 +311,80 @@
       </div>
     </div>
 
-    <div id="toast" class="pointer-events-none fixed bottom-24 left-1/2 z-50 hidden w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-xl lg:bottom-6" role="status" aria-live="polite"></div>
+    <div id="signal-composer" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+      <div data-close-signal-composer class="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"></div>
+
+      <section class="signal-composer-panel absolute inset-x-0 bottom-0 max-h-[96dvh] overflow-y-auto rounded-t-[1.75rem] bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:w-[min(92vw,640px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem]" role="dialog" aria-modal="true" aria-labelledby="signal-composer-title">
+        <div class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+          <div>
+            <span class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-700">Novo atendimento</span>
+            <h2 id="signal-composer-title" class="mt-1 text-xl font-extrabold tracking-[-0.02em] text-slate-950">Mandar um sinal</h2>
+          </div>
+          <button data-close-signal-composer type="button" class="grid h-11 w-11 place-items-center rounded-xl text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
+        </div>
+
+        <form id="signal-form" class="space-y-5 px-5 py-6 sm:px-6" novalidate>
+          <div>
+            <label for="signal-title" class="mb-2 block text-sm font-bold text-slate-800">O que aconteceu?</label>
+            <input id="signal-title" name="title" type="text" maxlength="120" required
+              placeholder="Ex.: Não consigo acessar o sistema"
+              class="min-h-12 w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100" />
+            <div class="mt-1.5 text-right text-xs text-slate-400"><span id="signal-title-count">0</span>/120</div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="signal-category" class="mb-2 block text-sm font-bold text-slate-800">Categoria</label>
+              <select id="signal-category" name="category" required
+                class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                <option value="">Selecione</option>
+                <option value="acesso">Acesso</option>
+                <option value="equipamento">Equipamento</option>
+                <option value="rede">Rede</option>
+                <option value="sistemas">Sistemas</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="signal-priority" class="mb-2 block text-sm font-bold text-slate-800">Prioridade</label>
+              <select id="signal-priority" name="priority" required
+                class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                <option value="normal" selected>Normal</option>
+                <option value="baixa">Baixa</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="signal-description" class="mb-2 block text-sm font-bold text-slate-800">Conte um pouco mais</label>
+            <textarea id="signal-description" name="description" rows="6" maxlength="4000" required
+              placeholder="Descreva o problema, quando começou e qualquer detalhe que possa ajudar."
+              class="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-base leading-6 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"></textarea>
+            <div class="mt-1.5 text-right text-xs text-slate-400"><span id="signal-description-count">0</span>/4000</div>
+          </div>
+
+          <div id="signal-form-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"></div>
+
+          <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+            <button data-close-signal-composer type="button" class="min-h-12 rounded-xl border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">
+              Cancelar
+            </button>
+            <button id="signal-submit-button" type="submit" class="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+              <svg id="signal-submit-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path>
+              </svg>
+              <span id="signal-submit-label">Enviar sinal</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="toast-container" class="pointer-events-none fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[70] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6" aria-live="polite" aria-atomic="false"></div>
   </main>
 
   <script type="module" src="./js/main.js"></script>

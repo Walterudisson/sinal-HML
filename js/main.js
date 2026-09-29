@@ -1,6 +1,8 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
+import { createTicket, observeMyTickets } from './services/tickets.service.js';
 import { initNavigation, renderContext, showToast } from './ui/app-shell.js';
+import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
 const authView = document.querySelector('#auth-view');
@@ -20,9 +22,10 @@ const loginButtonLabel = document.querySelector('#login-button-label');
 const loginSpinner = document.querySelector('#login-spinner');
 const authMessage = document.querySelector('#auth-message');
 const logoutButton = document.querySelector('#logout-button');
-const sendSignalButton = document.querySelector('#send-signal-button');
 
-let navigationInitialized = false;
+let currentContext = null;
+let unsubscribeTickets = null;
+let uiInitialized = false;
 
 const authErrorMessages = {
   'auth/invalid-email': 'Informe um endereço de e-mail válido.',
@@ -56,12 +59,45 @@ function setLoginLoading(isLoading) {
   loginButtonLabel.textContent = isLoading ? 'Entrando...' : 'Entrar';
 }
 
+function stopTicketObserver() {
+  if (typeof unsubscribeTickets === 'function') {
+    unsubscribeTickets();
+  }
+  unsubscribeTickets = null;
+  renderTickets([]);
+}
+
 function renderSignedOut() {
+  stopTicketObserver();
+  currentContext = null;
   appView.hidden = true;
   contextError.classList.add('hidden');
   authView.hidden = false;
   loadingScreen.hidden = true;
   window.setTimeout(() => emailInput.focus(), 50);
+}
+
+function initAuthenticatedUi() {
+  if (uiInitialized) return;
+
+  initNavigation();
+
+  initSignalComposer({
+    onSubmit: async (payload) => {
+      if (!currentContext) {
+        throw new Error('Seu contexto de usuário ainda não foi carregado.');
+      }
+
+      const ticket = await createTicket(currentContext, payload);
+      showToast(
+        `${ticket.code} foi enviado e já aparece em Meus sinais.`,
+        'success',
+        { title: 'Sinal recebido' }
+      );
+    }
+  });
+
+  uiInitialized = true;
 }
 
 async function renderSignedIn(user) {
@@ -70,15 +106,22 @@ async function renderSignedIn(user) {
   appView.hidden = false;
   loadingScreen.hidden = false;
   contextError.classList.add('hidden');
+  stopTicketObserver();
 
   try {
     const context = await loadUserContext(user);
+    currentContext = context;
     renderContext(context);
+    initAuthenticatedUi();
 
-    if (!navigationInitialized) {
-      initNavigation();
-      navigationInitialized = true;
-    }
+    unsubscribeTickets = observeMyTickets(
+      context,
+      (tickets) => renderTickets(tickets),
+      (error) => {
+        console.error('[Sinal][Tickets] Falha ao acompanhar sinais:', error);
+        showToast('Não foi possível atualizar sua lista de sinais.', 'error');
+      }
+    );
   } catch (error) {
     console.error('[Sinal][Context] Falha ao carregar contexto:', error);
     contextErrorMessage.textContent = error?.message || 'Erro inesperado ao carregar os dados do usuário.';
@@ -156,10 +199,6 @@ logoutButton.addEventListener('click', async () => {
     logoutButton.disabled = false;
     logoutButton.textContent = 'Sair';
   }
-});
-
-sendSignalButton.addEventListener('click', () => {
-  showToast('A abertura real de sinais chega na Sprint 1.0.');
 });
 
 observeAuth((user) => {
