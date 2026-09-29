@@ -154,7 +154,7 @@ function ticketMarkup(ticket, compact = false) {
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
 
   return `
-    <article class="${compact ? 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm' : 'ticket-card'}">
+    <article data-my-ticket="${escapeHtml(ticket.id)}" class="${compact ? 'ticket-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm' : 'ticket-card'}">
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
@@ -173,7 +173,7 @@ function ticketMarkup(ticket, compact = false) {
   `;
 }
 
-export function renderTickets(tickets) {
+export function renderTickets(tickets, onOpenTicket = null) {
   const primaryList = document.querySelector('#ticket-list');
   const secondaryList = document.querySelector('#ticket-list-secondary');
   const primaryEmpty = document.querySelector('#ticket-empty-state');
@@ -193,6 +193,27 @@ export function renderTickets(tickets) {
 
   primaryList.innerHTML = tickets.map((ticket) => ticketMarkup(ticket, false)).join('');
   secondaryList.innerHTML = tickets.map((ticket) => ticketMarkup(ticket, true)).join('');
+
+  if (typeof onOpenTicket === 'function') {
+    [...primaryList.querySelectorAll('[data-my-ticket]'), ...secondaryList.querySelectorAll('[data-my-ticket]')].forEach((element) => {
+      element.classList.add('is-clickable');
+      element.setAttribute('tabindex', '0');
+      element.setAttribute('role', 'button');
+
+      const open = () => {
+        const ticket = tickets.find((item) => item.id === element.dataset.myTicket);
+        if (ticket) onOpenTicket(ticket);
+      };
+
+      element.addEventListener('click', open);
+      element.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          open();
+        }
+      });
+    });
+  }
 }
 
 export function escapeHtml(value) {
