@@ -1,9 +1,11 @@
-# Sinal — Produção
+# Sinal — HML
 
-## Versão promovida
-`Sprint 1.2 — Atendimento e conversa`
+## Sprint atual
+`1.3 — Notificações + PWA`
 
-Firebase PRD: `sinaldesk`  
-Domínio oficial: `https://sinal.app.br`
+Fluxo:
+`Mandar um sinal → Central → Assumir → Conversar → Notificar`
 
-Origem homologada: `Walterudisson/sinal-HML`
+Firebase: `sinaldesk-hml`
+
+Antes da homologação, configure a chave VAPID, publique as Rules e implante as Cloud Functions conforme `docs/FIRESTORE-SETUP.md`.

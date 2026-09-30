@@ -58,6 +58,27 @@ service cloud.firestore {
       match /members/{memberId} {
         allow read: if superadmin() || (activeMember(tenantId) && request.auth.uid == memberId);
         allow write: if false;
+
+        match /notifications/{notificationId} {
+          allow read: if activeMember(tenantId) && request.auth.uid == memberId;
+          allow create, delete: if false;
+          allow update: if activeMember(tenantId)
+            && request.auth.uid == memberId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt'])
+            && request.resource.data.isRead == true
+            && request.resource.data.readAt == request.time;
+        }
+
+        match /devices/{deviceId} {
+          allow read: if activeMember(tenantId) && request.auth.uid == memberId;
+          allow create, update: if activeMember(tenantId)
+            && request.auth.uid == memberId
+            && request.resource.data.token is string
+            && request.resource.data.token.size() > 20
+            && request.resource.data.enabled is bool
+            && request.resource.data.updatedAt == request.time;
+          allow delete: if activeMember(tenantId) && request.auth.uid == memberId;
+        }
       }
 
       match /tickets/{ticketId} {

@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Sinal.</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Sinal | HML</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,7 +47,7 @@
           <div class="signal-mark relative h-10 w-10 text-sky-200" aria-hidden="true"><span></span><span></span><span></span></div>
           <div>
             <div class="text-lg font-extrabold tracking-tight">Sinal.</div>
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/70">Suporte e atendimento</div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/70">Homologação</div>
           </div>
         </div>
 
@@ -70,6 +74,7 @@
               <div class="signal-mark relative h-9 w-9 text-sky-700" aria-hidden="true"><span></span><span></span><span></span></div>
               <span class="text-xl font-extrabold tracking-tight">Sinal.</span>
             </div>
+            <span class="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-inset ring-amber-200">HML</span>
           </div>
 
           <div class="mb-8">
@@ -136,7 +141,7 @@
           <div class="signal-mark relative h-9 w-9 text-sky-300" aria-hidden="true"><span></span><span></span><span></span></div>
           <div>
             <div class="text-lg font-extrabold tracking-tight">Sinal.</div>
-            <div class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Produção</div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">HML</div>
           </div>
         </div>
 
@@ -151,7 +156,7 @@
         <div class="border-t border-white/10 p-4">
           <div class="rounded-2xl bg-white/5 p-4">
             <div class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Ambiente</div>
-            <div class="mt-1 text-sm font-semibold text-slate-300">Produção</div>
+            <div class="mt-1 text-sm font-semibold text-slate-300">Homologação</div>
           </div>
         </div>
       </aside>
@@ -164,6 +169,7 @@
               <div class="min-w-0">
                 <div class="flex items-center gap-2">
                   <strong id="tenant-name" class="truncate text-sm font-extrabold text-slate-950 sm:text-base">Sinal</strong>
+                  <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-inset ring-amber-200 lg:hidden">HML</span>
                 </div>
                 <div id="membership-label" class="truncate text-xs text-slate-500">Carregando contexto...</div>
               </div>
@@ -174,6 +180,7 @@
                 <div id="header-user-name" class="text-sm font-bold text-slate-900"></div>
                 <div id="header-user-email" class="text-xs text-slate-500"></div>
               </div>
+              <button id="notification-bell" type="button" class="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-300 bg-white text-lg text-slate-700 hover:bg-slate-50" aria-label="Notificações" title="Notificações">🔔<span id="notification-badge" class="absolute -right-1 -top-1 hidden min-w-5 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-4 text-white">0</span></button>
               <button id="logout-button" type="button" class="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 sm:px-4">Sair</button>
             </div>
           </div>
@@ -308,6 +315,21 @@
           <section id="view-more" class="hidden" data-app-view>
             <h1 class="text-3xl font-extrabold tracking-[-0.04em] text-slate-950">Mais</h1>
             <div class="mt-6 grid gap-3 sm:grid-cols-2">
+              <div class="rounded-2xl border border-sky-100 bg-sky-50 p-5 sm:col-span-2">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-sky-700">Aplicativo</span>
+                <h2 class="mt-2 text-lg font-extrabold text-slate-950">Sinal no seu celular</h2>
+                <p id="pwa-install-help" class="mt-1 text-sm leading-6 text-slate-600">Instale o Sinal para abrir em modo aplicativo.</p>
+                <button id="install-app-button" type="button" class="mt-4 min-h-11 rounded-xl bg-slate-950 px-4 text-sm font-extrabold text-white">Instalar aplicativo</button>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-white p-5 sm:col-span-2">
+                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Notificações</span>
+                <h2 class="mt-2 text-lg font-extrabold text-slate-950">Não perca um sinal</h2>
+                <p id="push-status-text" class="mt-1 text-sm leading-6 text-slate-500">Verificando suporte do dispositivo...</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <button id="enable-notifications-button" type="button" class="min-h-11 rounded-xl bg-sky-700 px-4 text-sm font-extrabold text-white">Ativar notificações</button>
+                  <button id="disable-notifications-button" type="button" class="hidden min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-slate-700">Desativar neste dispositivo</button>
+                </div>
+              </div>
               <div class="rounded-2xl border border-slate-200 bg-white p-5">
                 <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Usuário</span>
                 <strong id="more-user-email" class="mt-2 block break-all text-sm text-slate-900"></strong>
@@ -330,6 +352,20 @@
           </div>
         </nav>
       </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications-panel" class="fixed inset-0 z-[52] hidden" aria-hidden="true">
+      <div data-close-notifications class="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]"></div>
+      <section class="notifications-panel absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-white shadow-2xl sm:bottom-auto sm:left-auto sm:right-4 sm:top-20 sm:h-[min(72dvh,620px)] sm:w-[420px] sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <div><h2 id="notifications-title" class="text-lg font-extrabold text-slate-950">Notificações</h2><p id="notification-unread-count" class="mt-1 text-xs text-slate-500">Tudo lido</p></div>
+          <button data-close-notifications type="button" class="grid h-11 w-11 place-items-center rounded-xl text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
+        </div>
+        <div class="flex justify-end border-b border-slate-100 px-4 py-2"><button id="mark-all-notifications-read" type="button" class="min-h-10 px-2 text-xs font-extrabold text-sky-700">Marcar todas como lidas</button></div>
+        <div id="notification-list" class="min-h-0 flex-1 overflow-y-auto"></div>
+        <div id="notification-empty" class="grid min-h-48 place-items-center p-8 text-center"><div><div class="text-2xl">🔔</div><strong class="mt-3 block text-sm font-extrabold text-slate-800">Tudo silencioso por aqui.</strong><p class="mt-1 text-sm text-slate-500">Novos sinais e mensagens aparecerão aqui.</p></div></div>
+      </section>
     </div>
 
     <!-- Composer -->
