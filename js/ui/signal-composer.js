@@ -1,5 +1,7 @@
 import { openOverlayHistory, requestOverlayClose } from './overlay-history.js';
 
+const MIN_SIGNAL_TEXT_LENGTH = 3;
+
 const categoryLabels = Object.freeze({
   acesso: 'Acesso',
   equipamento: 'Equipamento',
@@ -93,6 +95,25 @@ export function initSignalComposer({ onSubmit }) {
     clearError();
   }
 
+  function validateSignalText() {
+    const title = titleInput.value.trim();
+    const description = descriptionInput.value.trim();
+
+    if (title.length < MIN_SIGNAL_TEXT_LENGTH) {
+      showError('O título precisa ter pelo menos 3 caracteres.');
+      titleInput.focus();
+      return null;
+    }
+
+    if (description.length < MIN_SIGNAL_TEXT_LENGTH) {
+      showError('A descrição precisa ter pelo menos 3 caracteres.');
+      descriptionInput.focus();
+      return null;
+    }
+
+    return { title, description };
+  }
+
   openButtons.forEach((button) => button.addEventListener('click', openComposer));
   closeButtons.forEach((button) => button.addEventListener('click', closeComposer));
 
@@ -102,10 +123,12 @@ export function initSignalComposer({ onSubmit }) {
 
   titleInput.addEventListener('input', () => {
     titleCount.textContent = String(titleInput.value.length);
+    if (!errorBox.classList.contains('hidden')) clearError();
   });
 
   descriptionInput.addEventListener('input', () => {
     descriptionCount.textContent = String(descriptionInput.value.length);
+    if (!errorBox.classList.contains('hidden')) clearError();
   });
 
   form.addEventListener('submit', async (event) => {
@@ -114,11 +137,14 @@ export function initSignalComposer({ onSubmit }) {
 
     if (!form.reportValidity()) return;
 
+    const text = validateSignalText();
+    if (!text) return;
+
     const payload = {
-      title: titleInput.value,
+      title: text.title,
       category: document.querySelector('#signal-category').value,
       priority: document.querySelector('#signal-priority').value,
-      description: descriptionInput.value
+      description: text.description
     };
 
     try {
@@ -128,7 +154,16 @@ export function initSignalComposer({ onSubmit }) {
       closeComposer();
     } catch (error) {
       console.error('[Sinal][Ticket] Falha ao criar sinal:', error);
-      showError(error?.message || 'Não foi possível enviar seu sinal agora. Tente novamente.');
+
+      const isPermissionError =
+        error?.code === 'permission-denied' ||
+        /insufficient permissions|permission denied/i.test(error?.message || '');
+
+      showError(
+        isPermissionError
+          ? 'Não foi possível enviar este sinal. Reabra o Sinal e tente novamente. Se o problema continuar, procure o suporte.'
+          : 'Não foi possível enviar seu sinal agora. Tente novamente.'
+      );
     } finally {
       setSubmitting(false);
     }
