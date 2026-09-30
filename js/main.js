@@ -27,6 +27,8 @@ const loginButtonLabel = document.querySelector('#login-button-label');
 const loginSpinner = document.querySelector('#login-spinner');
 const authMessage = document.querySelector('#auth-message');
 const logoutButton = document.querySelector('#logout-button');
+const mobileNavGrid = document.querySelector('#mobile-nav-grid');
+const membershipLabel = document.querySelector('#membership-label');
 
 let currentContext = null;
 let unsubscribeMyTickets = null;
@@ -37,6 +39,12 @@ let pwaRegistration = null;
 let uiInitialized = false;
 let centralInitialized = false;
 let detailInitialized = false;
+
+// Fallback mobile-first: antes de o contexto ser carregado há quatro itens visíveis.
+// renderContext() continua alterando para cinco colunas quando o usuário é suporte.
+if (mobileNavGrid) {
+  mobileNavGrid.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+}
 
 const authErrorMessages = {
   'auth/invalid-email': 'Informe um endereço de e-mail válido.',
@@ -84,6 +92,46 @@ function renderSignedOut() {
   contextError.classList.add('hidden');
   authView.hidden = false;
   loadingScreen.hidden = true;
+}
+
+function ensureContextRetryButton() {
+  let button = contextError.querySelector('[data-retry-context]');
+  if (button) return button;
+
+  button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.retryContext = '1';
+  button.className = 'mt-4 min-h-11 rounded-xl border border-rose-300 bg-white px-4 text-sm font-extrabold text-rose-800 hover:bg-rose-100';
+  button.textContent = 'Tentar novamente';
+  button.addEventListener('click', () => window.location.reload());
+
+  contextError.append(button);
+  return button;
+}
+
+function showContextLoadError(error) {
+  const title = contextError.querySelector('strong');
+  const message = String(error?.message || '');
+  const isOffline =
+    !navigator.onLine ||
+    error?.code === 'unavailable' ||
+    /offline|network/i.test(message);
+
+  ensureContextRetryButton();
+
+  if (isOffline) {
+    if (title) title.textContent = 'Você está sem conexão.';
+    contextErrorMessage.textContent =
+      'Não conseguimos carregar suas informações agora. Verifique sua internet e tente novamente.';
+    if (membershipLabel) membershipLabel.textContent = 'Sem conexão';
+  } else {
+    if (title) title.textContent = 'Não foi possível carregar suas informações.';
+    contextErrorMessage.textContent =
+      'Tente novamente em alguns instantes. Se o problema continuar, procure o suporte.';
+    if (membershipLabel) membershipLabel.textContent = 'Contexto indisponível';
+  }
+
+  contextError.classList.remove('hidden');
 }
 
 function initAuthenticatedUi() {
@@ -134,7 +182,6 @@ function ensureCentralInitialized(context) {
   initCentral({ context, onOpenTicket: openConversation });
   centralInitialized = true;
 }
-
 
 function refreshPushUi() {
   const state = getPushState();
@@ -232,6 +279,7 @@ async function renderSignedIn(user) {
   loadingScreen.hidden = false;
   contextError.classList.add('hidden');
   stopObservers();
+  currentContext = null;
 
   try {
     const context = await loadUserContext(user);
@@ -279,8 +327,7 @@ async function renderSignedIn(user) {
       );
     }
   } catch (error) {
-    contextErrorMessage.textContent = error?.message || 'Erro inesperado ao carregar os dados do usuário.';
-    contextError.classList.remove('hidden');
+    showContextLoadError(error);
   } finally {
     loadingScreen.hidden = true;
   }
