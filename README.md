@@ -1,13 +1,9 @@
-# Sinal — HML
+# Sinal — Produção
 
-## Sprint atual
+## Versão promovida
+`Sprint 1.2 — Atendimento e conversa`
 
-`1.2 — Atendimento e conversa`
+Firebase PRD: `sinaldesk`  
+Domínio oficial: `https://sinal.app.br`
 
-Fluxo disponível:
-
-`Mandar um sinal → Central → Assumir → Conversar`
-
-Firebase HML: `sinaldesk-hml`
-
-PRD permanece isolado em `Walterudisson/sinal`.
+Origem homologada: `Walterudisson/sinal-HML`
