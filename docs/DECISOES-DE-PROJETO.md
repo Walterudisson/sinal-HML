@@ -359,3 +359,23 @@ Regras iniciais:
 - outros atendentes podem ler, mas não escrever;
 - mensagens não são editáveis/excluíveis;
 - notas internas ficam para sprint futura.
+
+
+---
+
+## DP-020 — Notificações orientadas a eventos
+
+**Status:** Implementada na Sprint 1.3
+
+O Sinal registra notificações persistentes no tenant e usa Cloud Functions + FCM para Web Push.
+
+Eventos iniciais:
+- novo sinal para equipe de atendimento;
+- nova mensagem para a outra ponta do atendimento;
+- nunca notificar o autor do próprio evento.
+
+## DP-021 — PWA como experiência mobile principal
+
+**Status:** Implementada na Sprint 1.3
+
+O Sinal passa a possuir manifest, Service Worker, instalação standalone, tela offline e integração com Web Push. A permissão de notificações só é solicitada após ação explícita do usuário.

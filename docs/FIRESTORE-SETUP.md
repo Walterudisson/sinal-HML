@@ -1,34 +1,69 @@
-# Sinal — Firestore Setup HML
+# Sinal — Firestore / FCM Setup HML
 
-## Sprint 1.2 — Atendimento e conversa
+## Sprint 1.3 — Notificações + PWA
 
-Ambiente: `sinaldesk-hml`
+Firebase: `sinaldesk-hml`
 
-Não há documentos manuais novos.
+### 1. Publicar Security Rules
+Publique o arquivo `firestore.rules`.
 
-Publique o `firestore.rules` desta sprint.
+Novas subcoleções automáticas:
 
-A primeira mensagem criará automaticamente:
+```text
+tenants/{tenantId}/members/{uid}/notifications/{notificationId}
+tenants/{tenantId}/members/{uid}/devices/{deviceId}
+```
 
-`tenants/{tenantId}/tickets/{ticketId}/messages/{messageId}`
+### 2. Gerar chave pública Web Push (VAPID)
+No Firebase Console do HML:
 
-Cada mensagem possui:
+**Project Settings → Cloud Messaging → Web configuration → Web Push certificates**
 
-- `body`
-- `visibility: public`
-- `authorUid`
-- `authorName`
-- `authorEmail`
-- `authorRole`
-- `createdAt`
+Gere um par de chaves e copie apenas a **chave pública**.
 
-### Permissões
+Cole em:
 
-Solicitante:
-- lê e responde no próprio sinal.
+`js/config/notifications.js`
 
-Admin/Supervisor/Agente:
-- lê os sinais do tenant;
-- somente responde quando for o responsável (`assigneeUid`).
+substituindo:
 
-Mensagens não podem ser editadas ou excluídas nesta sprint.
+`SUBSTITUA_PELA_CHAVE_PUBLICA_VAPID_HML`
+
+A chave pública VAPID não é segredo.
+
+### 3. Cloud Functions
+As funções estão em `functions/` e usam Node.js 20.
+
+No Codespaces, a partir da raiz do repositório:
+
+```bash
+cd functions
+npm install
+cd ..
+firebase deploy --only functions
+```
+
+`.firebaserc` aponta para `sinaldesk-hml`.
+
+Funções:
+- `notifyNewTicket`
+- `notifyNewMessage`
+
+### 4. Eventos
+Novo sinal:
+- notifica admins, supervisores e agentes ativos;
+- não notifica o próprio autor.
+
+Nova mensagem:
+- mensagem do solicitante → responsável;
+- mensagem do responsável → solicitante;
+- nunca notifica o próprio autor.
+
+### 5. PWA
+Arquivos principais:
+- `manifest.webmanifest`
+- `service-worker.js`
+- `offline.html`
+- `icons/`
+
+No iPhone/iPad, Web Push deve ser testado com o Sinal aberto como web app instalado na Tela de Início.
