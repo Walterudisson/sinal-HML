@@ -81,3 +81,8 @@ Com detalhe aberto:
 - [ ] SPRINT 1.2 APROVADA
 - [ ] SPRINT 1.2 REPROVADA
 - [ ] APROVADA COM CORREÇÕES PENDENTES
+
+
+## Encerramento
+
+Sprint 1.2 homologada explicitamente em 2026-09-29.

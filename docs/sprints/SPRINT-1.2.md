@@ -2,7 +2,7 @@
 
 ## Atendimento e conversa
 
-**Status:** Em homologação  
+**Status:** Homologada  
 **Ambiente:** HML  
 **Data:** 2026-09-29
 
