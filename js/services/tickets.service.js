@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   limit,
   onSnapshot,
   query,
@@ -51,6 +52,14 @@ export async function claimTicket(context, ticket) {
     assigneeEmail: firebaseUser.email || userProfile.email || '',
     updatedAt: serverTimestamp()
   });
+}
+
+
+export async function getTicketById(context, ticketId) {
+  const ref = doc(db, 'tenants', context.tenant.id, 'tickets', ticketId);
+  const snapshot = await getDoc(ref);
+  if (!snapshot.exists()) throw new Error('Sinal não encontrado.');
+  return { id: snapshot.id, ...snapshot.data() };
 }
 
 export function observeMyTickets(context, onData, onError) {
