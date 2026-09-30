@@ -1,11 +1,14 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { createTicket, claimTicket, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { createTicket, claimTicket, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
 import { initCentral, updateCentralTickets } from './ui/central.js';
 import { initTicketDetail, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
+import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
+import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
+import { initNotificationsUi, renderNotifications } from './ui/notifications.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
 const authView = document.querySelector('#auth-view');
@@ -28,6 +31,9 @@ const logoutButton = document.querySelector('#logout-button');
 let currentContext = null;
 let unsubscribeMyTickets = null;
 let unsubscribeCentralTickets = null;
+let unsubscribeNotifications = null;
+let currentNotifications = [];
+let pwaRegistration = null;
 let uiInitialized = false;
 let centralInitialized = false;
 let detailInitialized = false;
@@ -63,8 +69,10 @@ function setLoginLoading(value) {
 function stopObservers() {
   unsubscribeMyTickets?.();
   unsubscribeCentralTickets?.();
+  unsubscribeNotifications?.();
   unsubscribeMyTickets = null;
   unsubscribeCentralTickets = null;
+  unsubscribeNotifications = null;
   renderTickets([]);
   updateCentralTickets([]);
 }
@@ -127,6 +135,96 @@ function ensureCentralInitialized(context) {
   centralInitialized = true;
 }
 
+
+function refreshPushUi() {
+  const state = getPushState();
+  const enable = document.querySelector('#enable-notifications-button');
+  const disable = document.querySelector('#disable-notifications-button');
+  const status = document.querySelector('#push-status-text');
+  if (!enable || !status) return;
+
+  if (!state.supported) {
+    status.textContent = 'Este navegador não oferece Web Push neste modo.';
+    enable.classList.add('hidden'); disable.classList.add('hidden'); return;
+  }
+  if (!state.configured) {
+    status.textContent = 'HML aguardando configuração da chave Web Push (VAPID).';
+    enable.classList.remove('hidden'); disable.classList.add('hidden'); return;
+  }
+  if (state.permission === 'denied') {
+    status.textContent = 'Notificações bloqueadas pelo navegador. Altere a permissão nas configurações do site.';
+    enable.classList.add('hidden'); disable.classList.add('hidden'); return;
+  }
+  if (state.permission === 'granted' && state.registered) {
+    status.textContent = 'Notificações ativas neste dispositivo.';
+    enable.classList.add('hidden'); disable.classList.remove('hidden'); return;
+  }
+  status.textContent = 'Ative avisos de novos sinais e novas mensagens.';
+  enable.classList.remove('hidden'); disable.classList.add('hidden');
+}
+
+function refreshInstallUi() {
+  const state = getPwaState();
+  const button = document.querySelector('#install-app-button');
+  const help = document.querySelector('#pwa-install-help');
+  if (!button || !help) return;
+  if (state.standalone) {
+    button.classList.add('hidden'); help.textContent = 'Sinal já está instalado neste dispositivo.';
+  } else if (state.ios && !state.installPromptAvailable) {
+    button.classList.add('hidden'); help.textContent = 'No iPhone/iPad, use Compartilhar → Adicionar à Tela de Início. Depois abra o Sinal pelo ícone para ativar Web Push.';
+  } else if (state.installPromptAvailable) {
+    button.classList.remove('hidden'); help.textContent = 'Instale o Sinal para abrir em modo aplicativo.';
+  } else {
+    button.classList.add('hidden'); help.textContent = 'A instalação será oferecida quando o navegador considerar o app elegível.';
+  }
+}
+
+async function openTicketById(ticketId) {
+  try {
+    const ticket = await getTicketById(currentContext, ticketId);
+    openConversation(ticket);
+  } catch (error) {
+    showToast(error?.message || 'Não foi possível abrir este sinal.', 'error', { title: 'Sinal indisponível' });
+  }
+}
+
+function handleTicketDeepLink() {
+  const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const ticketId = params.get('ticket');
+  if (!ticketId) return;
+  history.replaceState(history.state, '', `${location.pathname}${location.search}`);
+  openTicketById(ticketId);
+}
+
+function initSprint13Ui() {
+  initNotificationsUi({
+    onOpenTicket: openTicketById,
+    onMarkRead: (id) => markNotificationRead(currentContext, id),
+    onMarkAllRead: (items) => markAllNotificationsRead(currentContext, items)
+  });
+
+  document.querySelector('#install-app-button').addEventListener('click', async () => {
+    await promptInstall(); refreshInstallUi();
+  });
+  document.querySelector('#enable-notifications-button').addEventListener('click', async () => {
+    try {
+      if (!pwaRegistration) throw new Error('Service Worker ainda não está pronto. Recarregue a página e tente novamente.');
+      const pwa = getPwaState();
+      if (pwa.ios && !pwa.standalone) throw new Error('No iPhone/iPad, instale o Sinal na Tela de Início e abra pelo ícone antes de ativar notificações.');
+      await enablePushNotifications(currentContext, pwaRegistration);
+      showToast('Este dispositivo passará a receber avisos do Sinal.', 'success', { title: 'Notificações ativadas' });
+      refreshPushUi();
+    } catch (error) {
+      showToast(error?.message || 'Não foi possível ativar notificações.', 'error', { title: 'Notificações' });
+    }
+  });
+  document.querySelector('#disable-notifications-button').addEventListener('click', async () => {
+    await disablePushNotifications(currentContext);
+    showToast('Os avisos push foram desativados neste dispositivo.', 'info', { title: 'Notificações desativadas' });
+    refreshPushUi();
+  });
+}
+
 async function renderSignedIn(user) {
   clearAuthMessage();
   authView.hidden = true;
@@ -142,6 +240,13 @@ async function renderSignedIn(user) {
     initAuthenticatedUi();
     ensureDetailInitialized(context);
 
+    if (!document.body.dataset.sprint13Ui) {
+      initSprint13Ui();
+      document.body.dataset.sprint13Ui = '1';
+    }
+    refreshPushUi();
+    refreshInstallUi();
+
     unsubscribeMyTickets = observeMyTickets(
       context,
       (tickets) => {
@@ -150,6 +255,17 @@ async function renderSignedIn(user) {
       },
       () => showToast('Não foi possível atualizar sua lista de sinais.', 'error')
     );
+
+    unsubscribeNotifications = observeNotifications(
+      context,
+      (items, changes) => {
+        currentNotifications = items;
+        renderNotifications(items, changes, showToast);
+      },
+      () => showToast('Não foi possível atualizar suas notificações.', 'error')
+    );
+
+    handleTicketDeepLink();
 
     if (isSupportRole(context.membership.role)) {
       ensureCentralInitialized(context);
@@ -223,5 +339,11 @@ logoutButton.addEventListener('click', async () => {
     logoutButton.textContent = 'Sair';
   }
 });
+
+registerPwa({
+  onInstallAvailable: refreshInstallUi,
+  onInstalled: () => { refreshInstallUi(); showToast('Sinal instalado neste dispositivo.', 'success', { title: 'Aplicativo instalado' }); },
+  onUpdate: () => showToast('Uma nova versão do Sinal foi preparada. Recarregue quando for conveniente.', 'info', { title: 'Atualização disponível', persistent: true })
+}).then((registration) => { pwaRegistration = registration; refreshInstallUi(); }).catch((error) => console.error('[Sinal][PWA]', error));
 
 observeAuth((user) => user ? renderSignedIn(user) : renderSignedOut());
