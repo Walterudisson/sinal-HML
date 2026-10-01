@@ -127,7 +127,8 @@ export function initTicketDetail(options) {
       setResolvePanel(false);
       form.reset();
     } catch (error) {
-      fail(error?.message || 'Não foi possível resolver o sinal. Tente novamente.');
+      const isKnown = /sem conexão|somente o técnico|descreva a solução|preencha a mensagem/i.test(error?.message || '');
+      fail(isKnown ? error.message : 'Não foi possível confirmar a resolução. Verifique a conexão e tente novamente; se persistir, procure o suporte.');
     } finally {
       resolving = false;
       button.disabled = false;
