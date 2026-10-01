@@ -236,11 +236,31 @@ async function openTicketById(ticketId) {
 }
 
 function handleTicketDeepLink() {
+  // O link pode chegar quando a PWA já está aberta ou ainda está autenticando.
+  if (!currentContext) return;
   const params = new URLSearchParams(location.hash.replace(/^#/, ''));
   const ticketId = params.get('ticket');
-  if (!ticketId) return;
+  if (!ticketId || ticketId.length > 160) return;
   history.replaceState(history.state, '', `${location.pathname}${location.search}`);
-  openTicketById(ticketId);
+  void openTicketById(ticketId);
+}
+
+// Na PWA em segundo plano, o clique no push não dispara um novo login.
+window.addEventListener('hashchange', handleTicketDeepLink);
+window.addEventListener('pageshow', handleTicketDeepLink);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) handleTicketDeepLink();
+});
+
+// Alternativa quando o sistema operacional não permite navegar um cliente aberto.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type !== 'sinal:open-ticket') return;
+    const ticketId = event.data.ticketId;
+    if (typeof ticketId !== 'string' || !ticketId || ticketId.length > 160) return;
+    if (currentContext) void openTicketById(ticketId);
+    else location.hash = `ticket=${encodeURIComponent(ticketId)}`;
+  });
 }
 
 function initSprint13Ui() {
