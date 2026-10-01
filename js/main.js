@@ -1,11 +1,11 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { createTicket, claimTicket, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { createTicket, claimTicket, resolveTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
 import { initCentral, updateCentralTickets } from './ui/central.js';
-import { initTicketDetail, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
+import { initTicketDetail, setTicketDetailContext, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
 import { initNotificationsUi, renderNotifications, resetNotificationsUiSession } from './ui/notifications.js';
@@ -88,6 +88,7 @@ function stopObservers() {
 function renderSignedOut() {
   stopObservers();
   currentContext = null;
+  setTicketDetailContext(null);
   appView.hidden = true;
   contextError.classList.add('hidden');
   authView.hidden = false;
@@ -166,7 +167,14 @@ function ensureDetailInitialized(context) {
         showToast('Não foi possível enviar a mensagem agora.', 'error', { title: 'Mensagem não enviada' });
         throw error;
       }
-    }
+    },
+    onResolve: async (ticket, details) => {
+      await resolveTicket(currentContext, ticket, details);
+      showToast(`${ticket.code} foi resolvido com sucesso.`, 'success', { title: 'Sinal resolvido' });
+    },
+    onGetPrivateResolution: (ticketId) => getPrivateResolution(currentContext, ticketId),
+    onObserveStatusEvents: (ticketId, onData, onError) =>
+      observeStatusEvents(currentContext, ticketId, onData, onError)
   });
   detailInitialized = true;
 }
@@ -307,6 +315,7 @@ async function renderSignedIn(user) {
     renderContext(context);
     initAuthenticatedUi();
     ensureDetailInitialized(context);
+    setTicketDetailContext(context);
 
     if (!document.body.dataset.sprint13Ui) {
       initSprint13Ui();
