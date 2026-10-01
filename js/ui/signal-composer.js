@@ -46,10 +46,14 @@ export function initSignalComposer({ onSubmit }) {
   const errorBox = document.querySelector('#signal-form-error');
   const openButtons = [...document.querySelectorAll('[data-open-signal-composer]')];
   const closeButtons = [...document.querySelectorAll('[data-close-signal-composer]')];
+  let submitting = false;
+  let slowTimer = null;
+  let networkMessage = false;
 
   function clearError() {
     errorBox.textContent = '';
     errorBox.classList.add('hidden');
+    networkMessage = false;
   }
 
   function showError(message) {
@@ -57,11 +61,36 @@ export function initSignalComposer({ onSubmit }) {
     errorBox.classList.remove('hidden');
   }
 
-  function setSubmitting(isSubmitting) {
-    submitButton.disabled = isSubmitting;
-    submitSpinner.classList.toggle('hidden', !isSubmitting);
-    submitLabel.textContent = isSubmitting ? 'Enviando...' : 'Enviar sinal';
+  function showConnectionMessage(message) {
+    showError(message);
+    networkMessage = true;
   }
+
+  function setSubmitting(isSubmitting) {
+    submitting = isSubmitting;
+    submitButton.disabled = isSubmitting || !navigator.onLine;
+    submitSpinner.classList.toggle('hidden', !isSubmitting);
+    submitLabel.textContent = isSubmitting
+      ? (navigator.onLine ? 'Enviando...' : 'Aguardando conexão...')
+      : (navigator.onLine ? 'Enviar sinal' : 'Sem conexão');
+  }
+
+  function syncNetworkStatus() {
+    setSubmitting(submitting);
+
+    if (!navigator.onLine) {
+      showConnectionMessage(submitting
+        ? 'Sua conexão caiu durante o envio. Mantenha o Sinal aberto e aguarde a confirmação quando a internet voltar. Não envie novamente.'
+        : 'Você está sem conexão. Seu texto foi mantido. Reconecte-se para enviar o sinal.');
+    } else if (submitting && networkMessage) {
+      showConnectionMessage('Conexão restabelecida. Aguardando a confirmação do envio. Não envie novamente.');
+    } else if (networkMessage && !submitting) {
+      clearError();
+    }
+  }
+
+  window.addEventListener('offline', syncNetworkStatus);
+  window.addEventListener('online', syncNetworkStatus);
 
   function finalizeClose() {
     composer.classList.add('hidden');
@@ -75,6 +104,7 @@ export function initSignalComposer({ onSubmit }) {
 
     lastFocusedElement = document.activeElement;
     clearError();
+    syncNetworkStatus();
     composer.classList.remove('hidden');
     composer.setAttribute('aria-hidden', 'false');
     document.body.classList.add('overlay-open');
@@ -123,17 +153,29 @@ export function initSignalComposer({ onSubmit }) {
 
   titleInput.addEventListener('input', () => {
     titleCount.textContent = String(titleInput.value.length);
-    if (!errorBox.classList.contains('hidden')) clearError();
+    if (!errorBox.classList.contains('hidden')) {
+      if (navigator.onLine && !submitting) clearError();
+      else syncNetworkStatus();
+    }
   });
 
   descriptionInput.addEventListener('input', () => {
     descriptionCount.textContent = String(descriptionInput.value.length);
-    if (!errorBox.classList.contains('hidden')) clearError();
+    if (!errorBox.classList.contains('hidden')) {
+      if (navigator.onLine && !submitting) clearError();
+      else syncNetworkStatus();
+    }
   });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (submitting) return;
     clearError();
+
+    if (!navigator.onLine) {
+      syncNetworkStatus();
+      return;
+    }
 
     if (!form.reportValidity()) return;
 
@@ -149,6 +191,11 @@ export function initSignalComposer({ onSubmit }) {
 
     try {
       setSubmitting(true);
+      slowTimer = window.setTimeout(() => {
+        if (submitting && navigator.onLine) {
+          showConnectionMessage('O envio está demorando. Verifique a conexão e mantenha o Sinal aberto até a confirmação. Não envie novamente.');
+        }
+      }, 8000);
       await onSubmit(payload);
       resetComposer();
       closeComposer();
@@ -165,6 +212,8 @@ export function initSignalComposer({ onSubmit }) {
           : 'Não foi possível enviar seu sinal agora. Tente novamente.'
       );
     } finally {
+      window.clearTimeout(slowTimer);
+      slowTimer = null;
       setSubmitting(false);
     }
   });
