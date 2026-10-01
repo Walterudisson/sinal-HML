@@ -8,7 +8,7 @@ import { initCentral, updateCentralTickets } from './ui/central.js';
 import { initTicketDetail, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
-import { initNotificationsUi, renderNotifications } from './ui/notifications.js';
+import { initNotificationsUi, renderNotifications, resetNotificationsUiSession } from './ui/notifications.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
 const authView = document.querySelector('#auth-view');
@@ -304,6 +304,10 @@ async function renderSignedIn(user) {
       () => showToast('Não foi possível atualizar sua lista de sinais.', 'error')
     );
 
+    // Cada novo login/assinatura deve tratar o primeiro snapshot como estado inicial,
+    // não como uma rajada de notificações novas.
+    resetNotificationsUiSession();
+
     unsubscribeNotifications = observeNotifications(
       context,
       (items, changes) => {
@@ -389,8 +393,20 @@ logoutButton.addEventListener('click', async () => {
 
 registerPwa({
   onInstallAvailable: refreshInstallUi,
-  onInstalled: () => { refreshInstallUi(); showToast('Sinal instalado neste dispositivo.', 'success', { title: 'Aplicativo instalado' }); },
-  onUpdate: () => showToast('Uma nova versão do Sinal foi preparada. Recarregue quando for conveniente.', 'info', { title: 'Atualização disponível', persistent: true })
+  onInstalled: () => {
+    refreshInstallUi();
+    showToast('Sinal instalado neste dispositivo.', 'success', { title: 'Aplicativo instalado' });
+  },
+  onUpdate: () => showToast(
+    'Uma nova versão do Sinal está pronta.',
+    'info',
+    {
+      title: 'Atualização disponível',
+      persistent: true,
+      actionLabel: 'Atualizar agora',
+      onAction: () => window.location.reload()
+    }
+  )
 }).then((registration) => { pwaRegistration = registration; refreshInstallUi(); }).catch((error) => console.error('[Sinal][PWA]', error));
 
 observeAuth((user) => user ? renderSignedIn(user) : renderSignedOut());
