@@ -43,6 +43,7 @@ service cloud.firestore {
 
     function canReplyToTicket(tenantId, ticketId) {
       return activeMember(tenantId)
+        && get(ticketPath(tenantId, ticketId)).data.status != 'resolved'
         && (
           get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
           || (
