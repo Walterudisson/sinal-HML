@@ -7,6 +7,10 @@ let onMarkRead = null;
 let onMarkAllRead = null;
 let initialSnapshotSeen = false;
 
+export function resetNotificationsUiSession() {
+  initialSnapshotSeen = false;
+}
+
 export function initNotificationsUi(options) {
   onOpenTicket = options.onOpenTicket;
   onMarkRead = options.onMarkRead;
@@ -47,11 +51,23 @@ export function renderNotifications(nextItems, changes, showToast) {
   });
 
   if (initialSnapshotSeen) {
-    changes.filter((change) => change.type === 'added').forEach((change) => {
-      const item = { id: change.doc.id, ...change.doc.data() };
-      showToast?.(item.body || 'Você tem uma nova atualização.', 'info', { title: item.title || 'Novo aviso' });
-    });
+    changes
+      .filter((change) => change.type === 'added')
+      .forEach((change) => {
+        const item = { id: change.doc.id, ...change.doc.data() };
+
+        // Toast apenas para uma notificação realmente nova e ainda não lida.
+        if (item.isRead) return;
+
+        showToast?.(
+          item.body || 'Você tem uma nova atualização.',
+          'info',
+          { title: item.title || 'Novo aviso' }
+        );
+      });
   } else {
+    // O primeiro snapshot de cada login contém todo o histórico como "added".
+    // Ele alimenta a Central e o contador, mas não deve gerar toasts.
     initialSnapshotSeen = true;
   }
 }

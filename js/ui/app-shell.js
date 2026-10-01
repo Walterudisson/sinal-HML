@@ -116,6 +116,18 @@ export function showToast(message, type = 'info', options = {}) {
     window.setTimeout(() => toast.remove(), 180);
   };
 
+  if (options.actionLabel && typeof options.onAction === 'function') {
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'pointer-events-auto mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-sky-700 px-4 text-xs font-extrabold text-white hover:bg-sky-600';
+    action.textContent = options.actionLabel;
+    action.addEventListener('click', () => {
+      options.onAction();
+      if (options.removeOnAction !== false) remove();
+    });
+    content.append(action);
+  }
+
   close.addEventListener('click', remove);
 
   if (options.persistent !== true) {
