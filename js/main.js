@@ -5,7 +5,7 @@ import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
 import { initCentral, updateCentralTickets } from './ui/central.js';
-import { initTicketDetail, setTicketDetailContext, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
+import { initTicketDetail, setTicketDetailContext, resetTicketDetailUi, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
 import { initNotificationsUi, renderNotifications, resetNotificationsUiSession } from './ui/notifications.js';
@@ -88,7 +88,7 @@ function stopObservers() {
 function renderSignedOut() {
   stopObservers();
   currentContext = null;
-  setTicketDetailContext(null);
+  resetTicketDetailUi();
   appView.hidden = true;
   contextError.classList.add('hidden');
   authView.hidden = false;
@@ -301,6 +301,7 @@ function initSprint13Ui() {
 }
 
 async function renderSignedIn(user) {
+  resetTicketDetailUi();
   clearAuthMessage();
   authView.hidden = true;
   appView.hidden = false;
