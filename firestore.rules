@@ -7,6 +7,12 @@ service cloud.firestore {
     function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
     function memberPath(tenantId) { return /databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid); }
     function ticketPath(tenantId, ticketId) { return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId); }
+    function resolutionPath(tenantId, ticketId) {
+      return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId)/private/resolution;
+    }
+    function statusEventPath(tenantId, ticketId, eventId) {
+      return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId)/statusEvents/$(eventId);
+    }
 
     function activeUser() {
       return signedIn() && exists(userPath()) && get(userPath()).data.status == 'active';
@@ -113,19 +119,108 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && request.resource.data.updatedAt == request.time;
 
-        allow update: if supportMember(tenantId)
-          && resource.data.status == 'open'
-          && resource.data.assigneeUid == null
-          && request.resource.data.status == 'in_progress'
-          && request.resource.data.assigneeUid == request.auth.uid
-          && request.resource.data.assigneeName == get(userPath()).data.displayName
-          && request.resource.data.assigneeEmail == get(userPath()).data.email
-          && request.resource.data.updatedAt == request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','assigneeUid','assigneeName','assigneeEmail','updatedAt'
-          ]);
+        // Atribuição e resolução são transições distintas, vinculadas ao histórico.
+        allow update: if supportMember(tenantId) && (
+          (
+            resource.data.status == 'open'
+            && resource.data.assigneeUid == null
+            && request.resource.data.status == 'in_progress'
+            && request.resource.data.assigneeUid == request.auth.uid
+            && request.resource.data.assigneeName == get(userPath()).data.displayName
+            && request.resource.data.assigneeEmail == get(userPath()).data.email
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.lastEventId is string
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','assigneeUid','assigneeName','assigneeEmail','updatedAt','lastEventId'
+            ])
+            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.type == 'claimed'
+            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.createdAt == request.time
+          )
+          ||
+          (
+            resource.data.status == 'in_progress'
+            && resource.data.assigneeUid == request.auth.uid
+            && request.resource.data.status == 'resolved'
+            && request.resource.data.resolvedAt == request.time
+            && request.resource.data.resolvedByUid == request.auth.uid
+            && request.resource.data.resolvedByName == get(userPath()).data.displayName
+            && request.resource.data.resolutionShared is bool
+            && request.resource.data.publicResolution is string
+            && request.resource.data.publicResolution.size() <= 2000
+            && (
+              (request.resource.data.resolutionShared
+                && request.resource.data.publicResolution.size() >= 3)
+              || (!request.resource.data.resolutionShared
+                && request.resource.data.publicResolution == '')
+            )
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.lastEventId is string
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','resolvedAt','resolvedByUid','resolvedByName',
+              'resolutionShared','publicResolution','updatedAt','lastEventId'
+            ])
+            && getAfter(resolutionPath(tenantId, ticketId)).data.createdAt == request.time
+            && getAfter(resolutionPath(tenantId, ticketId)).data.createdByUid == request.auth.uid
+            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.type == 'resolved'
+            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.createdAt == request.time
+          )
+        );
 
         allow delete: if false;
+
+        // Nunca armazenar ou disponibilizar a solução técnica no ticket principal.
+        match /private/{privateId} {
+          allow read: if privateId == 'resolution' && supportMember(tenantId);
+          allow create: if privateId == 'resolution'
+            && supportMember(tenantId)
+            && get(ticketPath(tenantId, ticketId)).data.status == 'in_progress'
+            && get(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
+            && getAfter(ticketPath(tenantId, ticketId)).data.status == 'resolved'
+            && getAfter(ticketPath(tenantId, ticketId)).data.updatedAt == request.time
+            && request.resource.data.keys().hasOnly([
+              'text','knowledgeCandidate','createdByUid','createdByName','createdAt'
+            ])
+            && request.resource.data.keys().hasAll([
+              'text','knowledgeCandidate','createdByUid','createdByName','createdAt'
+            ])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() >= 3
+            && request.resource.data.text.size() <= 4000
+            && request.resource.data.knowledgeCandidate is bool
+            && request.resource.data.createdByUid == request.auth.uid
+            && request.resource.data.createdByName == get(userPath()).data.displayName
+            && request.resource.data.createdAt == request.time;
+          allow update, delete: if false;
+        }
+
+        match /statusEvents/{eventId} {
+          allow read: if canReadTicket(tenantId, ticketId);
+          allow create: if supportMember(tenantId)
+            && request.resource.data.keys().hasOnly([
+              'type','from','to','actorUid','actorName','createdAt'
+            ])
+            && request.resource.data.keys().hasAll([
+              'type','from','to','actorUid','actorName','createdAt'
+            ])
+            && request.resource.data.actorUid == request.auth.uid
+            && request.resource.data.actorName == get(userPath()).data.displayName
+            && request.resource.data.createdAt == request.time
+            && getAfter(ticketPath(tenantId, ticketId)).data.lastEventId == eventId
+            && getAfter(ticketPath(tenantId, ticketId)).data.updatedAt == request.time
+            && getAfter(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
+            && (
+              (request.resource.data.type == 'claimed'
+                && request.resource.data.from == 'open'
+                && request.resource.data.to == 'in_progress'
+                && getAfter(ticketPath(tenantId, ticketId)).data.status == 'in_progress')
+              ||
+              (request.resource.data.type == 'resolved'
+                && request.resource.data.from == 'in_progress'
+                && request.resource.data.to == 'resolved'
+                && getAfter(ticketPath(tenantId, ticketId)).data.status == 'resolved')
+            );
+          allow update, delete: if false;
+        }
 
         match /messages/{messageId} {
           allow read: if canReadTicket(tenantId, ticketId);
