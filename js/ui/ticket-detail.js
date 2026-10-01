@@ -1,7 +1,7 @@
 import {
   categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, escapeHtml
 } from './signal-composer.js';
-import { openOverlayHistory, requestOverlayClose } from './overlay-history.js';
+import { forceOverlayClosed, openOverlayHistory, requestOverlayClose } from './overlay-history.js';
 
 let currentContext = null;
 let selectedTicket = null;
@@ -242,6 +242,17 @@ function finalizeClose() {
   document.querySelector('#ticket-detail').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('overlay-open');
   selectedTicket = null;
+  document.querySelector('#detail-private-resolution-text').textContent = '';
+  document.querySelector('#detail-private-resolution').classList.add('hidden');
+  document.querySelector('#detail-public-resolution-text').textContent = '';
+  document.querySelector('#detail-public-resolution').classList.add('hidden');
+  renderStatusHistory([]);
+}
+
+export function resetTicketDetailUi() {
+  forceOverlayClosed('ticket-detail');
+  finalizeClose();
+  currentContext = null;
 }
 
 function renderTicket(ticket) {
