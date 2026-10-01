@@ -1,18 +1,140 @@
 import {
   categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, escapeHtml
 } from './signal-composer.js';
-import { openOverlayHistory, requestOverlayClose } from './overlay-history.js';
+import { forceOverlayClosed, openOverlayHistory, requestOverlayClose } from './overlay-history.js';
 
 let currentContext = null;
 let selectedTicket = null;
 let onClaim = null;
 let onSendMessage = null;
 let unsubscribeMessages = null;
+let unsubscribeStatusEvents = null;
+let onResolve = null;
+let onGetPrivateResolution = null;
+let onObserveStatusEvents = null;
+let privateRequestId = 0;
+
+const publicSuggestions = [
+  'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
+  'Sua solicitação foi atendida e os procedimentos necessários foram concluídos.',
+  'A solicitação foi atendida e as orientações necessárias foram fornecidas. Caso precise de mais informações, entre em contato com a equipe de suporte.'
+];
+
+export function setTicketDetailContext(context) { currentContext = context; }
+
+function setResolvePanel(open) {
+  document.querySelector('#resolve-panel').classList.toggle('hidden', !open);
+  if (open) {
+    document.querySelector('#resolve-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+async function loadPrivateResolution(ticket) {
+  const requestId = ++privateRequestId;
+  const block = document.querySelector('#detail-private-resolution');
+  block.classList.add('hidden');
+  document.querySelector('#detail-knowledge-candidate').classList.add('hidden');
+  if (!currentContext || !['admin', 'supervisor', 'agente'].includes(currentContext.membership.role)
+      || ticket.status !== 'resolved') return;
+
+  try {
+    const resolution = await onGetPrivateResolution?.(ticket.id);
+    if (requestId !== privateRequestId || selectedTicket?.id !== ticket.id) return;
+    if (!resolution) return;
+    document.querySelector('#detail-private-resolution-text').textContent = resolution.text || '';
+    document.querySelector('#detail-knowledge-candidate').classList.toggle('hidden', resolution.knowledgeCandidate !== true);
+    block.classList.remove('hidden');
+  } catch (error) {
+    // Nenhuma informação interna é apresentada quando a leitura falhar.
+    console.error('[Sinal] Não foi possível carregar a solução interna:', error?.code || 'indisponível');
+  }
+}
+
+function renderStatusHistory(events) {
+  const list = document.querySelector('#detail-status-history');
+  if (!events.length) {
+    list.innerHTML = '<li>Sem mudanças registradas nesta versão.</li>';
+    return;
+  }
+  list.innerHTML = events.map((event) => {
+    const label = event.type === 'claimed' ? 'Sinal em atendimento' :
+      event.type === 'resolved' ? 'Sinal resolvido' : 'Atualização';
+    return `<li class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+      <strong class="block text-slate-800">${escapeHtml(label)}</strong>
+      <span class="mt-1 block text-xs text-slate-500">${escapeHtml(event.actorName || 'Equipe')} · ${escapeHtml(formatDate(event.createdAt))}</span>
+    </li>`;
+  }).join('');
+}
 
 export function initTicketDetail(options) {
   currentContext = options.context;
   onClaim = options.onClaim;
   onSendMessage = options.onSendMessage;
+  onResolve = options.onResolve;
+  onGetPrivateResolution = options.onGetPrivateResolution;
+  onObserveStatusEvents = options.onObserveStatusEvents;
+
+  const form = document.querySelector('#resolve-form');
+  const internal = document.querySelector('#resolution-internal');
+  const share = document.querySelector('#resolution-share');
+  const publicText = document.querySelector('#resolution-public');
+  const errorBox = document.querySelector('#resolve-error');
+  let resolving = false;
+
+  document.querySelector('#resolve-ticket-button').addEventListener('click', () => {
+    form.reset();
+    errorBox.classList.add('hidden');
+    document.querySelector('#resolution-public-area').classList.add('hidden');
+    setResolvePanel(true);
+  });
+  document.querySelector('#resolve-cancel').addEventListener('click', () => {
+    if (!resolving) setResolvePanel(false);
+  });
+  share.addEventListener('change', () => {
+    document.querySelector('#resolution-public-area').classList.toggle('hidden', !share.checked);
+  });
+  document.querySelectorAll('[data-resolution-suggestion]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const suggestion = publicSuggestions[Number(button.dataset.resolutionSuggestion)];
+      if (suggestion) {
+        publicText.value = suggestion;
+        publicText.focus();
+      }
+    });
+  });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!selectedTicket || resolving) return;
+    const internalText = internal.value.trim();
+    const message = share.checked ? publicText.value.trim() : '';
+    const fail = (text) => { errorBox.textContent = text; errorBox.classList.remove('hidden'); };
+    errorBox.classList.add('hidden');
+    if (!navigator.onLine) return fail('Você está sem conexão. Reconecte-se antes de resolver o sinal.');
+    if (internalText.length < 3) return fail('Descreva a solução interna com pelo menos 3 caracteres.');
+    if (share.checked && message.length < 3) return fail('Preencha a mensagem para o solicitante com pelo menos 3 caracteres.');
+
+    const button = document.querySelector('#resolve-submit');
+    resolving = true;
+    button.disabled = true;
+    button.textContent = 'Resolvendo...';
+    try {
+      await onResolve(selectedTicket, {
+        internalText,
+        share: share.checked,
+        publicText: message,
+        knowledgeCandidate: document.querySelector('#resolution-knowledge').checked
+      });
+      setResolvePanel(false);
+      form.reset();
+    } catch (error) {
+      const isKnown = /sem conexão|somente o técnico|descreva a solução|preencha a mensagem/i.test(error?.message || '');
+      fail(isKnown ? error.message : 'Não foi possível confirmar a resolução. Verifique a conexão e tente novamente; se persistir, procure o suporte.');
+    } finally {
+      resolving = false;
+      button.disabled = false;
+      button.textContent = 'Confirmar resolução';
+    }
+  });
 
   document.querySelectorAll('[data-close-ticket-detail]').forEach((button) => button.addEventListener('click', closeTicketDetail));
 
@@ -75,6 +197,9 @@ export function openTicketDetail(ticket, observeMessages) {
   selectedTicket = ticket;
   renderTicket(ticket);
   renderMessages([]);
+  renderStatusHistory([]);
+  setResolvePanel(false);
+  void loadPrivateResolution(ticket);
 
   const overlay = document.querySelector('#ticket-detail');
   overlay.classList.remove('hidden');
@@ -85,6 +210,12 @@ export function openTicketDetail(ticket, observeMessages) {
   unsubscribeMessages = observeMessages(ticket, renderMessages, (error) => {
     console.error('[Sinal][Messages] Falha ao acompanhar conversa:', error);
   });
+  unsubscribeStatusEvents?.();
+  unsubscribeStatusEvents = onObserveStatusEvents?.(
+    ticket.id,
+    renderStatusHistory,
+    () => renderStatusHistory([])
+  );
 
   openOverlayHistory('ticket-detail', finalizeClose);
 }
@@ -93,6 +224,7 @@ export function updateSelectedTicket(ticket) {
   if (selectedTicket?.id === ticket.id) {
     selectedTicket = ticket;
     renderTicket(ticket);
+    if (ticket.status === 'resolved') void loadPrivateResolution(ticket);
   }
 }
 
@@ -102,11 +234,26 @@ export function closeTicketDetail() {
 
 function finalizeClose() {
   unsubscribeMessages?.();
+  unsubscribeStatusEvents?.();
   unsubscribeMessages = null;
+  unsubscribeStatusEvents = null;
+  ++privateRequestId;
+  setResolvePanel(false);
   document.querySelector('#ticket-detail').classList.add('hidden');
   document.querySelector('#ticket-detail').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('overlay-open');
   selectedTicket = null;
+  document.querySelector('#detail-private-resolution-text').textContent = '';
+  document.querySelector('#detail-private-resolution').classList.add('hidden');
+  document.querySelector('#detail-public-resolution-text').textContent = '';
+  document.querySelector('#detail-public-resolution').classList.add('hidden');
+  renderStatusHistory([]);
+}
+
+export function resetTicketDetailUi() {
+  forceOverlayClosed('ticket-detail');
+  finalizeClose();
+  currentContext = null;
 }
 
 function renderTicket(ticket) {
@@ -114,7 +261,8 @@ function renderTicket(ticket) {
   const isRequester = ticket.requesterUid === uid;
   const isAssignedAgent = ticket.assigneeUid === uid;
   const canClaim = currentContext.membership.role !== 'solicitante' && ticket.status === 'open' && !ticket.assigneeUid;
-  const canMessage = isRequester || isAssignedAgent;
+  const canResolve = isAssignedAgent && ticket.status === 'in_progress';
+  const canMessage = (isRequester || isAssignedAgent) && ticket.status !== 'resolved';
 
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
@@ -139,9 +287,19 @@ function renderTicket(ticket) {
   document.querySelector('#detail-category').textContent = category;
 
   document.querySelector('#claim-ticket-button').classList.toggle('hidden', !canClaim);
+  document.querySelector('#resolve-ticket-button').classList.toggle('hidden', !canResolve);
+  if (!canResolve) setResolvePanel(false);
+
+  const publicBlock = document.querySelector('#detail-public-resolution');
+  const hasPublicResolution = ticket.status === 'resolved' &&
+    ticket.resolutionShared === true && Boolean(ticket.publicResolution);
+  publicBlock.classList.toggle('hidden', !hasPublicResolution);
+  document.querySelector('#detail-public-resolution-text').textContent =
+    hasPublicResolution ? ticket.publicResolution : '';
 
   const actionHelp = document.querySelector('#detail-action-help');
-  if (canClaim) actionHelp.textContent = 'Assuma o sinal para iniciar o atendimento e poder responder ao solicitante.';
+  if (ticket.status === 'resolved') actionHelp.textContent = 'Sinal resolvido. O histórico continua disponível.';
+  else if (canClaim) actionHelp.textContent = 'Assuma o sinal para iniciar o atendimento e poder responder ao solicitante.';
   else if (isAssignedAgent) actionHelp.textContent = 'Este sinal está em atendimento por você.';
   else if (ticket.assigneeName) actionHelp.textContent = `Este sinal está em atendimento por ${ticket.assigneeName}.`;
   else if (isRequester) actionHelp.textContent = 'Seu sinal está aguardando atendimento.';
@@ -158,8 +316,10 @@ function renderTicket(ticket) {
   if (canMessage) {
     textarea.placeholder = isRequester ? 'Escreva uma mensagem para o atendimento...' : 'Escreva uma resposta para o solicitante...';
   } else {
-    textarea.placeholder = canClaim ? 'Assuma este sinal para responder.' : 'Mensagem indisponível neste atendimento.';
-    help.textContent = 'Somente o solicitante ou o atendente responsável pode enviar mensagens.';
+    textarea.placeholder = ticket.status === 'resolved' ? 'Conversa encerrada neste sinal.' :
+      canClaim ? 'Assuma este sinal para responder.' : 'Mensagem indisponível neste atendimento.';
+    help.textContent = ticket.status === 'resolved' ? 'Este sinal foi resolvido. A reabertura será disponibilizada em uma próxima versão.' :
+      'Somente o solicitante ou o atendente responsável pode enviar mensagens.';
   }
 }
 
