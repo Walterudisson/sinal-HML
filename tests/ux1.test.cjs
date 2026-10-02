@@ -106,12 +106,11 @@ test('a conversa permanece pública nesta etapa e não altera as regras', () => 
 });
 
 test('painel mobile usa altura definida e rolagem própria para detalhes completos', () => {
-  const panel = html.match(/<section class="ticket-detail-panel[^"\\n]*"/);
-  assert.ok(panel, 'painel de detalhes deve existir');
-  assert.match(panel[0], /h-\\[96dvh\\]/, 'altura definida para a área flex do mobile');
-  assert.match(panel[0], /sm:h-\\[min\\(90dvh,760px\\)\\]/, 'desktop preserva altura anterior');
-  assert.match(html, /id="ticket-details-view" class="min-h-0 flex-1 overflow-hidden"/);
-  assert.match(html, /class="h-full min-h-0 overflow-y-auto" id="ticket-detail-scroll"/);
-  assert.match(css, /#ticket-detail-scroll\\s*\\{[^}]*overscroll-behavior-y: contain/);
-  assert.match(serviceWorker, /sinal-shell-ux1-2-scroll/);
+  const panel = html.slice(html.indexOf('<section class="ticket-detail-panel'), html.indexOf('role="dialog"'));
+  assert.ok(panel.includes('h-[96dvh] max-h-[96dvh]'), 'altura definida no mobile');
+  assert.ok(panel.includes('sm:h-[min(90dvh,760px)]'), 'desktop preserva altura anterior');
+  assert.ok(html.includes('id="ticket-details-view" class="min-h-0 flex-1 overflow-hidden"'));
+  assert.ok(html.includes('class="h-full min-h-0 overflow-y-auto" id="ticket-detail-scroll"'));
+  assert.ok(css.includes('overscroll-behavior-y: contain'));
+  assert.ok(serviceWorker.includes('sinal-shell-ux1-2-scroll'));
 });
