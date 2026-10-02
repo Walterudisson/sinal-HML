@@ -1,0 +1,12 @@
+{
+  "name": "sinal-security-hml-tests",
+  "private": true,
+  "scripts": {
+    "test": "firebase emulators:exec --config ../../firebase.security.json --only firestore --project demo-sinal-security \"node --test security.test.cjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0",
+    "firebase-tools": "^14.0.0"
+  }
+}
