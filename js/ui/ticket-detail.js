@@ -13,6 +13,8 @@ let onResolve = null;
 let onGetPrivateResolution = null;
 let onObserveStatusEvents = null;
 let privateRequestId = 0;
+let messagesSnapshotInitialized = false;
+let previousMessageIds = [];
 
 const publicSuggestions = [
   'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
@@ -196,7 +198,11 @@ export function initTicketDetail(options) {
 export function openTicketDetail(ticket, observeMessages) {
   selectedTicket = ticket;
   renderTicket(ticket);
+  messagesSnapshotInitialized = false;
+  previousMessageIds = [];
   renderMessages([]);
+  // O reset visual não representa o primeiro snapshot do Firestore.
+  messagesSnapshotInitialized = false;
   renderStatusHistory([]);
   setResolvePanel(false);
   void loadPrivateResolution(ticket);
@@ -205,6 +211,14 @@ export function openTicketDetail(ticket, observeMessages) {
   overlay.classList.remove('hidden');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.classList.add('overlay-open');
+
+  // Abrir sempre pelo cabeçalho: status, prioridade e categoria precisam ficar visíveis.
+  // A conversa não deve forçar a rolagem ao receber o primeiro snapshot.
+  const scroller = document.querySelector('#ticket-detail-scroll');
+  scroller.scrollTop = 0;
+  requestAnimationFrame(() => {
+    if (selectedTicket?.id === ticket.id) scroller.scrollTop = 0;
+  });
 
   unsubscribeMessages?.();
   unsubscribeMessages = observeMessages(ticket, renderMessages, (error) => {
@@ -243,6 +257,8 @@ function finalizeClose() {
   document.querySelector('#ticket-detail').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('overlay-open');
   selectedTicket = null;
+  messagesSnapshotInitialized = false;
+  previousMessageIds = [];
   document.querySelector('#detail-private-resolution-text').textContent = '';
   document.querySelector('#detail-private-resolution').classList.add('hidden');
   document.querySelector('#detail-public-resolution-text').textContent = '';
@@ -329,6 +345,15 @@ function renderMessages(messages) {
   const count = document.querySelector('#conversation-count');
   const uid = currentContext?.firebaseUser.uid;
 
+  const scroller = document.querySelector('#ticket-detail-scroll');
+  const nearBottom = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop < 100;
+  const nextMessageIds = messages.map((message) => message.id);
+  const hasNewMessage = messagesSnapshotInitialized && messages.length > previousMessageIds.length
+    && nextMessageIds.some((id) => !previousMessageIds.includes(id));
+  previousMessageIds = nextMessageIds;
+  const shouldFollow = hasNewMessage && nearBottom;
+  messagesSnapshotInitialized = true;
+
   count.textContent = String(messages.length);
   empty.classList.toggle('hidden', messages.length > 0);
 
@@ -341,6 +366,9 @@ function renderMessages(messages) {
       </article>`;
   }).join('');
 
-  const scroller = document.querySelector('#ticket-detail-scroll');
-  window.setTimeout(() => { scroller.scrollTop = scroller.scrollHeight; }, 0);
+  // Apenas acompanhar novas mensagens quando o usuário já estiver perto do final.
+  // Nunca mover a tela ao abrir um sinal ou ao atualizar um snapshot existente.
+  if (shouldFollow) {
+    requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
+  }
 }
