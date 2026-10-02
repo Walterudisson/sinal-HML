@@ -106,7 +106,11 @@ test('a conversa permanece pública nesta etapa e não altera as regras', () => 
 });
 
 test('painel mobile usa altura definida e rolagem própria para detalhes completos', () => {
-  const panel = html.slice(html.indexOf('<section class="ticket-detail-panel'), html.indexOf('role="dialog"'));
+  const panelStart = html.indexOf('<section class="ticket-detail-panel');
+  assert.ok(panelStart >= 0, 'painel de detalhes presente');
+  const panelEnd = html.indexOf('role="dialog"', panelStart);
+  assert.ok(panelEnd > panelStart, 'fim da abertura do modal de detalhes presente');
+  const panel = html.slice(panelStart, panelEnd);
   assert.ok(panel.includes('h-[96dvh] max-h-[96dvh]'), 'altura definida no mobile');
   assert.ok(panel.includes('sm:h-[min(90dvh,760px)]'), 'desktop preserva altura anterior');
   assert.ok(html.includes('id="ticket-details-view" class="min-h-0 flex-1 overflow-hidden"'));
