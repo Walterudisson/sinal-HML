@@ -201,6 +201,8 @@ export function openTicketDetail(ticket, observeMessages) {
   messagesSnapshotInitialized = false;
   previousMessageIds = [];
   renderMessages([]);
+  // O reset visual não representa o primeiro snapshot do Firestore.
+  messagesSnapshotInitialized = false;
   renderStatusHistory([]);
   setResolvePanel(false);
   void loadPrivateResolution(ticket);
