@@ -6,7 +6,8 @@
     "node": "22"
   },
   "scripts": {
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "test": "node --test status-notifications.test.cjs"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",
