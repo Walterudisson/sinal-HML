@@ -1,7 +1,7 @@
 import {
   categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, escapeHtml
 } from './signal-composer.js';
-import { forceOverlayClosed, openOverlayHistory, requestOverlayClose } from './overlay-history.js';
+import { forceOverlayClosed, openOverlayHistory, openOverlaySubstate, requestOverlayClose, requestOverlaySubstateClose } from './overlay-history.js';
 
 let currentContext = null;
 let selectedTicket = null;
@@ -15,6 +15,8 @@ let onObserveStatusEvents = null;
 let privateRequestId = 0;
 let messagesSnapshotInitialized = false;
 let previousMessageIds = [];
+let activeView = 'details';
+let substateClosePending = false;
 
 const publicSuggestions = [
   'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
@@ -24,11 +26,56 @@ const publicSuggestions = [
 
 export function setTicketDetailContext(context) { currentContext = context; }
 
-function setResolvePanel(open) {
-  document.querySelector('#resolve-panel').classList.toggle('hidden', !open);
-  if (open) {
-    document.querySelector('#resolve-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+function setTicketView(view) {
+  activeView = view;
+  for (const [name, id] of [
+    ['details', 'ticket-details-view'],
+    ['conversation', 'ticket-conversation-view'],
+    ['resolution', 'ticket-resolution-view']
+  ]) {
+    const element = document.getElementById(id);
+    element.classList.toggle('hidden', name !== view);
+    if (name !== 'details') element.setAttribute('aria-hidden', String(name !== view));
   }
+  const back = document.querySelector('#ticket-view-back');
+  back.classList.toggle('hidden', view === 'details');
+  document.querySelector('#ticket-view-label').textContent =
+    view === 'details' ? 'Detalhes do sinal' : view === 'conversation' ? 'Conversa com o solicitante' : 'Finalizar atendimento';
+  document.querySelector('#ticket-detail .ticket-detail-panel').classList.toggle('is-immersive', view !== 'details');
+  document.querySelectorAll('#ticket-detail [data-close-ticket-detail]').forEach((element) => {
+    if (element.tagName === 'BUTTON') element.classList.toggle('hidden', view !== 'details');
+  });
+}
+
+function goToDetails() {
+  if (activeView === 'details' || substateClosePending) return;
+  const leaving = activeView;
+  substateClosePending = true;
+  requestOverlaySubstateClose('ticket-detail', leaving, () => {
+    substateClosePending = false;
+    setTicketView('details');
+  });
+}
+
+function openSubView(view) {
+  if (!selectedTicket || activeView !== 'details') return;
+  const created = openOverlaySubstate('ticket-detail', view, () => {
+    substateClosePending = false;
+    setTicketView('details');
+  });
+  if (!created) return;
+  setTicketView(view);
+  const scroller = document.querySelector(view === 'conversation' ? '#conversation-scroll' : '#resolution-scroll');
+  requestAnimationFrame(() => {
+    if (selectedTicket && activeView === view) {
+      scroller.scrollTop = view === 'conversation' ? scroller.scrollHeight : 0;
+    }
+  });
+}
+
+function setResolvePanel(open) {
+  if (open) openSubView('resolution');
+  else if (activeView === 'resolution') goToDetails();
 }
 
 async function loadPrivateResolution(ticket) {
@@ -89,6 +136,8 @@ export function initTicketDetail(options) {
     document.querySelector('#resolution-public-area').classList.add('hidden');
     setResolvePanel(true);
   });
+  document.querySelector('#open-conversation-button').addEventListener('click', () => openSubView('conversation'));
+  document.querySelector('#ticket-view-back').addEventListener('click', goToDetails);
   document.querySelector('#resolve-cancel').addEventListener('click', () => {
     if (!resolving) setResolvePanel(false);
   });
@@ -160,7 +209,7 @@ export function initTicketDetail(options) {
 
   document.querySelector('#message-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!selectedTicket) return;
+    if (!selectedTicket || activeView !== 'conversation') return;
 
     const textarea = document.querySelector('#message-body');
     const body = textarea.value.trim();
@@ -196,7 +245,14 @@ export function initTicketDetail(options) {
 }
 
 export function openTicketDetail(ticket, observeMessages) {
+  const ticketChanged = selectedTicket?.id !== ticket.id;
+  if (ticketChanged) {
+    document.querySelector('#message-body').value = '';
+    document.querySelector('#message-body').style.height = '';
+  }
   selectedTicket = ticket;
+  substateClosePending = false;
+  setTicketView('details');
   renderTicket(ticket);
   messagesSnapshotInitialized = false;
   previousMessageIds = [];
@@ -204,7 +260,6 @@ export function openTicketDetail(ticket, observeMessages) {
   // O reset visual não representa o primeiro snapshot do Firestore.
   messagesSnapshotInitialized = false;
   renderStatusHistory([]);
-  setResolvePanel(false);
   void loadPrivateResolution(ticket);
 
   const overlay = document.querySelector('#ticket-detail');
@@ -243,6 +298,10 @@ export function updateSelectedTicket(ticket) {
 }
 
 export function closeTicketDetail() {
+  if (activeView !== 'details') {
+    goToDetails();
+    return;
+  }
   requestOverlayClose('ticket-detail', finalizeClose);
 }
 
@@ -252,7 +311,8 @@ function finalizeClose() {
   unsubscribeMessages = null;
   unsubscribeStatusEvents = null;
   ++privateRequestId;
-  setResolvePanel(false);
+  substateClosePending = false;
+  setTicketView('details');
   document.querySelector('#ticket-detail').classList.add('hidden');
   document.querySelector('#ticket-detail').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('overlay-open');
@@ -345,13 +405,13 @@ function renderMessages(messages) {
   const count = document.querySelector('#conversation-count');
   const uid = currentContext?.firebaseUser.uid;
 
-  const scroller = document.querySelector('#ticket-detail-scroll');
+  const scroller = document.querySelector('#conversation-scroll');
   const nearBottom = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop < 100;
   const nextMessageIds = messages.map((message) => message.id);
   const hasNewMessage = messagesSnapshotInitialized && messages.length > previousMessageIds.length
     && nextMessageIds.some((id) => !previousMessageIds.includes(id));
   previousMessageIds = nextMessageIds;
-  const shouldFollow = hasNewMessage && nearBottom;
+  const shouldFollow = hasNewMessage && nearBottom && activeView === 'conversation';
   messagesSnapshotInitialized = true;
 
   count.textContent = String(messages.length);
