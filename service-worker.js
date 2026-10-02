@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-ux1-1';
+const CACHE_NAME = 'sinal-shell-ux1-2-scroll';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
