@@ -200,3 +200,15 @@ body.overlay-open { overflow: hidden; }
 
 .notifications-panel{padding-bottom:env(safe-area-inset-bottom)}
 @media (max-width:639px){#notification-bell{flex-shrink:0}.notifications-panel{padding-bottom:max(.25rem,env(safe-area-inset-bottom))}}
+
+/* UX-1: conversa e resolução são telas exclusivas, sem dois campos de escrita. */
+#ticket-conversation-view, #ticket-resolution-view { min-height: 0; }
+#ticket-conversation-view:not(.hidden), #ticket-resolution-view:not(.hidden) { display: flex; }
+#conversation-scroll, #resolution-scroll { overscroll-behavior: contain; }
+#ticket-view-back:focus-visible, #open-conversation-button:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+@media (max-width: 639px) {
+  #ticket-detail .ticket-detail-panel.is-immersive {
+    inset: 0; height: 100dvh; max-height: 100dvh;
+    border-radius: 0; padding-bottom: 0;
+  }
+}
