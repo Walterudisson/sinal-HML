@@ -25,7 +25,18 @@ const publicSuggestions = [
 export function setTicketDetailContext(context) { currentContext = context; }
 
 function setResolvePanel(open) {
+  // Dois modos mutuamente exclusivos: conversa ou resolução.
   document.querySelector('#resolve-panel').classList.toggle('hidden', !open);
+  document.querySelector('#message-composer-container').classList.toggle('hidden', open);
+  document.querySelector('#resolution-action-bar').classList.toggle('hidden', !open);
+
+  // Impedir envios pela conversa mesmo que um evento de teclado ocorra enquanto oculta.
+  const uid = currentContext?.firebaseUser.uid;
+  const canMessage = Boolean(selectedTicket && uid &&
+    (selectedTicket.requesterUid === uid || selectedTicket.assigneeUid === uid) &&
+    selectedTicket.status !== 'resolved');
+  document.querySelector('#message-body').disabled = open || !canMessage;
+  document.querySelector('#message-submit-button').disabled = open || !canMessage;
   if (open) {
     document.querySelector('#resolve-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -160,7 +171,7 @@ export function initTicketDetail(options) {
 
   document.querySelector('#message-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!selectedTicket) return;
+    if (!selectedTicket || !document.querySelector('#resolve-panel').classList.contains('hidden')) return;
 
     const textarea = document.querySelector('#message-body');
     const body = textarea.value.trim();
@@ -325,8 +336,9 @@ function renderTicket(ticket) {
   const submit = document.querySelector('#message-submit-button');
   const help = document.querySelector('#message-permission-help');
 
-  textarea.disabled = !canMessage;
-  submit.disabled = !canMessage;
+  const resolutionMode = !document.querySelector('#resolve-panel').classList.contains('hidden');
+  textarea.disabled = !canMessage || resolutionMode;
+  submit.disabled = !canMessage || resolutionMode;
   help.classList.toggle('hidden', canMessage);
 
   if (canMessage) {
