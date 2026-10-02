@@ -4,6 +4,8 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const root = join(__dirname, '..');
 const html = readFileSync(join(root, 'index.html'), 'utf8');
+const css = readFileSync(join(root, 'css/app.css'), 'utf8');
+const serviceWorker = readFileSync(join(root, 'service-worker.js'), 'utf8');
 const ui = readFileSync(join(root, 'js/ui/ticket-detail.js'), 'utf8');
 const overlayCode = readFileSync(join(root, 'js/ui/overlay-history.js'), 'utf8');
 
@@ -101,4 +103,18 @@ test('a conversa permanece pública nesta etapa e não altera as regras', () => 
   assert.match(ui, /#conversation-scroll/);
   assert.match(html, /Canal público: mensagens entre solicitante e atendimento/);
   assert.match(html, /Compartilhar uma mensagem de solução com o solicitante/);
+});
+
+test('painel mobile usa altura definida e rolagem própria para detalhes completos', () => {
+  const panelStart = html.indexOf('<section class="ticket-detail-panel');
+  assert.ok(panelStart >= 0, 'painel de detalhes presente');
+  const panelEnd = html.indexOf('role="dialog"', panelStart);
+  assert.ok(panelEnd > panelStart, 'fim da abertura do modal de detalhes presente');
+  const panel = html.slice(panelStart, panelEnd);
+  assert.ok(panel.includes('h-[96dvh] max-h-[96dvh]'), 'altura definida no mobile');
+  assert.ok(panel.includes('sm:h-[min(90dvh,760px)]'), 'desktop preserva altura anterior');
+  assert.ok(html.includes('id="ticket-details-view" class="min-h-0 flex-1 overflow-hidden"'));
+  assert.ok(html.includes('class="h-full min-h-0 overflow-y-auto" id="ticket-detail-scroll"'));
+  assert.ok(css.includes('overscroll-behavior-y: contain'));
+  assert.ok(serviceWorker.includes('sinal-shell-ux1-2-scroll'));
 });

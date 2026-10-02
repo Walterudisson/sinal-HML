@@ -212,3 +212,10 @@ body.overlay-open { overflow: hidden; }
     border-radius: 0; padding-bottom: 0;
   }
 }
+
+/* UX-1 hotfix: o painel precisa de altura definida para o flex-1 calcular
+   a área rolável. max-height isolado não define o espaço do scroll no mobile. */
+#ticket-detail-scroll {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
