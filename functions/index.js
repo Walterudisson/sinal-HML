@@ -1,5 +1,5 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
-const { buildStatusNotice } = require('./status-notifications');
+const { buildStatusNotice, createNotificationOnce } = require('./status-notifications');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -52,7 +52,10 @@ exports.notifyNewMessage = onDocumentCreated('tenants/{tenantId}/tickets/{ticket
 // A gravação do statusEvent e a mudança do ticket ocorrem no mesmo lote.
 // Os eventos são imutáveis e contêm somente metadados, nunca a solução interna.
 exports.notifyTicketStatus = onDocumentCreated(
-  'tenants/{tenantId}/tickets/{ticketId}/statusEvents/{eventId}',
+  {
+    document: 'tenants/{tenantId}/tickets/{ticketId}/statusEvents/{eventId}',
+    region: 'southamerica-east1'
+  },
   async (event) => {
     if (!event.data) return;
     const { tenantId, ticketId, eventId } = event.params;
@@ -62,7 +65,7 @@ exports.notifyTicketStatus = onDocumentCreated(
     const ticketSnap = await db.doc(`tenants/${tenantId}/tickets/${ticketId}`).get();
     if (!ticketSnap.exists) return;
     const ticket = ticketSnap.data();
-    const notice = buildStatusNotice(ticket, statusEvent, eventId);
+    const notice = buildStatusNotice({ ...ticket, _eventTicketId: ticketId }, statusEvent, eventId);
     if (!notice) return;
 
     const recipient = await db.doc(`tenants/${tenantId}/members/${notice.uid}`).get();
@@ -91,12 +94,8 @@ async function createAndPush({ tenantId, uid, type, actorUid, title, body, ticke
   if (notificationId) {
     // A entrega de eventos Firestore é pelo menos uma vez. Uma ID estável
     // evita notificações repetidas no sino e reenvio de push em reexecuções.
-    try {
-      await notificationRef.create(payload);
-    } catch (error) {
-      if (error?.code === 6 || error?.code === 'already-exists') return;
-      throw error;
-    }
+    const created = await createNotificationOnce(notificationRef, payload);
+    if (!created) return;
   } else {
     await notificationRef.set(payload);
   }
