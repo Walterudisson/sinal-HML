@@ -352,6 +352,7 @@ function renderTicket(ticket) {
   document.querySelector('#detail-requester-email').textContent = ticket.requesterEmail ?? '';
   document.querySelector('#detail-created-at').textContent = `Recebido em ${formatDate(ticket.createdAt)}`;
   document.querySelector('#detail-assignee').textContent = ticket.assigneeName || 'Ainda não atribuído';
+  document.querySelector('#open-conversation-label').textContent = isRequester ? 'Conversar com o atendimento' : 'Conversar com o solicitante';
 
   const statusEl = document.querySelector('#detail-status');
   statusEl.className = ticket.status === 'in_progress' ? 'ticket-badge bg-indigo-50 text-indigo-700' : 'ticket-badge bg-emerald-50 text-emerald-700';
