@@ -1,8 +1,14 @@
 'use strict';
 
 // Apenas campos públicos e mensagens predefinidas. Nunca recebe ou usa private/resolution.
+function ticketIdSafe(ticket) {
+  // O ticketId vem exclusivamente de parâmetros de caminho da função, nunca do solicitante.
+  return String(ticket._eventTicketId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 160);
+}
+
 function buildStatusNotice(ticket, event, eventId) {
   if (!ticket || !event || typeof eventId !== 'string' || !/^[A-Za-z0-9_-]{1,160}$/.test(eventId)) return null;
+  if (!ticketIdSafe(ticket)) return null;
   const actorUid = event.actorUid;
   const requesterUid = ticket.requesterUid;
   if (typeof actorUid !== 'string' || !actorUid
@@ -17,7 +23,7 @@ function buildStatusNotice(ticket, event, eventId) {
   if (event.type === 'claimed' && event.from === 'open' && event.to === 'in_progress'
       && ticket.assigneeUid === actorUid) {
     return {
-      notificationId: `status-${eventId}`,
+      notificationId: `status-${ticketIdSafe(ticket)}-${eventId}`,
       uid: requesterUid,
       type: 'ticket_claimed',
       actorUid,
@@ -40,4 +46,14 @@ function buildStatusNotice(ticket, event, eventId) {
   return null;
 }
 
-module.exports = { buildStatusNotice };
+async function createNotificationOnce(notificationRef, payload) {
+  try {
+    await notificationRef.create(payload);
+    return true;
+  } catch (error) {
+    if (error?.code === 6 || error?.code === 'already-exists') return false;
+    throw error;
+  }
+}
+
+module.exports = { buildStatusNotice, createNotificationOnce };
