@@ -1,4 +1,5 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { buildStatusNotice, createNotificationOnce } = require('./status-notifications');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -47,12 +48,57 @@ exports.notifyNewMessage = onDocumentCreated('tenants/{tenantId}/tickets/{ticket
   });
 });
 
-async function createAndPush({ tenantId, uid, type, actorUid, title, body, ticketId, ticketCode }) {
-  const notificationRef = db.collection(`tenants/${tenantId}/members/${uid}/notifications`).doc();
-  await notificationRef.set({
+
+// A gravação do statusEvent e a mudança do ticket ocorrem no mesmo lote.
+// Os eventos são imutáveis e contêm somente metadados, nunca a solução interna.
+exports.notifyTicketStatus = onDocumentCreated(
+  {
+    document: 'tenants/{tenantId}/tickets/{ticketId}/statusEvents/{eventId}',
+    region: 'southamerica-east1'
+  },
+  async (event) => {
+    if (!event.data) return;
+    const { tenantId, ticketId, eventId } = event.params;
+    const statusEvent = event.data.data();
+    if (!['claimed', 'resolved'].includes(statusEvent.type)) return;
+
+    const ticketSnap = await db.doc(`tenants/${tenantId}/tickets/${ticketId}`).get();
+    if (!ticketSnap.exists) return;
+    const ticket = ticketSnap.data();
+    const notice = buildStatusNotice({ ...ticket, _eventTicketId: ticketId }, statusEvent, eventId);
+    if (!notice) return;
+
+    const recipient = await db.doc(`tenants/${tenantId}/members/${notice.uid}`).get();
+    if (!recipient.exists || recipient.data().status !== 'active') return;
+    const profile = await db.doc(`users/${notice.uid}`).get();
+    if (!profile.exists || profile.data().status !== 'active') return;
+
+    await createAndPush({
+      tenantId, uid: notice.uid, type: notice.type, actorUid: notice.actorUid,
+      title: notice.title, body: notice.body, ticketId, ticketCode: ticket.code,
+      notificationId: notice.notificationId
+    });
+  }
+);
+
+async function createAndPush({ tenantId, uid, type, actorUid, title, body, ticketId, ticketCode, notificationId = null }) {
+  const notificationCollection = db.collection(`tenants/${tenantId}/members/${uid}/notifications`);
+  const notificationRef = notificationId
+    ? notificationCollection.doc(notificationId)
+    : notificationCollection.doc();
+  const payload = {
     type, title, body, ticketId, ticketCode: ticketCode || '', actorUid: actorUid || '',
     isRead: false, readAt: null, createdAt: FieldValue.serverTimestamp()
-  });
+  };
+
+  if (notificationId) {
+    // A entrega de eventos Firestore é pelo menos uma vez. Uma ID estável
+    // evita notificações repetidas no sino e reenvio de push em reexecuções.
+    const created = await createNotificationOnce(notificationRef, payload);
+    if (!created) return;
+  } else {
+    await notificationRef.set(payload);
+  }
 
   const devices = await db.collection(`tenants/${tenantId}/members/${uid}/devices`).where('enabled', '==', true).get();
   const valid = devices.docs.filter((doc) => typeof doc.data().token === 'string' && doc.data().token.length > 20);
