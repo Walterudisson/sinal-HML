@@ -21,11 +21,7 @@ npm audit
 npm test
 ```
 
-**Regiões das funções HML:** não alterar ou implantar `functions/index.js` até conferir as regiões efetivamente implantadas:
-```bash
-npx firebase-tools functions:list --project sinaldesk-hml
-```
-O código atual de HML não declara a região para `notifyNewTicket` e `notifyNewMessage`, enquanto PRD declara `southamerica-east1`. Alinhar somente após essa verificação para evitar criação duplicada de gatilhos.
+**Regiões das funções HML:** conferidas no Firebase em 03/10/2026: `notifyNewTicket`, `notifyNewMessage` e `notifyTicketStatus` estão implantadas em `southamerica-east1`, Node.js 22, segunda geração. A branch agora declara explicitamente essa região para as três funções, igual ao PRD. **Não é necessário fazer deploy das funções para homologar a interface 1.4.3**: validar esse ajuste de código agora e implantá-lo somente na próxima publicação necessária das funções.
 
 O deploy da versão HML via GitHub Pages requer merge autorizado desta branch para `main`. Esta release **não exige** deploy de regras nem das funções se já estiverem operacionais; a correção das dependências só será implantada na próxima publicação necessária das funções.
 
