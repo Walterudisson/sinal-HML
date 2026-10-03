@@ -1,3 +1,6 @@
+import { environment } from '../config/firebase.js';
+import { APP_VERSION } from '../config/version.js';
+
 const roleLabels = Object.freeze({
   admin: 'Administrador',
   supervisor: 'Supervisor',
@@ -25,8 +28,12 @@ export function renderContext(context) {
   document.querySelector('#header-user-name').textContent = displayName;
   document.querySelector('#header-user-email').textContent = firebaseUser.email ?? '';
   document.querySelector('#welcome-title').textContent = `Olá, ${firstName}.`;
-  document.querySelector('#card-tenant-name').textContent = tenant.name;
-  document.querySelector('#card-role').textContent = roleLabel(membership.role);
+  document.querySelector('#more-tenant-name').textContent = tenant.name;
+  document.querySelector('#more-user-role').textContent = roleLabel(membership.role);
+  const environmentLabel = environment.production ? 'Produção (PRD)' : 'Homologação (HML)';
+  document.querySelector('#more-app-environment').textContent = environmentLabel;
+  document.querySelector('#more-app-version').textContent = `v${APP_VERSION}`;
+  document.querySelector('#sidebar-app-version').textContent = `v${APP_VERSION}`;
   document.querySelector('#more-user-email').textContent = firebaseUser.email ?? '';
   document.querySelector('#more-user-uid').textContent = firebaseUser.uid;
 

@@ -153,10 +153,9 @@
           <button class="nav-item-desktop" data-view="more"><span class="nav-icon">⋯</span><span>Mais</span></button>
         </nav>
 
-        <div class="border-t border-white/10 p-4">
-          <div class="rounded-2xl bg-white/5 p-4">
-            <div class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Ambiente</div>
-            <div class="mt-1 text-sm font-semibold text-slate-300">Homologação (HML)</div>
+        <div class="border-t border-white/10 px-6 py-4" aria-label="Versão e ambiente">
+          <div class="flex items-center justify-between gap-2 text-xs text-slate-400">
+            <span>HML</span><span id="sidebar-app-version">Versão...</span>
           </div>
         </div>
       </aside>
@@ -206,16 +205,11 @@
               </button>
             </div>
 
-            <div class="mt-8 grid gap-4 md:grid-cols-3">
+            <div class="mt-8 grid gap-4 md:grid-cols-2">
               <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Meus sinais</span>
                 <strong id="ticket-count" class="mt-3 block text-3xl font-extrabold tracking-tight text-slate-950">0</strong>
                 <span id="ticket-count-label" class="mt-1 block text-sm text-slate-500">Nenhum sinal enviado.</span>
-              </article>
-              <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">Organização</span>
-                <strong id="card-tenant-name" class="mt-3 block truncate text-lg font-extrabold text-slate-950"></strong>
-                <span id="card-role" class="mt-1 block text-sm text-slate-500"></span>
               </article>
               <article data-support-only class="hidden rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
                 <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-indigo-700">Central</span>
@@ -337,6 +331,32 @@
               <div class="rounded-2xl border border-slate-200 bg-white p-5">
                 <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-400">UID HML</span>
                 <code id="more-user-uid" class="mt-2 block break-all text-xs leading-5 text-slate-700"></code>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-white p-5 sm:col-span-2">
+                <h2 class="text-sm font-extrabold text-slate-950">Organização</h2>
+                <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Organização atual</dt>
+                    <dd id="more-tenant-name" class="mt-1 break-words text-sm font-semibold text-slate-900"></dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Seu perfil</dt>
+                    <dd id="more-user-role" class="mt-1 text-sm font-semibold text-slate-900"></dd>
+                  </div>
+                </dl>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-white p-5 sm:col-span-2">
+                <h2 class="text-sm font-extrabold text-slate-950">Sobre o Sinal</h2>
+                <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Ambiente</dt>
+                    <dd id="more-app-environment" class="mt-1 text-sm font-semibold text-slate-900"></dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Versão</dt>
+                    <dd id="more-app-version" class="mt-1 text-sm font-semibold text-slate-900"></dd>
+                  </div>
+                </dl>
               </div>
             </div>
           </section>
