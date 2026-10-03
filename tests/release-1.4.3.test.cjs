@@ -27,12 +27,12 @@ test('Mais reúne organização, perfil, ambiente e versão', () => {
   }
 });
 test('Versão possui fonte única e é preenchida também na barra lateral', () => {
-  assert.match(version, /export const APP_VERSION = '1\\.4\\.3';/);
+  assert.ok(version.includes("export const APP_VERSION = '1.4.3';"));
   assert.ok(html.includes('id="sidebar-app-version"'));
   assert.ok(appShell.includes("import { APP_VERSION } from '../config/version.js'"));
   assert.ok(appShell.includes("'#sidebar-app-version'"));
   assert.ok(appShell.includes("'#more-app-version'"));
-  assert.ok(!/v1\\.4\\.3/.test(html), 'Não duplicar versão fixa no HTML');
+  assert.ok(!html.includes('v1.4.3'), 'Não duplicar versão fixa no HTML');
 });
 test('Ambiente é obtido do Firebase HML, sem valor PRD no código', () => {
   assert.ok(appShell.includes("import { environment } from '../config/firebase.js'"));
