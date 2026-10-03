@@ -54,3 +54,13 @@ test('Correção do uuid transitivo foi alinhada com PRD', () => {
   assert.equal(pkg.overrides.gaxios.uuid, '^11.1.1');
   assert.equal(lock.packages['node_modules/uuid'].version, '11.1.1');
 });
+
+test('As três funções usam a região sul-americana já implantada em HML', () => {
+  const functions = read('functions/index.js');
+  for (const name of ['notifyNewTicket', 'notifyNewMessage', 'notifyTicketStatus']) {
+    const start = functions.indexOf(`exports.${name} = onDocumentCreated(`);
+    assert.ok(start >= 0, `Função ausente: ${name}`);
+    const options = functions.slice(start, start + 230);
+    assert.ok(options.includes("region: 'southamerica-east1'"), `Região ausente: ${name}`);
+  }
+});
