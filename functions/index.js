@@ -9,7 +9,7 @@ const db = getFirestore();
 const APP_BASE_URL = 'https://walterudisson.github.io/sinal-HML/';
 const SUPPORT_ROLES = new Set(['admin', 'supervisor', 'agente']);
 
-exports.notifyNewTicket = onDocumentCreated('tenants/{tenantId}/tickets/{ticketId}', async (event) => {
+exports.notifyNewTicket = onDocumentCreated({ document: 'tenants/{tenantId}/tickets/{ticketId}', region: 'southamerica-east1' }, async (event) => {
   if (!event.data) return;
   const { tenantId, ticketId } = event.params;
   const ticket = event.data.data();
@@ -26,7 +26,7 @@ exports.notifyNewTicket = onDocumentCreated('tenants/{tenantId}/tickets/{ticketI
   })));
 });
 
-exports.notifyNewMessage = onDocumentCreated('tenants/{tenantId}/tickets/{ticketId}/messages/{messageId}', async (event) => {
+exports.notifyNewMessage = onDocumentCreated({ document: 'tenants/{tenantId}/tickets/{ticketId}/messages/{messageId}', region: 'southamerica-east1' }, async (event) => {
   if (!event.data) return;
   const { tenantId, ticketId } = event.params;
   const message = event.data.data();
