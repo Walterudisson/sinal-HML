@@ -32,6 +32,7 @@ export function renderContext(context) {
   document.querySelector('#more-user-role').textContent = roleLabel(membership.role);
   const environmentLabel = environment.production ? 'Produção (PRD)' : 'Homologação (HML)';
   document.querySelector('#more-app-environment').textContent = environmentLabel;
+  document.querySelector('#sidebar-app-environment').textContent = environment.production ? 'PRD' : 'HML';
   document.querySelector('#more-app-version').textContent = `v${APP_VERSION}`;
   document.querySelector('#sidebar-app-version').textContent = `v${APP_VERSION}`;
   document.querySelector('#more-user-email').textContent = firebaseUser.email ?? '';
