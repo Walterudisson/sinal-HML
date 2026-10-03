@@ -28,6 +28,10 @@ test('Mais reúne organização, perfil, ambiente e versão', () => {
 });
 test('Versão possui fonte única e é preenchida também na barra lateral', () => {
   assert.ok(version.includes("export const APP_VERSION = '1.4.3';"));
+  assert.ok(html.includes('id="sidebar-app-environment"'));
+  assert.ok(appShell.includes("'#sidebar-app-environment'"));
+  assert.ok(appShell.includes("environment.production ? 'PRD' : 'HML'"));
+  assert.ok(!html.includes('<span>HML</span><span id="sidebar-app-version"'), 'Rodapé não pode fixar o ambiente no HTML');
   assert.ok(html.includes('id="sidebar-app-version"'));
   assert.ok(appShell.includes("import { APP_VERSION } from '../config/version.js'"));
   assert.ok(appShell.includes("'#sidebar-app-version'"));
