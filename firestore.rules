@@ -102,17 +102,10 @@ service cloud.firestore {
       }
 
       match /tickets/{ticketId} {
-        function linkedStatusEvent(type, from, to) {
+        function linkedStatusEventExists() {
           let next = request.resource.data;
-          let event = getAfter(statusEventPath(tenantId, ticketId, next.lastEventId)).data;
-          let user = get(userPath()).data;
           return next.lastEventId is string
-            && event.type == type
-            && event.from == from
-            && event.to == to
-            && event.actorUid == request.auth.uid
-            && event.actorName == user.displayName
-            && event.createdAt == request.time;
+            && existsAfter(statusEventPath(tenantId, ticketId, next.lastEventId));
         }
 
         function claimTransition() {
@@ -127,7 +120,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'status','assigneeUid','assigneeName','assigneeEmail','updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('claimed', 'open', 'in_progress');
+            && linkedStatusEventExists();
         }
 
         function waitingRequesterTransition() {
@@ -139,7 +132,7 @@ service cloud.firestore {
             && next.diff(current).affectedKeys().hasOnly([
               'status','updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('waiting_requester', 'in_progress', 'waiting_requester');
+            && linkedStatusEventExists();
         }
 
         function requesterRepliedTransition() {
@@ -151,7 +144,7 @@ service cloud.firestore {
             && next.diff(current).affectedKeys().hasOnly([
               'status','updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('requester_replied', 'waiting_requester', 'in_progress');
+            && linkedStatusEventExists();
         }
 
         function resolvedTransition() {
@@ -179,7 +172,7 @@ service cloud.firestore {
               'resolutionShared','publicResolution','latestResolutionId',
               'updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('resolved', 'in_progress', 'resolved')
+            && linkedStatusEventExists()
             && getAfter(privateResolutionPath(
               tenantId,
               ticketId,
@@ -206,7 +199,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'status','updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('reopened', 'resolved', 'in_progress');
+            && linkedStatusEventExists();
         }
 
         function closedTransition() {
@@ -221,7 +214,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'status','closedAt','closedByUid','closedByName','updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('closed', 'resolved', 'closed');
+            && linkedStatusEventExists();
         }
 
         allow read: if activeMember(tenantId)
@@ -324,11 +317,12 @@ service cloud.firestore {
         match /statusEvents/{eventId} {
           function baseEventValid() {
             let incoming = request.resource.data;
+            let user = get(userPath()).data;
             let nextTicket = getAfter(ticketPath(tenantId, ticketId)).data;
             return incoming.actorUid == request.auth.uid
+              && incoming.actorName == user.displayName
               && incoming.createdAt == request.time
-              && nextTicket.lastEventId == eventId
-              && nextTicket.updatedAt == request.time;
+              && nextTicket.lastEventId == eventId;
           }
 
           function simpleEventFields() {
@@ -340,66 +334,82 @@ service cloud.firestore {
             ]);
           }
 
-          function validSimpleTransition() {
-            return simpleEventFields() && (
-              (request.resource.data.type == 'claimed'
-                && request.resource.data.from == 'open'
-                && request.resource.data.to == 'in_progress')
-              ||
-              (request.resource.data.type == 'waiting_requester'
-                && request.resource.data.from == 'in_progress'
-                && request.resource.data.to == 'waiting_requester')
-              ||
-              (request.resource.data.type == 'reopened'
-                && request.resource.data.from == 'resolved'
-                && request.resource.data.to == 'in_progress')
-              ||
-              (request.resource.data.type == 'closed'
-                && request.resource.data.from == 'resolved'
-                && request.resource.data.to == 'closed')
-            );
+          function simpleEventMatchesTicket() {
+            let incoming = request.resource.data;
+            let currentTicket = get(ticketPath(tenantId, ticketId)).data;
+            let nextTicket = getAfter(ticketPath(tenantId, ticketId)).data;
+            return simpleEventFields()
+              && incoming.from == currentTicket.status
+              && incoming.to == nextTicket.status
+              && (
+                (incoming.type == 'claimed'
+                  && incoming.from == 'open'
+                  && incoming.to == 'in_progress')
+                ||
+                (incoming.type == 'waiting_requester'
+                  && incoming.from == 'in_progress'
+                  && incoming.to == 'waiting_requester')
+                ||
+                (incoming.type == 'reopened'
+                  && incoming.from == 'resolved'
+                  && incoming.to == 'in_progress')
+                ||
+                (incoming.type == 'closed'
+                  && incoming.from == 'resolved'
+                  && incoming.to == 'closed')
+              );
           }
 
           function requesterReplyEventValid() {
-            return request.resource.data.type == 'requester_replied'
-              && request.resource.data.keys().hasOnly([
+            let incoming = request.resource.data;
+            let currentTicket = get(ticketPath(tenantId, ticketId)).data;
+            let nextTicket = getAfter(ticketPath(tenantId, ticketId)).data;
+            return incoming.type == 'requester_replied'
+              && incoming.keys().hasOnly([
                 'type','from','to','actorUid','actorName','messageId','createdAt'
               ])
-              && request.resource.data.keys().hasAll([
+              && incoming.keys().hasAll([
                 'type','from','to','actorUid','actorName','messageId','createdAt'
               ])
-              && request.resource.data.from == 'waiting_requester'
-              && request.resource.data.to == 'in_progress'
-              && request.resource.data.messageId is string
-              && getAfter(messagePath(tenantId, ticketId, request.resource.data.messageId)).data.authorUid == request.auth.uid
-              && getAfter(messagePath(tenantId, ticketId, request.resource.data.messageId)).data.createdAt == request.time;
+              && incoming.from == currentTicket.status
+              && incoming.to == nextTicket.status
+              && incoming.from == 'waiting_requester'
+              && incoming.to == 'in_progress'
+              && incoming.messageId is string
+              && getAfter(messagePath(tenantId, ticketId, incoming.messageId)).data.authorUid == request.auth.uid
+              && getAfter(messagePath(tenantId, ticketId, incoming.messageId)).data.createdAt == request.time;
           }
 
           function resolvedEventValid() {
-            return request.resource.data.type == 'resolved'
-              && request.resource.data.keys().hasOnly([
+            let incoming = request.resource.data;
+            let currentTicket = get(ticketPath(tenantId, ticketId)).data;
+            let nextTicket = getAfter(ticketPath(tenantId, ticketId)).data;
+            return incoming.type == 'resolved'
+              && incoming.keys().hasOnly([
                 'type','from','to','actorUid','actorName',
                 'resolutionId','resolutionShared','publicResolution','createdAt'
               ])
-              && request.resource.data.keys().hasAll([
+              && incoming.keys().hasAll([
                 'type','from','to','actorUid','actorName',
                 'resolutionId','resolutionShared','publicResolution','createdAt'
               ])
-              && request.resource.data.from == 'in_progress'
-              && request.resource.data.to == 'resolved'
-              && request.resource.data.resolutionId == eventId
-              && request.resource.data.resolutionId == getAfter(ticketPath(tenantId, ticketId)).data.latestResolutionId
-              && request.resource.data.resolutionShared == getAfter(ticketPath(tenantId, ticketId)).data.resolutionShared
-              && request.resource.data.publicResolution == getAfter(ticketPath(tenantId, ticketId)).data.publicResolution;
+              && incoming.from == currentTicket.status
+              && incoming.to == nextTicket.status
+              && incoming.from == 'in_progress'
+              && incoming.to == 'resolved'
+              && incoming.resolutionId == eventId
+              && incoming.resolutionId == nextTicket.latestResolutionId
+              && incoming.resolutionShared == nextTicket.resolutionShared
+              && incoming.publicResolution == nextTicket.publicResolution;
           }
 
           allow read: if canReadTicket(tenantId, ticketId);
 
-          // A autorização da transição pertence ao update do ticket.
-          // O evento só é aceito se estiver vinculado ao mesmo lote e ao ator autenticado.
+          // O ticket exige que este documento exista no mesmo lote.
+          // Aqui validamos vínculo, ator e a correspondência entre estado anterior e posterior.
           allow create: if baseEventValid()
             && (
-              validSimpleTransition()
+              simpleEventMatchesTicket()
               || requesterReplyEventValid()
               || resolvedEventValid()
             );
