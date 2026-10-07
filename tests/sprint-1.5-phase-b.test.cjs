@@ -50,7 +50,7 @@ test('resposta do solicitante continua ligada à retomada atômica preparada na 
   assert.match(messages, /TICKET_EVENT\.REQUESTER_REPLIED/);
   assert.match(messages, /messageId:\s*messageRef\.id/);
   assert.match(rules, /linkedStatusEvent\('requester_replied', 'waiting_requester', 'in_progress'\)/);
-  assert.match(rules, /data\.messageId == messageId/);
+  assert.match(rules, /(?:data|event)\.messageId == messageId/);
 });
 
 test('notificação waiting_requester avisa somente o solicitante e não duplica com requester_replied', () => {
