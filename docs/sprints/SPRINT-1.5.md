@@ -339,6 +339,35 @@ Coberta tecnicamente por S15-07, mas mantida como história separada para teste 
 5. testes automatizados;
 6. roteiro manual HML.
 
+## Estratégia de homologação e promoção
+
+A Sprint 1.5 será homologada de forma incremental em HML, mas terá **uma única promoção para PRD**, somente após a conclusão e aprovação da sprint inteira.
+
+Checkpoints de HML:
+- fim da Fase B: homologação focada em espera pelo solicitante e retomada automática;
+- fim da Fase C: homologação focada em reabertura e múltiplas resoluções;
+- fim da Fase D: homologação focada em fechamento e avaliação;
+- Fase E: integração final, notificações, mobile/PWA e regressão completa;
+- Release Candidate 1.5.0: homologação final do conjunto completo.
+
+As aprovações intermediárias servem para reduzir risco e localizar regressões cedo, mas **não autorizam promoção parcial para PRD**.
+
+Fluxo de release:
+1. implementar e testar em HML;
+2. concluir todos os checkpoints de homologação;
+3. gerar o estado candidato da versão 1.5.0;
+4. executar homologação final completa em HML;
+5. obter aprovação explícita da versão;
+6. confirmar a janela de implantação em PRD;
+7. promover a 1.5.0 completa para PRD em uma única transição;
+8. executar smoke test objetivo em produção.
+
+Exceções admitidas:
+- hotfix crítico em produção;
+- necessidade técnica específica de infraestrutura que exija validação isolada em PRD.
+
+Fora dessas exceções, não serão promovidas fases A, B, C ou D separadamente para produção.
+
 ## Roteiro mínimo de homologação HML
 
 1. criar sinal como solicitante;
