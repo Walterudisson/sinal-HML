@@ -2,11 +2,10 @@
   "name": "sinal-security-sprint-1-5",
   "private": true,
   "scripts": {
-    "test": "firebase emulators:exec --config ../../firebase.security.json --only firestore --project demo-sinal-security \"node --test security.test.cjs\""
+    "test": "npx --yes firebase-tools@15.32.1 emulators:exec --config ../../firebase.security.json --only firestore --project demo-sinal-security \"node --test security.test.cjs\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",
-    "firebase": "^11.10.0",
-    "firebase-tools": "^15.32.1"
+    "firebase": "^11.10.0"
   }
 }
