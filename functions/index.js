@@ -60,7 +60,7 @@ exports.notifyTicketStatus = onDocumentCreated(
     if (!event.data) return;
     const { tenantId, ticketId, eventId } = event.params;
     const statusEvent = event.data.data();
-    if (!['claimed', 'resolved'].includes(statusEvent.type)) return;
+    if (!['claimed', 'waiting_requester', 'resolved'].includes(statusEvent.type)) return;
 
     const ticketSnap = await db.doc(`tenants/${tenantId}/tickets/${ticketId}`).get();
     if (!ticketSnap.exists) return;
