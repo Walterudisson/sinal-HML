@@ -14,13 +14,21 @@ npm test
 
 Os testes não acessam HML nem PRD.
 
-## Cobertura da Fase B
+## Arquitetura após o pivô
 
-1. atendente responsável pode marcar `in_progress → waiting_requester`;
-2. outro agente não pode alterar o sinal;
-3. solicitante não pode iniciar a espera;
-4. resposta do solicitante retoma `waiting_requester → in_progress` no mesmo lote da mensagem e do evento;
-5. mensagem isolada do solicitante durante a espera é negada;
-6. atendente responsável pode complementar a conversa durante a espera sem retirar o sinal desse estado.
+O cliente pode criar o sinal inicial, mas não pode alterar diretamente tickets existentes nem escrever em `messages`, `statusEvents` ou `privateResolutions`. Essas operações pertencem às Cloud Functions autenticadas.
 
-O teste considera inválida uma negação causada por esgotamento do limite de 1000 expressões das regras; a negação precisa ocorrer pela regra de autorização correspondente.
+## Cobertura
+
+1. solicitante ativo pode criar sinal novo em `open`;
+2. cliente não pode atualizar ticket operacional diretamente;
+3. cliente não pode criar `statusEvent`;
+4. solicitante não pode criar mensagem diretamente;
+5. agente também não pode criar mensagem diretamente;
+6. cliente não pode escrever resolução privada diretamente;
+7. solicitante lê conversa e histórico públicos do próprio sinal;
+8. solução privada é negada ao solicitante e permitida à equipe.
+
+**Critério:** 8/8 aprovados, audit sem vulnerabilidades e nenhuma ocorrência de `maximum of 1000 expressions`.
+
+Nenhum `firebase deploy` é necessário para estes testes.
