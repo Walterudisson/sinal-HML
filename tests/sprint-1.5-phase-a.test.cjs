@@ -81,6 +81,6 @@ test('sinal fechado não pertence aos estados que aceitam mensagens', () => {
 test('retomada por mensagem exige vínculo atômico entre ticket, evento e messageId', () => {
   const messagesRules = rules.split('match /messages/{messageId}')[1];
   assert.match(messagesRules, /waitingRequesterReplyIsAtomic/);
-  assert.match(messagesRules, /data\.type == 'requester_replied'/);
-  assert.match(messagesRules, /data\.messageId == messageId/);
+  assert.match(messagesRules, /(?:data|event)\.type == 'requester_replied'/);
+  assert.match(messagesRules, /(?:data|event)\.messageId == messageId/);
 });
