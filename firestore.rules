@@ -21,7 +21,7 @@ service cloud.firestore {
     }
 
     function activeUser() {
-      return signedIn() && exists(userPath()) && get(userPath()).data.status == 'active';
+      return signedIn() && get(userPath()).data.status == 'active';
     }
 
     function superadmin() {
@@ -29,32 +29,39 @@ service cloud.firestore {
     }
 
     function activeMember(tenantId) {
-      return activeUser()
-        && exists(memberPath(tenantId))
-        && get(memberPath(tenantId)).data.status == 'active';
+      let member = get(memberPath(tenantId)).data;
+      return activeUser() && member.status == 'active';
     }
 
     function supportMember(tenantId) {
-      return activeMember(tenantId)
-        && get(memberPath(tenantId)).data.role in ['admin', 'supervisor', 'agente'];
+      let member = get(memberPath(tenantId)).data;
+      return activeUser()
+        && member.status == 'active'
+        && member.role in ['admin', 'supervisor', 'agente'];
     }
 
     function canReadTicket(tenantId, ticketId) {
-      return activeMember(tenantId)
+      let member = get(memberPath(tenantId)).data;
+      let ticket = get(ticketPath(tenantId, ticketId)).data;
+      return activeUser()
+        && member.status == 'active'
         && (
-          get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
-          || supportMember(tenantId)
+          ticket.requesterUid == request.auth.uid
+          || member.role in ['admin', 'supervisor', 'agente']
         );
     }
 
     function canReplyToTicket(tenantId, ticketId) {
-      return activeMember(tenantId)
-        && get(ticketPath(tenantId, ticketId)).data.status in ['open', 'in_progress', 'waiting_requester']
+      let member = get(memberPath(tenantId)).data;
+      let ticket = get(ticketPath(tenantId, ticketId)).data;
+      return activeUser()
+        && member.status == 'active'
+        && ticket.status in ['open', 'in_progress', 'waiting_requester']
         && (
-          get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
+          ticket.requesterUid == request.auth.uid
           || (
-            supportMember(tenantId)
-            && get(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
+            member.role in ['admin', 'supervisor', 'agente']
+            && ticket.assigneeUid == request.auth.uid
           )
         );
     }
@@ -96,12 +103,14 @@ service cloud.firestore {
 
       match /tickets/{ticketId} {
         function linkedStatusEvent(type, from, to) {
-          return request.resource.data.lastEventId is string
-            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.type == type
-            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.from == from
-            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.to == to
-            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.actorUid == request.auth.uid
-            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.createdAt == request.time;
+          let next = request.resource.data;
+          let event = getAfter(statusEventPath(tenantId, ticketId, next.lastEventId)).data;
+          return next.lastEventId is string
+            && event.type == type
+            && event.from == from
+            && event.to == to
+            && event.actorUid == request.auth.uid
+            && event.createdAt == request.time;
         }
 
         function claimTransition() {
@@ -120,24 +129,24 @@ service cloud.firestore {
         }
 
         function waitingRequesterTransition() {
+          let current = resource.data;
+          let next = request.resource.data;
           return supportMember(tenantId)
-            && resource.data.status == 'in_progress'
-            && resource.data.assigneeUid == request.auth.uid
-            && request.resource.data.status == 'waiting_requester'
-            && request.resource.data.updatedAt == request.time
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            && current.assigneeUid == request.auth.uid
+            && next.updatedAt == request.time
+            && next.diff(current).affectedKeys().hasOnly([
               'status','updatedAt','lastEventId'
             ])
             && linkedStatusEvent('waiting_requester', 'in_progress', 'waiting_requester');
         }
 
         function requesterRepliedTransition() {
+          let current = resource.data;
+          let next = request.resource.data;
           return activeMember(tenantId)
-            && resource.data.status == 'waiting_requester'
-            && resource.data.requesterUid == request.auth.uid
-            && request.resource.data.status == 'in_progress'
-            && request.resource.data.updatedAt == request.time
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            && current.requesterUid == request.auth.uid
+            && next.updatedAt == request.time
+            && next.diff(current).affectedKeys().hasOnly([
               'status','updatedAt','lastEventId'
             ])
             && linkedStatusEvent('requester_replied', 'waiting_requester', 'in_progress');
@@ -312,12 +321,15 @@ service cloud.firestore {
 
         match /statusEvents/{eventId} {
           function baseEventValid() {
+            let incoming = request.resource.data;
+            let user = get(userPath()).data;
+            let nextTicket = getAfter(ticketPath(tenantId, ticketId)).data;
             return activeMember(tenantId)
-              && request.resource.data.actorUid == request.auth.uid
-              && request.resource.data.actorName == get(userPath()).data.displayName
-              && request.resource.data.createdAt == request.time
-              && getAfter(ticketPath(tenantId, ticketId)).data.lastEventId == eventId
-              && getAfter(ticketPath(tenantId, ticketId)).data.updatedAt == request.time;
+              && incoming.actorUid == request.auth.uid
+              && incoming.actorName == user.displayName
+              && incoming.createdAt == request.time
+              && nextTicket.lastEventId == eventId
+              && nextTicket.updatedAt == request.time;
           }
 
           function simpleEventFields() {
@@ -398,37 +410,35 @@ service cloud.firestore {
 
         match /messages/{messageId} {
           function validMessage() {
-            return request.resource.data.keys().hasOnly([
+            let incoming = request.resource.data;
+            let user = get(userPath()).data;
+            let member = get(memberPath(tenantId)).data;
+            return incoming.keys().hasOnly([
               'body','visibility','authorUid','authorName',
               'authorEmail','authorRole','createdAt'
             ])
-            && request.resource.data.body is string
-            && request.resource.data.body.size() >= 1
-            && request.resource.data.body.size() <= 4000
-            && request.resource.data.visibility == 'public'
-            && request.resource.data.authorUid == request.auth.uid
-            && request.resource.data.authorName == get(userPath()).data.displayName
-            && request.resource.data.authorEmail == get(userPath()).data.email
-            && request.resource.data.authorRole == get(memberPath(tenantId)).data.role
-            && request.resource.data.createdAt == request.time;
+            && incoming.body is string
+            && incoming.body.size() >= 1
+            && incoming.body.size() <= 4000
+            && incoming.visibility == 'public'
+            && incoming.authorUid == request.auth.uid
+            && incoming.authorName == user.displayName
+            && incoming.authorEmail == user.email
+            && incoming.authorRole == member.role
+            && incoming.createdAt == request.time;
           }
 
           function waitingRequesterReplyIsAtomic() {
-            return get(ticketPath(tenantId, ticketId)).data.status != 'waiting_requester'
-              || get(ticketPath(tenantId, ticketId)).data.requesterUid != request.auth.uid
+            let current = get(ticketPath(tenantId, ticketId)).data;
+            let next = getAfter(ticketPath(tenantId, ticketId)).data;
+            let event = getAfter(statusEventPath(tenantId, ticketId, next.lastEventId)).data;
+            return current.status != 'waiting_requester'
+              || current.requesterUid != request.auth.uid
               || (
-                getAfter(ticketPath(tenantId, ticketId)).data.status == 'in_progress'
-                && getAfter(ticketPath(tenantId, ticketId)).data.lastEventId is string
-                && getAfter(statusEventPath(
-                  tenantId,
-                  ticketId,
-                  getAfter(ticketPath(tenantId, ticketId)).data.lastEventId
-                )).data.type == 'requester_replied'
-                && getAfter(statusEventPath(
-                  tenantId,
-                  ticketId,
-                  getAfter(ticketPath(tenantId, ticketId)).data.lastEventId
-                )).data.messageId == messageId
+                next.status == 'in_progress'
+                && next.lastEventId is string
+                && event.type == 'requester_replied'
+                && event.messageId == messageId
               );
           }
 
@@ -443,8 +453,5 @@ service cloud.firestore {
       }
     }
 
-    match /{document=**} {
-      allow read, write: if false;
-    }
   }
 }
