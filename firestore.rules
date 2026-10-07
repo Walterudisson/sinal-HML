@@ -105,11 +105,13 @@ service cloud.firestore {
         function linkedStatusEvent(type, from, to) {
           let next = request.resource.data;
           let event = getAfter(statusEventPath(tenantId, ticketId, next.lastEventId)).data;
+          let user = get(userPath()).data;
           return next.lastEventId is string
             && event.type == type
             && event.from == from
             && event.to == to
             && event.actorUid == request.auth.uid
+            && event.actorName == user.displayName
             && event.createdAt == request.time;
         }
 
@@ -322,11 +324,8 @@ service cloud.firestore {
         match /statusEvents/{eventId} {
           function baseEventValid() {
             let incoming = request.resource.data;
-            let user = get(userPath()).data;
             let nextTicket = getAfter(ticketPath(tenantId, ticketId)).data;
-            return activeMember(tenantId)
-              && incoming.actorUid == request.auth.uid
-              && incoming.actorName == user.displayName
+            return incoming.actorUid == request.auth.uid
               && incoming.createdAt == request.time
               && nextTicket.lastEventId == eventId
               && nextTicket.updatedAt == request.time;
