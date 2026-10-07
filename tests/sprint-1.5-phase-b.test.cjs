@@ -14,6 +14,7 @@ const messages = read('js/services/messages.service.js');
 const rules = read('firestore.rules');
 const statusFn = read('functions/status-notifications.js');
 const functionsIndex = read('functions/index.js');
+const commands = read('functions/ticket-commands.js');
 const sw = read('service-worker.js');
 
 test('detalhe expõe Aguardar solicitante apenas como ação própria da Fase B', () => {
@@ -46,20 +47,20 @@ test('histórico reconhece espera e retomada sem expor conteúdo de mensagem', (
   assert.match(detail, /event\.type === 'requester_replied' \? 'Solicitante respondeu · atendimento retomado'/);
 });
 
-test('resposta do solicitante continua ligada à retomada atômica preparada na Fase A', () => {
-  assert.match(messages, /TICKET_EVENT\.REQUESTER_REPLIED/);
-  assert.match(messages, /messageId:\s*messageRef\.id/);
-  assert.match(rules, /function linkedStatusEventExists/);
-  assert.match(rules, /incoming\.type == 'requester_replied'/);
-  assert.match(rules, /(?:data|event)\.messageId == messageId/);
+test('retomada automática agora ocorre no backend autoritativo', () => {
+  assert.match(messages, /sendTicketMessageCallable/);
+  assert.match(commands, /ticket\.status === 'waiting_requester' && ticket\.requesterUid === actor\.uid/);
+  assert.match(commands, /type:\s*'requester_replied'/);
+  assert.match(commands, /messageId:\s*messageRef\.id/);
+  assert.match(commands, /status:\s*'in_progress'/);
 });
 
-test('notificação waiting_requester avisa somente o solicitante e não duplica com requester_replied', () => {
+test('notificação waiting_requester continua sem duplicar requester_replied', () => {
   assert.match(statusFn, /type:\s*'ticket_waiting_requester'/);
   assert.match(statusFn, /title:\s*'A equipe está aguardando você'/);
-  assert.match(statusFn, /responda ao sinal para o atendimento continuar/);
   assert.match(functionsIndex, /\['claimed', 'waiting_requester', 'resolved'\]/);
   assert.doesNotMatch(functionsIndex, /\['claimed', 'waiting_requester', 'requester_replied', 'resolved'\]/);
+  assert.match(rules, /match \/statusEvents\/\{eventId\}/);
 });
 
 test('PWA usa cache próprio do checkpoint B', () => {
