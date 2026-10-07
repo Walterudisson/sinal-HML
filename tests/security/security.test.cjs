@@ -152,6 +152,19 @@ test('outro agente não pode colocar sinal alheio em espera', async () => {
   await assertDeniedWithoutExpressionLimit(waitBatch(otherAgentUid, 'wait-other', 'Outro Agente'));
 });
 
+test('statusEvent isolado não pode ser criado sem a transição correspondente no ticket', async () => {
+  const db = env.authenticatedContext(agentUid).firestore();
+  const eventRef = doc(db, ticketPath('wait-other'), 'statusEvents', 'evt-isolated');
+  await assertDeniedWithoutExpressionLimit(setDoc(eventRef, {
+    type: 'waiting_requester',
+    from: 'in_progress',
+    to: 'waiting_requester',
+    actorUid: agentUid,
+    actorName: 'Agente Teste',
+    createdAt: serverTimestamp()
+  }));
+});
+
 test('solicitante não pode executar a transição de espera', async () => {
   await assertDeniedWithoutExpressionLimit(waitBatch(requesterUid, 'wait-requester', 'Solicitante Teste'));
 });
