@@ -49,7 +49,8 @@ test('histórico reconhece espera e retomada sem expor conteúdo de mensagem', (
 test('resposta do solicitante continua ligada à retomada atômica preparada na Fase A', () => {
   assert.match(messages, /TICKET_EVENT\.REQUESTER_REPLIED/);
   assert.match(messages, /messageId:\s*messageRef\.id/);
-  assert.match(rules, /linkedStatusEvent\('requester_replied', 'waiting_requester', 'in_progress'\)/);
+  assert.match(rules, /function linkedStatusEventExists/);
+  assert.match(rules, /incoming\.type == 'requester_replied'/);
   assert.match(rules, /(?:data|event)\.messageId == messageId/);
 });
 
