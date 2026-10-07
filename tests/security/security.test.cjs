@@ -20,6 +20,17 @@ let env;
 
 const ticketPath = (id) => `tenants/${tenantId}/tickets/${id}`;
 
+async function assertDeniedWithoutExpressionLimit(promise) {
+  try {
+    await promise;
+    assert.fail('A operação deveria ser negada pelas regras.');
+  } catch (error) {
+    const message = String(error?.message || error || '');
+    assert.match(message, /permission[-_ ]denied|PERMISSION_DENIED/i);
+    assert.doesNotMatch(message, /maximum of 1000 expressions/i);
+  }
+}
+
 before(async () => {
   env = await initializeTestEnvironment({
     projectId,
@@ -138,11 +149,11 @@ test('responsável pode marcar sinal como Aguardando solicitante', async () => {
 });
 
 test('outro agente não pode colocar sinal alheio em espera', async () => {
-  await assertFails(waitBatch(otherAgentUid, 'wait-other', 'Outro Agente'));
+  await assertDeniedWithoutExpressionLimit(waitBatch(otherAgentUid, 'wait-other', 'Outro Agente'));
 });
 
 test('solicitante não pode executar a transição de espera', async () => {
-  await assertFails(waitBatch(requesterUid, 'wait-requester', 'Solicitante Teste'));
+  await assertDeniedWithoutExpressionLimit(waitBatch(requesterUid, 'wait-requester', 'Solicitante Teste'));
 });
 
 test('resposta do solicitante retoma atendimento em lote atômico', async () => {
@@ -158,7 +169,7 @@ test('resposta do solicitante retoma atendimento em lote atômico', async () => 
 test('mensagem isolada do solicitante enquanto aguarda é negada', async () => {
   const db = env.authenticatedContext(requesterUid).firestore();
   const messageRef = doc(collection(db, ticketPath('resume-standalone'), 'messages'));
-  await assertFails(setDoc(messageRef, {
+  await assertDeniedWithoutExpressionLimit(setDoc(messageRef, {
     body: 'Mensagem sem retomar o estado',
     visibility: 'public',
     authorUid: requesterUid,
