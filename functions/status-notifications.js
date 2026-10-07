@@ -32,6 +32,20 @@ function buildStatusNotice(ticket, event, eventId) {
     };
   }
 
+  if (event.type === 'waiting_requester'
+      && event.from === 'in_progress'
+      && event.to === 'waiting_requester'
+      && ticket.assigneeUid === actorUid) {
+    return {
+      notificationId: `status-${ticketIdSafe(ticket)}-${eventId}`,
+      uid: requesterUid,
+      type: 'ticket_waiting_requester',
+      actorUid,
+      title: 'A equipe está aguardando você',
+      body: `${code}: responda ao sinal para o atendimento continuar.`
+    };
+  }
+
   if (event.type === 'resolved' && event.from === 'in_progress' && event.to === 'resolved'
       && ticket.resolvedByUid === actorUid) {
     return {
