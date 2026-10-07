@@ -52,7 +52,7 @@ npm install
 npm test
 ```
 
-Esperado: **6/6** testes de regras aprovados. O projeto é local e fictício (`demo-sinal-security`); não acessa HML ou PRD.
+Esperado: **7/7** testes de regras aprovados. O projeto é local e fictício (`demo-sinal-security`); não acessa HML ou PRD.
 
 ### Functions
 
