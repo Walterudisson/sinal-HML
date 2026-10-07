@@ -6,6 +6,7 @@ import { forceOverlayClosed, openOverlayHistory, openOverlaySubstate, requestOve
 let currentContext = null;
 let selectedTicket = null;
 let onClaim = null;
+let onWaitForRequester = null;
 let onSendMessage = null;
 let unsubscribeMessages = null;
 let unsubscribeStatusEvents = null;
@@ -107,7 +108,11 @@ function renderStatusHistory(events) {
   }
   list.innerHTML = events.map((event) => {
     const label = event.type === 'claimed' ? 'Sinal em atendimento' :
-      event.type === 'resolved' ? 'Sinal resolvido' : 'Atualização';
+      event.type === 'waiting_requester' ? 'Aguardando solicitante' :
+      event.type === 'requester_replied' ? 'Solicitante respondeu · atendimento retomado' :
+      event.type === 'resolved' ? 'Sinal resolvido' :
+      event.type === 'reopened' ? 'Sinal reaberto' :
+      event.type === 'closed' ? 'Sinal fechado' : 'Atualização';
     return `<li class="rounded-xl border border-slate-100 bg-slate-50 p-3">
       <strong class="block text-slate-800">${escapeHtml(label)}</strong>
       <span class="mt-1 block text-xs text-slate-500">${escapeHtml(event.actorName || 'Equipe')} · ${escapeHtml(formatDate(event.createdAt))}</span>
@@ -118,6 +123,7 @@ function renderStatusHistory(events) {
 export function initTicketDetail(options) {
   currentContext = options.context;
   onClaim = options.onClaim;
+  onWaitForRequester = options.onWaitForRequester;
   onSendMessage = options.onSendMessage;
   onResolve = options.onResolve;
   onGetPrivateResolution = options.onGetPrivateResolution;
@@ -204,6 +210,20 @@ export function initTicketDetail(options) {
       button.disabled = false;
       spinner.classList.add('hidden');
       label.textContent = 'Assumir sinal';
+    }
+  });
+
+  document.querySelector('#wait-requester-button').addEventListener('click', async () => {
+    if (!selectedTicket) return;
+    const button = document.querySelector('#wait-requester-button');
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = 'Atualizando...';
+    try {
+      await onWaitForRequester(selectedTicket);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
     }
   });
 
@@ -338,9 +358,12 @@ function renderTicket(ticket) {
   const isAssignedAgent = ticket.assigneeUid === uid;
   const canClaim = currentContext.membership.role !== 'solicitante' && ticket.status === 'open' && !ticket.assigneeUid;
   const canResolve = isAssignedAgent && ticket.status === 'in_progress';
-  const canMessage = (isRequester || isAssignedAgent) && ticket.status !== 'resolved';
+  const canWaitForRequester = isAssignedAgent && ticket.status === 'in_progress';
+  const canMessage = (isRequester || isAssignedAgent) && !['resolved', 'closed'].includes(ticket.status);
 
-  const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
+  const status = ticket.status === 'waiting_requester'
+    ? (isRequester ? 'Aguardando você' : 'Aguardando solicitante')
+    : (statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido');
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
@@ -355,7 +378,11 @@ function renderTicket(ticket) {
   document.querySelector('#open-conversation-label').textContent = isRequester ? 'Conversar com o atendimento' : 'Conversar com o solicitante';
 
   const statusEl = document.querySelector('#detail-status');
-  statusEl.className = ticket.status === 'in_progress' ? 'ticket-badge bg-indigo-50 text-indigo-700' : 'ticket-badge bg-emerald-50 text-emerald-700';
+  statusEl.className = ticket.status === 'in_progress'
+    ? 'ticket-badge bg-indigo-50 text-indigo-700'
+    : ticket.status === 'waiting_requester'
+      ? 'ticket-badge bg-amber-50 text-amber-800'
+      : 'ticket-badge bg-emerald-50 text-emerald-700';
   statusEl.textContent = status;
 
   const priorityEl = document.querySelector('#detail-priority');
@@ -364,6 +391,7 @@ function renderTicket(ticket) {
   document.querySelector('#detail-category').textContent = category;
 
   document.querySelector('#claim-ticket-button').classList.toggle('hidden', !canClaim);
+  document.querySelector('#wait-requester-button').classList.toggle('hidden', !canWaitForRequester);
   document.querySelector('#resolve-ticket-button').classList.toggle('hidden', !canResolve);
   if (!canResolve) setResolvePanel(false);
 
@@ -376,6 +404,10 @@ function renderTicket(ticket) {
 
   const actionHelp = document.querySelector('#detail-action-help');
   if (ticket.status === 'resolved') actionHelp.textContent = 'Sinal resolvido. O histórico continua disponível.';
+  else if (ticket.status === 'closed') actionHelp.textContent = 'Sinal fechado. O histórico continua disponível.';
+  else if (ticket.status === 'waiting_requester' && isRequester) actionHelp.textContent = 'A equipe está aguardando sua resposta. Ao enviar uma mensagem, o atendimento será retomado automaticamente.';
+  else if (ticket.status === 'waiting_requester' && isAssignedAgent) actionHelp.textContent = 'Aguardando resposta do solicitante. Você ainda pode enviar uma mensagem enquanto aguarda.';
+  else if (ticket.status === 'waiting_requester') actionHelp.textContent = 'Este atendimento está aguardando resposta do solicitante.';
   else if (canClaim) actionHelp.textContent = 'Assuma o sinal para iniciar o atendimento e poder responder ao solicitante.';
   else if (isAssignedAgent) actionHelp.textContent = 'Este sinal está em atendimento por você.';
   else if (ticket.assigneeName) actionHelp.textContent = `Este sinal está em atendimento por ${ticket.assigneeName}.`;
@@ -393,9 +425,10 @@ function renderTicket(ticket) {
   if (canMessage) {
     textarea.placeholder = isRequester ? 'Escreva uma mensagem para o atendimento...' : 'Escreva uma resposta para o solicitante...';
   } else {
-    textarea.placeholder = ticket.status === 'resolved' ? 'Conversa encerrada neste sinal.' :
+    textarea.placeholder = ['resolved', 'closed'].includes(ticket.status) ? 'Conversa encerrada neste sinal.' :
       canClaim ? 'Assuma este sinal para responder.' : 'Mensagem indisponível neste atendimento.';
-    help.textContent = ticket.status === 'resolved' ? 'Este sinal foi resolvido. A reabertura será disponibilizada em uma próxima versão.' :
+    help.textContent = ticket.status === 'resolved' ? 'Este sinal foi resolvido. A reabertura será disponibilizada em uma próxima fase da Sprint 1.5.' :
+      ticket.status === 'closed' ? 'Este sinal foi fechado e não aceita novas mensagens.' :
       'Somente o solicitante ou o atendente responsável pode enviar mensagens.';
   }
 }
