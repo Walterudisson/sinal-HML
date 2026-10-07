@@ -10,6 +10,8 @@ const tickets = read('js/services/tickets.service.js');
 const messages = read('js/services/messages.service.js');
 const rules = read('firestore.rules');
 const lifecycle = read('js/domain/ticket-lifecycle.mjs');
+const commands = read('functions/ticket-commands.js');
+const config = read('js/config/firebase.js');
 
 test('domínio 1.5 possui cinco estados persistidos e reabertura apenas como evento', () => {
   for (const status of ['open', 'in_progress', 'waiting_requester', 'resolved', 'closed']) {
@@ -21,66 +23,55 @@ test('domínio 1.5 possui cinco estados persistidos e reabertura apenas como eve
   assert.ok(!statusBlock.includes("'reopened'"));
 });
 
-test('serviço possui espera, reabertura e fechamento sem reatribuir assignee', () => {
-  assert.match(tickets, /export async function waitForRequester/);
-  assert.match(tickets, /export async function reopenTicket/);
-  assert.match(tickets, /export async function closeTicket/);
-
-  const reopen = tickets.split('export async function reopenTicket')[1].split('export async function closeTicket')[0];
-  assert.match(reopen, /status:\s*TICKET_STATUS\.IN_PROGRESS/);
-  assert.doesNotMatch(reopen, /assigneeUid\s*:/);
-
-  const close = tickets.split('export async function closeTicket')[1].split('export async function getPrivateResolution')[0];
-  assert.match(close, /closedAt:\s*serverTimestamp\(\)/);
-  assert.match(close, /closedByUid:\s*context\.firebaseUser\.uid/);
+test('cliente usa callable para claim, espera, resolução, reabertura e fechamento', () => {
+  assert.match(tickets, /httpsCallable/);
+  assert.match(tickets, /ticketCommandCallable/);
+  for (const command of ['claim', 'wait_requester', 'resolve', 'reopen', 'close']) {
+    assert.ok(tickets.includes(`'${command}'`), command);
+  }
+  assert.doesNotMatch(tickets, /writeBatch/);
 });
 
-test('resoluções 1.5 são append-only e mantêm fallback legado 1.4.x', () => {
-  assert.match(tickets, /privateResolutions', eventRef\.id/);
-  assert.match(tickets, /latestResolutionId:\s*eventRef\.id/);
-  assert.match(tickets, /resolutionId:\s*eventRef\.id/);
+test('backend mantém resolução append-only e fallback legado permanece no cliente', () => {
+  assert.match(commands, /collection\('privateResolutions'\)\.doc\(eventRef\.id\)/);
+  assert.match(commands, /latestResolutionId:\s*eventRef\.id/);
+  assert.match(commands, /resolutionId:\s*eventRef\.id/);
   assert.match(tickets, /private', 'resolution'/);
   assert.match(tickets, /Compatibilidade com sinais resolvidos na série 1\.4\.x/);
 });
 
-test('resposta do solicitante em espera grava mensagem, status e evento no mesmo batch', () => {
-  assert.match(messages, /TICKET_STATUS\.WAITING_REQUESTER/);
-  assert.match(messages, /TICKET_EVENT\.REQUESTER_REPLIED/);
-  assert.match(messages, /batch\.set\(messageRef, payload\)/);
-  assert.match(messages, /batch\.update\(ticketRef/);
-  assert.match(messages, /messageId:\s*messageRef\.id/);
-  assert.match(messages, /await batch\.commit\(\)/);
+test('mensagens são enviadas somente pela callable do backend', () => {
+  assert.match(messages, /httpsCallable/);
+  assert.match(messages, /sendTicketMessageCallable/);
+  assert.match(messages, /tenantId:\s*context\.tenant\.id/);
+  assert.match(messages, /ticketId:\s*ticket\.id/);
+  assert.doesNotMatch(messages, /writeBatch|serverTimestamp/);
 });
 
-test('regras bloqueiam escrita no documento legado e criam resolução imutável por ID', () => {
-  const legacy = rules.split('match /private/{privateId}')[1].split('match /privateResolutions')[0];
-  assert.match(legacy, /allow create, update, delete: if false/);
-
-  const current = rules.split('match /privateResolutions/{resolutionId}')[1].split('match /statusEvents')[0];
-  assert.match(current, /latestResolutionId == resolutionId/);
-  assert.match(current, /statusEventPath\(tenantId, ticketId, resolutionId\)/);
-  assert.match(current, /allow update, delete: if false/);
+test('Rules bloqueiam escrita direta em ticket, eventos, mensagens e resolução privada', () => {
+  assert.match(rules, /allow update, delete: if false/);
+  const events = rules.split('match /statusEvents/{eventId}')[1].split('match /messages/{messageId}')[0];
+  assert.match(events, /allow write: if false/);
+  const msgs = rules.split('match /messages/{messageId}')[1];
+  assert.match(msgs, /allow write: if false/);
+  const privateRes = rules.split('match /privateResolutions/{resolutionId}')[1].split('match /statusEvents')[0];
+  assert.match(privateRes, /allow write: if false/);
 });
 
-test('regras ligam cada transição ao statusEvent correspondente', () => {
+test('backend contém todas as transições previstas da Sprint 1.5', () => {
   for (const event of ['claimed', 'waiting_requester', 'requester_replied', 'resolved', 'reopened', 'closed']) {
-    assert.ok(rules.includes(`'${event}'`), event);
+    assert.ok(commands.includes(`'${event}'`), event);
   }
-  assert.match(rules, /linkedStatusEvent\('reopened', 'resolved', 'in_progress'\)/);
-  assert.match(rules, /linkedStatusEvent\('closed', 'resolved', 'closed'\)/);
-  assert.match(rules, /linkedStatusEvent\('requester_replied', 'waiting_requester', 'in_progress'\)/);
+  assert.match(commands, /runTransaction/);
+  assert.match(commands, /lastEventId:\s*eventRef\.id/);
 });
 
-test('sinal fechado não pertence aos estados que aceitam mensagens', () => {
-  const reply = rules.split('function canReplyToTicket')[1].split('match /users')[0];
-  assert.match(reply, /\['open', 'in_progress', 'waiting_requester'\]/);
-  assert.doesNotMatch(reply, /'closed'/);
-  assert.doesNotMatch(reply, /'resolved'/);
+test('resolvido e fechado continuam bloqueando novas mensagens no backend e no cliente', () => {
+  assert.match(commands, /ticket\.status === 'resolved' \|\| ticket\.status === 'closed'/);
+  assert.match(messages, /TICKET_STATUS\.RESOLVED/);
+  assert.match(messages, /TICKET_STATUS\.CLOSED/);
 });
 
-test('retomada por mensagem exige vínculo atômico entre ticket, evento e messageId', () => {
-  const messagesRules = rules.split('match /messages/{messageId}')[1];
-  assert.match(messagesRules, /waitingRequesterReplyIsAtomic/);
-  assert.match(messagesRules, /data\.type == 'requester_replied'/);
-  assert.match(messagesRules, /data\.messageId == messageId/);
+test('cliente inicializa Functions na mesma região das Functions HML', () => {
+  assert.match(config, /getFunctions\(firebaseApp, 'southamerica-east1'\)/);
 });

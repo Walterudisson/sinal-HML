@@ -16,6 +16,10 @@ const resolved = Object.freeze({
   type: 'resolved', from: 'in_progress', to: 'resolved',
   actorUid: 'agente-1', actorName: 'Atendente Teste'
 });
+const waitingRequester = Object.freeze({
+  type: 'waiting_requester', from: 'in_progress', to: 'waiting_requester',
+  actorUid: 'agente-1', actorName: 'Atendente Teste'
+});
 
 test('avisa o solicitante quando alguém assume, sem avisar o ator', () => {
   const notice = buildStatusNotice(ticket, claimed, 'evt-01');
@@ -23,6 +27,16 @@ test('avisa o solicitante quando alguém assume, sem avisar o ator', () => {
   assert.equal(notice.type, 'ticket_claimed');
   assert.match(notice.body, /Atendente Teste/);
   assert.equal(buildStatusNotice({...ticket, requesterUid: 'agente-1'}, claimed, 'evt-02'), null);
+});
+
+test('avisa o solicitante quando a equipe está aguardando sua resposta', () => {
+  const notice = buildStatusNotice(ticket, waitingRequester, 'evt-wait-01');
+  assert.equal(notice.uid, 'solicitante-1');
+  assert.equal(notice.type, 'ticket_waiting_requester');
+  assert.match(notice.title, /aguardando você/i);
+  assert.match(notice.body, /responda ao sinal/i);
+  assert.doesNotMatch(notice.title + notice.body, /NÃO PODE APARECER|Mensagem pública opcional/);
+  assert.equal(buildStatusNotice({...ticket, requesterUid: 'agente-1'}, waitingRequester, 'evt-wait-02'), null);
 });
 
 test('notifica resolução sem expor solução interna nem resumo público', () => {
@@ -44,6 +58,8 @@ test('mesmo evento gera ID estável de notificação, eventos distintos geram ID
 
 test('ignora eventos inválidos, falsos ou não relacionados ao responsável', () => {
   assert.equal(buildStatusNotice(ticket, {...claimed, actorUid: 'outro-agente'}, 'evt-06'), null);
+  assert.equal(buildStatusNotice(ticket, {...waitingRequester, actorUid: 'outro-agente'}, 'evt-wait-03'), null);
+  assert.equal(buildStatusNotice(ticket, {...waitingRequester, from: 'open'}, 'evt-wait-04'), null);
   assert.equal(buildStatusNotice(ticket, {...resolved, actorUid: 'outro-agente'}, 'evt-07'), null);
   assert.equal(buildStatusNotice(ticket, {...resolved, from: 'open'}, 'evt-08'), null);
   assert.equal(buildStatusNotice(ticket, {...claimed, type: 'other'}, 'evt-09'), null);

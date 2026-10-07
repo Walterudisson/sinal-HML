@@ -1,6 +1,6 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { createTicket, claimTicket, resolveTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { createTicket, claimTicket, waitForRequester, resolveTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
@@ -157,6 +157,15 @@ function ensureDetailInitialized(context) {
         showToast(`${ticket.code} agora está em atendimento por você.`, 'success', { title: 'Sinal assumido' });
       } catch (error) {
         showToast('Não foi possível assumir este sinal.', 'error', { title: 'Atendimento não iniciado' });
+        throw error;
+      }
+    },
+    onWaitForRequester: async (ticket) => {
+      try {
+        await waitForRequester(currentContext, ticket);
+        showToast(`${ticket.code} agora está aguardando o solicitante.`, 'success', { title: 'Aguardando solicitante' });
+      } catch (error) {
+        showToast('Não foi possível alterar o estado deste sinal.', 'error', { title: 'Estado não alterado' });
         throw error;
       }
     },

@@ -116,5 +116,5 @@ test('painel mobile usa altura definida e rolagem própria para detalhes complet
   assert.ok(html.includes('id="ticket-details-view" class="min-h-0 flex-1 overflow-hidden"'));
   assert.ok(html.includes('class="h-full min-h-0 overflow-y-auto" id="ticket-detail-scroll"'));
   assert.ok(css.includes('overscroll-behavior-y: contain'));
-  assert.ok(serviceWorker.includes('sinal-shell-hml-1.4.3-fix1'));
+  assert.ok(serviceWorker.includes('sinal-shell-hml-1.5-b1'));
 });

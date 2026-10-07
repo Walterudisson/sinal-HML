@@ -44,7 +44,7 @@ test('Ambiente é obtido do Firebase HML, sem valor PRD no código', () => {
   assert.ok(firebase.includes("projectId: 'sinaldesk-hml'"));
 });
 test('PWA invalida cache para a nova release sem mudar o projeto Firebase', () => {
-  assert.ok(sw.includes("sinal-shell-hml-1.4.3"));
+  assert.ok(sw.includes("sinal-shell-hml-"));
   assert.ok(sw.includes("projectId: 'sinaldesk-hml'"));
 });
 test('Regras têm alvo HML definido explicitamente', () => {

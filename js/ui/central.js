@@ -37,7 +37,7 @@ function renderCentral() {
 
   const stats = {
     new: tickets.filter((t) => t.status === 'open').length,
-    mine: tickets.filter((t) => t.assigneeUid === uid && t.status === 'in_progress').length,
+    mine: tickets.filter((t) => t.assigneeUid === uid && ['in_progress', 'waiting_requester'].includes(t.status)).length,
     unassigned: tickets.filter((t) => !t.assigneeUid).length
   };
 
@@ -71,13 +71,15 @@ function renderCentral() {
 
 function filterTickets(items, filter, uid) {
   if (filter === 'new') return items.filter((t) => t.status === 'open');
-  if (filter === 'mine') return items.filter((t) => t.assigneeUid === uid && t.status === 'in_progress');
+  if (filter === 'mine') return items.filter((t) => t.assigneeUid === uid && ['in_progress', 'waiting_requester'].includes(t.status));
   if (filter === 'unassigned') return items.filter((t) => !t.assigneeUid);
   return items;
 }
 
 function markup(ticket) {
-  const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
+  const status = ticket.status === 'waiting_requester'
+    ? 'Aguardando solicitante'
+    : (statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido');
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
@@ -87,7 +89,11 @@ function markup(ticket) {
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code)}</span>
-          <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'}">${escapeHtml(status)}</span>
+          <span class="ticket-badge ${ticket.status === 'in_progress'
+            ? 'bg-indigo-50 text-indigo-700'
+            : ticket.status === 'waiting_requester'
+              ? 'bg-amber-50 text-amber-800'
+              : 'bg-emerald-50 text-emerald-700'}">${escapeHtml(status)}</span>
           <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
         </div>
         <h3 class="mt-2 truncate text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>

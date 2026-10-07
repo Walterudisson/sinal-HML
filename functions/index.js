@@ -1,5 +1,7 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onCall } = require('firebase-functions/v2/https');
 const { buildStatusNotice, createNotificationOnce } = require('./status-notifications');
+const { executeTicketCommand, executeSendMessage } = require('./ticket-commands');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -8,6 +10,14 @@ initializeApp();
 const db = getFirestore();
 const APP_BASE_URL = 'https://walterudisson.github.io/sinal-HML/';
 const SUPPORT_ROLES = new Set(['admin', 'supervisor', 'agente']);
+
+exports.ticketCommand = onCall({ region: 'southamerica-east1' }, async (request) => {
+  return executeTicketCommand(db, request.auth, request.data);
+});
+
+exports.sendTicketMessage = onCall({ region: 'southamerica-east1' }, async (request) => {
+  return executeSendMessage(db, request.auth, request.data);
+});
 
 exports.notifyNewTicket = onDocumentCreated({ document: 'tenants/{tenantId}/tickets/{ticketId}', region: 'southamerica-east1' }, async (event) => {
   if (!event.data) return;
@@ -60,7 +70,7 @@ exports.notifyTicketStatus = onDocumentCreated(
     if (!event.data) return;
     const { tenantId, ticketId, eventId } = event.params;
     const statusEvent = event.data.data();
-    if (!['claimed', 'resolved'].includes(statusEvent.type)) return;
+    if (!['claimed', 'waiting_requester', 'resolved'].includes(statusEvent.type)) return;
 
     const ticketSnap = await db.doc(`tenants/${tenantId}/tickets/${ticketId}`).get();
     if (!ticketSnap.exists) return;

@@ -7,12 +7,12 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  writeBatch,
   orderBy,
   where
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js';
 
-import { db } from '../config/firebase.js';
+import { db, functions } from '../config/firebase.js';
 import {
   TICKET_EVENT,
   TICKET_STATUS,
@@ -34,6 +34,18 @@ function transitionAllowed(context, ticket, event) {
     isRequester: ticket.requesterUid === context.firebaseUser.uid,
     isAssignee: ticket.assigneeUid === context.firebaseUser.uid
   });
+}
+
+const ticketCommandCallable = httpsCallable(functions, 'ticketCommand');
+
+async function runTicketCommand(context, ticket, command, extra = {}) {
+  const result = await ticketCommandCallable({
+    tenantId: context.tenant.id,
+    ticketId: ticket.id,
+    command,
+    ...extra
+  });
+  return result.data;
 }
 
 export async function createTicket(context, input) {
@@ -68,56 +80,14 @@ export async function claimTicket(context, ticket) {
   if (!transitionAllowed(context, ticket, TICKET_EVENT.CLAIMED)) {
     throw new Error('Este sinal não pode ser assumido neste estado.');
   }
-
-  const { firebaseUser, userProfile, tenant } = context;
-  const ticketRef = doc(db, 'tenants', tenant.id, 'tickets', ticket.id);
-  const name = actorName(context, 'Atendente');
-  const historyRef = doc(collection(ticketRef, 'statusEvents'));
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.IN_PROGRESS,
-    assigneeUid: firebaseUser.uid,
-    assigneeName: name,
-    assigneeEmail: firebaseUser.email || userProfile.email || '',
-    updatedAt: serverTimestamp(),
-    lastEventId: historyRef.id
-  });
-  batch.set(historyRef, {
-    type: TICKET_EVENT.CLAIMED,
-    from: TICKET_STATUS.OPEN,
-    to: TICKET_STATUS.IN_PROGRESS,
-    actorUid: firebaseUser.uid,
-    actorName: name,
-    createdAt: serverTimestamp()
-  });
-  await batch.commit();
+  return runTicketCommand(context, ticket, 'claim');
 }
 
 export async function waitForRequester(context, ticket) {
   if (!transitionAllowed(context, ticket, TICKET_EVENT.WAITING_REQUESTER)) {
     throw new Error('Somente o atendente responsável pode aguardar o solicitante.');
   }
-
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const name = actorName(context, 'Atendente');
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.WAITING_REQUESTER,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
-  });
-  batch.set(eventRef, {
-    type: TICKET_EVENT.WAITING_REQUESTER,
-    from: TICKET_STATUS.IN_PROGRESS,
-    to: TICKET_STATUS.WAITING_REQUESTER,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
-    createdAt: serverTimestamp()
-  });
-  await batch.commit();
+  return runTicketCommand(context, ticket, 'wait_requester');
 }
 
 export async function resolveTicket(context, ticket, details) {
@@ -136,101 +106,26 @@ export async function resolveTicket(context, ticket, details) {
     throw new Error('Preencha a mensagem compartilhada (3 a 2.000 caracteres).');
   }
 
-  const name = actorName(context, 'Atendente');
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const privateRef = doc(ticketRef, 'privateResolutions', eventRef.id);
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.RESOLVED,
-    resolvedAt: serverTimestamp(),
-    resolvedByUid: context.firebaseUser.uid,
-    resolvedByName: name,
-    resolutionShared: share,
-    publicResolution: publicText,
-    latestResolutionId: eventRef.id,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
+  return runTicketCommand(context, ticket, 'resolve', {
+    internalText,
+    share,
+    publicText,
+    knowledgeCandidate: details.knowledgeCandidate === true
   });
-
-  // Resoluções 1.5 são append-only. O ID coincide com o evento resolved.
-  batch.set(privateRef, {
-    text: internalText,
-    knowledgeCandidate: details.knowledgeCandidate === true,
-    createdByUid: context.firebaseUser.uid,
-    createdByName: name,
-    createdAt: serverTimestamp()
-  });
-
-  batch.set(eventRef, {
-    type: TICKET_EVENT.RESOLVED,
-    from: TICKET_STATUS.IN_PROGRESS,
-    to: TICKET_STATUS.RESOLVED,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
-    resolutionId: eventRef.id,
-    resolutionShared: share,
-    publicResolution: publicText,
-    createdAt: serverTimestamp()
-  });
-
-  await batch.commit();
 }
 
 export async function reopenTicket(context, ticket) {
   if (!transitionAllowed(context, ticket, TICKET_EVENT.REOPENED)) {
     throw new Error('Este sinal não pode ser reaberto por este usuário.');
   }
-
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const name = actorName(context);
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.IN_PROGRESS,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
-  });
-  batch.set(eventRef, {
-    type: TICKET_EVENT.REOPENED,
-    from: TICKET_STATUS.RESOLVED,
-    to: TICKET_STATUS.IN_PROGRESS,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
-    createdAt: serverTimestamp()
-  });
-  await batch.commit();
+  return runTicketCommand(context, ticket, 'reopen');
 }
 
 export async function closeTicket(context, ticket) {
   if (!transitionAllowed(context, ticket, TICKET_EVENT.CLOSED)) {
     throw new Error('Somente o solicitante pode confirmar o encerramento de um sinal resolvido.');
   }
-
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const name = actorName(context, 'Solicitante');
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.CLOSED,
-    closedAt: serverTimestamp(),
-    closedByUid: context.firebaseUser.uid,
-    closedByName: name,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
-  });
-  batch.set(eventRef, {
-    type: TICKET_EVENT.CLOSED,
-    from: TICKET_STATUS.RESOLVED,
-    to: TICKET_STATUS.CLOSED,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
-    createdAt: serverTimestamp()
-  });
-  await batch.commit();
+  return runTicketCommand(context, ticket, 'close');
 }
 
 export async function getPrivateResolution(context, ticketId) {
