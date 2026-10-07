@@ -140,18 +140,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'status','updatedAt','lastEventId'
             ])
-            && linkedStatusEvent('requester_replied', 'waiting_requester', 'in_progress')
-            && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.messageId is string
-            && getAfter(messagePath(
-              tenantId,
-              ticketId,
-              getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.messageId
-            )).data.authorUid == request.auth.uid
-            && getAfter(messagePath(
-              tenantId,
-              ticketId,
-              getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.messageId
-            )).data.createdAt == request.time;
+            && linkedStatusEvent('requester_replied', 'waiting_requester', 'in_progress');
         }
 
         function resolvedTransition() {
@@ -256,12 +245,36 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
 
         allow update: if
-          claimTransition()
-          || waitingRequesterTransition()
-          || requesterRepliedTransition()
-          || resolvedTransition()
-          || reopenedTransition()
-          || closedTransition();
+          (
+            resource.data.status == 'open'
+            && request.resource.data.status == 'in_progress'
+            && claimTransition()
+          )
+          || (
+            resource.data.status == 'in_progress'
+            && request.resource.data.status == 'waiting_requester'
+            && waitingRequesterTransition()
+          )
+          || (
+            resource.data.status == 'waiting_requester'
+            && request.resource.data.status == 'in_progress'
+            && requesterRepliedTransition()
+          )
+          || (
+            resource.data.status == 'in_progress'
+            && request.resource.data.status == 'resolved'
+            && resolvedTransition()
+          )
+          || (
+            resource.data.status == 'resolved'
+            && request.resource.data.status == 'in_progress'
+            && reopenedTransition()
+          )
+          || (
+            resource.data.status == 'resolved'
+            && request.resource.data.status == 'closed'
+            && closedTransition()
+          );
 
         allow delete: if false;
 
@@ -315,37 +328,31 @@ service cloud.firestore {
             ]);
           }
 
-          allow read: if canReadTicket(tenantId, ticketId);
-
-          allow create: if baseEventValid() && (
-            (
-              simpleEventFields()
-              && request.resource.data.type == 'claimed'
+          function claimedEventValid() {
+            return simpleEventFields()
               && request.resource.data.from == 'open'
               && request.resource.data.to == 'in_progress'
               && supportMember(tenantId)
               && getAfter(ticketPath(tenantId, ticketId)).data.status == 'in_progress'
-              && getAfter(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
-            )
-            ||
-            (
-              simpleEventFields()
-              && request.resource.data.type == 'waiting_requester'
+              && getAfter(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid;
+          }
+
+          function waitingRequesterEventValid() {
+            return simpleEventFields()
               && request.resource.data.from == 'in_progress'
               && request.resource.data.to == 'waiting_requester'
               && supportMember(tenantId)
               && getAfter(ticketPath(tenantId, ticketId)).data.status == 'waiting_requester'
-              && getAfter(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
-            )
-            ||
-            (
-              request.resource.data.keys().hasOnly([
+              && getAfter(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid;
+          }
+
+          function requesterRepliedEventValid() {
+            return request.resource.data.keys().hasOnly([
                 'type','from','to','actorUid','actorName','messageId','createdAt'
               ])
               && request.resource.data.keys().hasAll([
                 'type','from','to','actorUid','actorName','messageId','createdAt'
               ])
-              && request.resource.data.type == 'requester_replied'
               && request.resource.data.from == 'waiting_requester'
               && request.resource.data.to == 'in_progress'
               && activeMember(tenantId)
@@ -353,11 +360,11 @@ service cloud.firestore {
               && getAfter(ticketPath(tenantId, ticketId)).data.status == 'in_progress'
               && request.resource.data.messageId is string
               && getAfter(messagePath(tenantId, ticketId, request.resource.data.messageId)).data.authorUid == request.auth.uid
-              && getAfter(messagePath(tenantId, ticketId, request.resource.data.messageId)).data.createdAt == request.time
-            )
-            ||
-            (
-              request.resource.data.keys().hasOnly([
+              && getAfter(messagePath(tenantId, ticketId, request.resource.data.messageId)).data.createdAt == request.time;
+          }
+
+          function resolvedEventValid() {
+            return request.resource.data.keys().hasOnly([
                 'type','from','to','actorUid','actorName',
                 'resolutionId','resolutionShared','publicResolution','createdAt'
               ])
@@ -365,7 +372,6 @@ service cloud.firestore {
                 'type','from','to','actorUid','actorName',
                 'resolutionId','resolutionShared','publicResolution','createdAt'
               ])
-              && request.resource.data.type == 'resolved'
               && request.resource.data.from == 'in_progress'
               && request.resource.data.to == 'resolved'
               && supportMember(tenantId)
@@ -374,12 +380,11 @@ service cloud.firestore {
               && request.resource.data.resolutionId == eventId
               && request.resource.data.resolutionId == getAfter(ticketPath(tenantId, ticketId)).data.latestResolutionId
               && request.resource.data.resolutionShared == getAfter(ticketPath(tenantId, ticketId)).data.resolutionShared
-              && request.resource.data.publicResolution == getAfter(ticketPath(tenantId, ticketId)).data.publicResolution
-            )
-            ||
-            (
-              simpleEventFields()
-              && request.resource.data.type == 'reopened'
+              && request.resource.data.publicResolution == getAfter(ticketPath(tenantId, ticketId)).data.publicResolution;
+          }
+
+          function reopenedEventValid() {
+            return simpleEventFields()
               && request.resource.data.from == 'resolved'
               && request.resource.data.to == 'in_progress'
               && getAfter(ticketPath(tenantId, ticketId)).data.status == 'in_progress'
@@ -389,18 +394,27 @@ service cloud.firestore {
                   supportMember(tenantId)
                   && get(ticketPath(tenantId, ticketId)).data.assigneeUid == request.auth.uid
                 )
-              )
-            )
-            ||
-            (
-              simpleEventFields()
-              && request.resource.data.type == 'closed'
+              );
+          }
+
+          function closedEventValid() {
+            return simpleEventFields()
               && request.resource.data.from == 'resolved'
               && request.resource.data.to == 'closed'
               && activeMember(tenantId)
               && get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
-              && getAfter(ticketPath(tenantId, ticketId)).data.status == 'closed'
-            )
+              && getAfter(ticketPath(tenantId, ticketId)).data.status == 'closed';
+          }
+
+          allow read: if canReadTicket(tenantId, ticketId);
+
+          allow create: if baseEventValid() && (
+            (request.resource.data.type == 'claimed' && claimedEventValid())
+            || (request.resource.data.type == 'waiting_requester' && waitingRequesterEventValid())
+            || (request.resource.data.type == 'requester_replied' && requesterRepliedEventValid())
+            || (request.resource.data.type == 'resolved' && resolvedEventValid())
+            || (request.resource.data.type == 'reopened' && reopenedEventValid())
+            || (request.resource.data.type == 'closed' && closedEventValid())
           );
 
           allow update, delete: if false;
