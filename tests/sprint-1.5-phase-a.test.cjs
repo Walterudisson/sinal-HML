@@ -16,7 +16,9 @@ test('domínio 1.5 possui cinco estados persistidos e reabertura apenas como eve
     assert.ok(lifecycle.includes(`'${status}'`), status);
   }
   assert.ok(lifecycle.includes("REOPENED: 'reopened'"));
-  assert.ok(!/TICKET_STATUS[\s\S]*REOPENED\s*:/.test(lifecycle));
+  const statusBlock = lifecycle.split('export const TICKET_STATUS')[1].split('export const TICKET_EVENT')[0];
+  assert.ok(!statusBlock.includes('REOPENED'));
+  assert.ok(!statusBlock.includes("'reopened'"));
 });
 
 test('serviço possui espera, reabertura e fechamento sem reatribuir assignee', () => {
