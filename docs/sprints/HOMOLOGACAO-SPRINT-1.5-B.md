@@ -23,6 +23,21 @@
 - `requester_replied` não gera status push, evitando duplicidade com a notificação normal de nova mensagem;
 - cache PWA HML renovado para `sinal-shell-hml-1.5-b1`.
 
+
+## Pivô arquitetural da Fase B
+
+A partir deste checkpoint, o cliente não executa mais diretamente mudanças operacionais no Firestore. As Cloud Functions autenticadas são a camada autoritativa para:
+
+- assumir sinal;
+- aguardar solicitante;
+- resolver;
+- reabrir;
+- fechar;
+- enviar mensagens;
+- retomar automaticamente o atendimento após resposta do solicitante.
+
+As Firestore Rules permanecem responsáveis por leitura, criação inicial do sinal e bloqueio de gravações diretas em tickets existentes, mensagens, statusEvents e resoluções privadas. Isso evita transformar as Rules em um motor de workflow e elimina o risco de atingir o limite de expressões durante transições complexas.
+
 ## Testes automatizados
 
 Em um clone limpo:
@@ -65,18 +80,18 @@ npm test
 
 Esperado:
 - `0 vulnerabilities`;
-- **7/7** testes de notificações.
+- **14/14** testes: 7 de notificações + 7 de autorização/comandos do ciclo de vida.
 
 ## Publicação para homologação HML
 
 Somente após os testes e autorização explícita:
 
-1. integrar o PR da Fase B em `main` HML;
-2. publicar as regras HML:
+1. publicar primeiro as novas Functions HML, ainda sem alterar as Rules:
+   `firebase deploy --only functions:ticketCommand,functions:sendTicketMessage,functions:notifyTicketStatus --project sinaldesk-hml`;
+2. integrar o PR da Fase B em `main` HML e aguardar a atualização do GitHub Pages/PWA;
+3. confirmar em HML que o frontend novo chama as Functions corretamente;
+4. publicar as Rules simplificadas HML:
    `firebase deploy --only firestore:rules --project sinaldesk-hml`;
-3. publicar somente a função alterada:
-   `firebase deploy --only functions:notifyTicketStatus --project sinaldesk-hml`;
-4. aguardar atualização do GitHub Pages/PWA;
 5. executar a homologação manual abaixo.
 
 Nenhuma dessas publicações será feita em PRD nesta fase.
