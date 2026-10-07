@@ -66,9 +66,11 @@ test('regras ligam cada transição ao statusEvent correspondente', () => {
   for (const event of ['claimed', 'waiting_requester', 'requester_replied', 'resolved', 'reopened', 'closed']) {
     assert.ok(rules.includes(`'${event}'`), event);
   }
-  assert.match(rules, /linkedStatusEvent\('reopened', 'resolved', 'in_progress'\)/);
-  assert.match(rules, /linkedStatusEvent\('closed', 'resolved', 'closed'\)/);
-  assert.match(rules, /linkedStatusEvent\('requester_replied', 'waiting_requester', 'in_progress'\)/);
+  assert.match(rules, /function linkedStatusEventExists/);
+  assert.match(rules, /existsAfter\(statusEventPath/);
+  assert.match(rules, /incoming\.from == currentTicket\.status/);
+  assert.match(rules, /incoming\.to == nextTicket\.status/);
+  assert.match(rules, /incoming\.type == 'requester_replied'/);
 });
 
 test('sinal fechado não pertence aos estados que aceitam mensagens', () => {
