@@ -60,7 +60,7 @@ before(async () => {
       });
     }
 
-    for (const id of ['wait-ok', 'wait-other', 'wait-requester']) {
+    for (const id of ['wait-ok', 'wait-other', 'wait-requester', 'wait-no-event']) {
       await setDoc(doc(db, ticketPath(id)), {
         code: 'S-WAIT', title: 'Teste espera', description: 'Teste de regras',
         category: 'acesso', priority: 'normal', status: 'in_progress',
@@ -163,6 +163,18 @@ test('statusEvent isolado não pode ser criado sem a transição correspondente 
     actorName: 'Agente Teste',
     createdAt: serverTimestamp()
   }));
+});
+
+test('ticket não pode mudar para espera sem criar o statusEvent no mesmo lote', async () => {
+  const db = env.authenticatedContext(agentUid).firestore();
+  const ticketRef = doc(db, ticketPath('wait-no-event'));
+  const batch = writeBatch(db);
+  batch.update(ticketRef, {
+    status: 'waiting_requester',
+    updatedAt: serverTimestamp(),
+    lastEventId: 'evt-ausente'
+  });
+  await assertDeniedWithoutExpressionLimit(batch.commit());
 });
 
 test('solicitante não pode executar a transição de espera', async () => {
