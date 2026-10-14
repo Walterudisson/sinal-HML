@@ -10,6 +10,7 @@ let onSendMessage = null;
 let unsubscribeMessages = null;
 let unsubscribeStatusEvents = null;
 let onResolve = null;
+let onReopen = null;
 let onGetPrivateResolution = null;
 let onObserveStatusEvents = null;
 let privateRequestId = 0;
@@ -120,6 +121,7 @@ export function initTicketDetail(options) {
   onClaim = options.onClaim;
   onSendMessage = options.onSendMessage;
   onResolve = options.onResolve;
+  onReopen = options.onReopen;
   onGetPrivateResolution = options.onGetPrivateResolution;
   onObserveStatusEvents = options.onObserveStatusEvents;
 
@@ -204,6 +206,20 @@ export function initTicketDetail(options) {
       button.disabled = false;
       spinner.classList.add('hidden');
       label.textContent = 'Assumir sinal';
+    }
+  });
+
+  document.querySelector('#reopen-ticket-button').addEventListener('click', async () => {
+    if (!selectedTicket) return;
+    const button = document.querySelector('#reopen-ticket-button');
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = 'Reabrindo...';
+    try {
+      await onReopen(selectedTicket);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
     }
   });
 
@@ -338,6 +354,7 @@ function renderTicket(ticket) {
   const isAssignedAgent = ticket.assigneeUid === uid;
   const canClaim = currentContext.membership.role !== 'solicitante' && ticket.status === 'open' && !ticket.assigneeUid;
   const canResolve = isAssignedAgent && ticket.status === 'in_progress';
+  const canReopen = isRequester && ticket.status === 'resolved';
   const canMessage = (isRequester || isAssignedAgent) && ticket.status !== 'resolved';
 
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
@@ -365,6 +382,7 @@ function renderTicket(ticket) {
 
   document.querySelector('#claim-ticket-button').classList.toggle('hidden', !canClaim);
   document.querySelector('#resolve-ticket-button').classList.toggle('hidden', !canResolve);
+  document.querySelector('#reopen-ticket-button').classList.toggle('hidden', !canReopen);
   if (!canResolve) setResolvePanel(false);
 
   const publicBlock = document.querySelector('#detail-public-resolution');
@@ -375,7 +393,7 @@ function renderTicket(ticket) {
     hasPublicResolution ? ticket.publicResolution : '';
 
   const actionHelp = document.querySelector('#detail-action-help');
-  if (ticket.status === 'resolved') actionHelp.textContent = 'Sinal resolvido. O histórico continua disponível.';
+  if (ticket.status === 'resolved') actionHelp.textContent = canReopen ? 'Sinal resolvido. Reabra se precisar continuar o atendimento.' : 'Sinal resolvido. O histórico continua disponível.';
   else if (canClaim) actionHelp.textContent = 'Assuma o sinal para iniciar o atendimento e poder responder ao solicitante.';
   else if (isAssignedAgent) actionHelp.textContent = 'Este sinal está em atendimento por você.';
   else if (ticket.assigneeName) actionHelp.textContent = `Este sinal está em atendimento por ${ticket.assigneeName}.`;
@@ -393,9 +411,9 @@ function renderTicket(ticket) {
   if (canMessage) {
     textarea.placeholder = isRequester ? 'Escreva uma mensagem para o atendimento...' : 'Escreva uma resposta para o solicitante...';
   } else {
-    textarea.placeholder = ticket.status === 'resolved' ? 'Conversa encerrada neste sinal.' :
+    textarea.placeholder = ticket.status === 'resolved' ? (canReopen ? 'Reabra o sinal para continuar a conversa.' : 'Conversa encerrada neste sinal.') :
       canClaim ? 'Assuma este sinal para responder.' : 'Mensagem indisponível neste atendimento.';
-    help.textContent = ticket.status === 'resolved' ? 'Este sinal foi resolvido. A reabertura será disponibilizada em uma próxima versão.' :
+    help.textContent = ticket.status === 'resolved' ? (canReopen ? 'Reabra o sinal para enviar uma nova mensagem.' : 'Este sinal foi resolvido.') :
       'Somente o solicitante ou o atendente responsável pode enviar mensagens.';
   }
 }
