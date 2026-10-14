@@ -451,11 +451,14 @@ function renderMessages(messages) {
 
   const scroller = document.querySelector('#conversation-scroll');
   const nearBottom = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop < 100;
+  const firstSnapshot = !messagesSnapshotInitialized;
   const nextMessageIds = messages.map((message) => message.id);
-  const hasNewMessage = messagesSnapshotInitialized && messages.length > previousMessageIds.length
+  const hasNewMessage = !firstSnapshot && messages.length > previousMessageIds.length
     && nextMessageIds.some((id) => !previousMessageIds.includes(id));
   previousMessageIds = nextMessageIds;
-  const shouldFollow = hasNewMessage && nearBottom && activeView === 'conversation';
+  const shouldFollow =
+    activeView === 'conversation' &&
+    (firstSnapshot || (hasNewMessage && nearBottom));
   messagesSnapshotInitialized = true;
 
   count.textContent = String(messages.length);
@@ -473,8 +476,8 @@ function renderMessages(messages) {
       </article>`;
   }).join('');
 
-  // Apenas acompanhar novas mensagens quando o usuário já estiver perto do final.
-  // Nunca mover a tela ao abrir um sinal ou ao atualizar um snapshot existente.
+  // Ao entrar na conversa, mostrar a mensagem mais recente.
+  // Depois disso, só acompanhar novas mensagens se o usuário já estiver perto do final.
   if (shouldFollow) {
     requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
   }
