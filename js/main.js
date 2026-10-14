@@ -191,7 +191,19 @@ function openConversation(ticket) {
 
 function ensureCentralInitialized(context) {
   if (centralInitialized) return;
-  initCentral({ context, onOpenTicket: openConversation });
+  initCentral({
+    context,
+    onOpenTicket: openConversation,
+    onClaimTicket: async (ticket) => {
+      try {
+        await claimTicket(currentContext, ticket);
+        showToast(`${ticket.code} agora está com você.`, 'success', { title: 'Sinal assumido' });
+      } catch (error) {
+        showToast(error?.message || 'Não foi possível assumir este sinal.', 'error', { title: 'Falha ao assumir' });
+        throw error;
+      }
+    }
+  });
   centralInitialized = true;
 }
 
