@@ -4,7 +4,7 @@ let registration = null;
 export async function registerPwa({ onInstallAvailable, onInstalled, onUpdate }) {
   if (!('serviceWorker' in navigator)) return null;
 
-  registration = await navigator.serviceWorker.register('./service-worker.js');
+  registration = await navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' });
   registration.update().catch(() => {});
   registration = await navigator.serviceWorker.ready;
 
@@ -24,8 +24,21 @@ export async function registerPwa({ onInstallAvailable, onInstalled, onUpdate })
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;
     refreshing = true;
+
+    const reloadKey = 'sinal:pwa-controller-reload';
+    if (sessionStorage.getItem(reloadKey) !== '1') {
+      sessionStorage.setItem(reloadKey, '1');
+      window.location.reload();
+      return;
+    }
+
+    sessionStorage.removeItem(reloadKey);
     onUpdate?.();
   });
+
+  // Libera a trava após uma inicialização estável para que a próxima
+  // atualização futura também possa recarregar automaticamente.
+  window.setTimeout(() => sessionStorage.removeItem('sinal:pwa-controller-reload'), 5000);
 
   return registration;
 }
