@@ -139,6 +139,15 @@ body.composer-open { overflow: hidden; }
 
 .ticket-face-back {
   transform: rotateY(180deg);
+  pointer-events: none;
+}
+
+.ticket-flip-shell.is-flipped .ticket-face-front {
+  pointer-events: none;
+}
+
+.ticket-flip-shell.is-flipped .ticket-face-back {
+  pointer-events: auto;
 }
 
 .ticket-back-content {
