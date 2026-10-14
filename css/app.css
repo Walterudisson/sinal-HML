@@ -689,3 +689,25 @@ body.overlay-open { overflow: hidden; }
   font-size: .72rem;
   color: #64748b;
 }
+
+.my-signals-filter {
+  min-height: 2.75rem;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: .75rem;
+  background: #fff;
+  padding: .45rem .8rem;
+  font-size: .78rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.my-signals-filter.is-active {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+@media (min-width: 640px) {
+  .my-signals-filter { width: auto; }
+}

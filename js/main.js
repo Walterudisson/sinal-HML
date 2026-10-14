@@ -3,7 +3,7 @@ import { loadUserContext } from './services/context.service.js';
 import { createTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
-import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
+import { initSignalComposer, initMySignalsFilters, renderTickets } from './ui/signal-composer.js';
 import { initCentral, updateCentralTickets, updateCentralUnreadMessages } from './ui/central.js';
 import { initTicketDetail, setTicketDetailContext, resetTicketDetailUi, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
@@ -138,6 +138,7 @@ function showContextLoadError(error) {
 function initAuthenticatedUi() {
   if (uiInitialized) return;
   initNavigation();
+  initMySignalsFilters();
   initSignalComposer({
     onSubmit: async (payload) => {
       const ticket = await createTicket(currentContext, payload);
