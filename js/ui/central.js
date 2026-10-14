@@ -252,7 +252,7 @@ function markup(ticket) {
         <div class="flex items-center gap-2">
           ${ticket.status === 'open' && !ticket.assigneeUid ? `
             <button data-claim-ticket="${escapeHtml(ticket.id)}" type="button"
-              class="min-h-10 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
+              class="min-h-11 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
               Assumir
             </button>` : ''}
         </div>

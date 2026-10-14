@@ -11,6 +11,25 @@ body {
 button, input, a { -webkit-tap-highlight-color: transparent; }
 input { font-size: 16px; }
 
+.ui-icon-button {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 3rem;
+  place-items: center;
+  border-radius: .85rem;
+  transition: background-color .14s ease, transform .12s ease;
+}
+
+.ui-icon-button:active {
+  transform: scale(.96);
+}
+
+.ui-icon-button:focus-visible {
+  outline: 3px solid rgba(56, 189, 248, .35);
+  outline-offset: 2px;
+}
+
 .safe-page {
   padding-top: max(1rem, env(safe-area-inset-top));
   padding-right: max(1rem, env(safe-area-inset-right));
@@ -222,26 +241,41 @@ body.overlay-open { overflow: hidden; }
 
 .central-stat {
   display: flex;
-  min-height: 7.5rem;
+  min-height: 5.5rem;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   border: 1px solid #e2e8f0;
   border-radius: 1rem;
   background: white;
-  padding: 1rem 1.1rem;
-  text-align: left;
+  padding: .7rem .45rem;
+  text-align: center;
   transition: .16s ease;
+}
+
+@media (min-width: 640px) {
+  .central-stat {
+    min-height: 7.5rem;
+    align-items: flex-start;
+    padding: 1rem 1.1rem;
+    text-align: left;
+  }
 }
 
 .central-stat:hover { border-color: #cbd5e1; background: #f8fafc; }
 .central-stat-active { border-color: #c7d2fe; background: #eef2ff; }
-.central-stat-label { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: #64748b; }
-.central-stat-number { margin-top: .35rem; font-size: 1.9rem; line-height: 1; color: #0f172a; }
-.central-stat-help { margin-top: .45rem; font-size: .76rem; color: #64748b; }
+.central-stat-label { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #64748b; }
+.central-stat-number { margin-top: .25rem; font-size: 1.6rem; line-height: 1; color: #0f172a; }
+.central-stat-help { display: none; margin-top: .45rem; font-size: .76rem; color: #64748b; }
+
+@media (min-width: 640px) {
+  .central-stat-label { font-size: .7rem; letter-spacing: .12em; }
+  .central-stat-number { margin-top: .35rem; font-size: 1.9rem; }
+  .central-stat-help { display: block; }
+}
 
 .central-filter {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   border-radius: .75rem;
   border: 1px solid #e2e8f0;
   background: white;

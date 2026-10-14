@@ -179,8 +179,8 @@
                 <div id="header-user-name" class="text-sm font-bold text-slate-900"></div>
                 <div id="header-user-email" class="text-xs text-slate-500"></div>
               </div>
-              <button id="notification-bell" type="button" class="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-300 bg-white text-lg text-slate-700 hover:bg-slate-50" aria-label="Notificações" title="Notificações">🔔<span id="notification-badge" class="absolute -right-1 -top-1 hidden min-w-5 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-4 text-white">0</span></button>
-              <button id="logout-button" type="button" class="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 sm:px-4">Sair</button>
+              <button id="notification-bell" type="button" class="ui-icon-button relative border border-slate-300 bg-white text-lg text-slate-700 hover:bg-slate-50" aria-label="Notificações" title="Notificações">🔔<span id="notification-badge" class="absolute -right-1 -top-1 hidden min-w-5 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-4 text-white">0</span></button>
+              <button id="logout-button" type="button" class="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 sm:px-4">Sair</button>
             </div>
           </div>
         </header>
@@ -246,7 +246,7 @@
               </div>
             </div>
 
-            <div class="mt-7 grid gap-3 sm:grid-cols-3">
+            <div class="central-stat-grid mt-5 grid grid-cols-3 gap-2 sm:mt-7 sm:gap-3">
               <button data-central-filter="new" class="central-stat central-stat-active">
                 <span class="central-stat-label">Novos</span>
                 <strong id="central-new-count" class="central-stat-number">0</strong>
@@ -423,9 +423,9 @@
       <section class="notifications-panel absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-white shadow-2xl sm:bottom-auto sm:left-auto sm:right-4 sm:top-20 sm:h-[min(72dvh,620px)] sm:w-[420px] sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
         <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div><h2 id="notifications-title" class="text-lg font-extrabold text-slate-950">Notificações</h2><p id="notification-unread-count" class="mt-1 text-xs text-slate-500">Tudo lido</p></div>
-          <button data-close-notifications type="button" class="grid h-11 w-11 place-items-center rounded-xl text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
+          <button data-close-notifications type="button" class="ui-icon-button text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
         </div>
-        <div class="flex justify-end border-b border-slate-100 px-4 py-2"><button id="mark-all-notifications-read" type="button" class="min-h-10 px-2 text-xs font-extrabold text-sky-700">Marcar todas como lidas</button></div>
+        <div class="flex justify-end border-b border-slate-100 px-4 py-2"><button id="mark-all-notifications-read" type="button" class="min-h-11 rounded-lg px-2 text-xs font-extrabold text-sky-700 hover:bg-sky-50">Marcar todas como lidas</button></div>
         <div id="notification-list" class="min-h-0 flex-1 overflow-y-auto"></div>
         <div id="notification-empty" class="grid min-h-48 place-items-center p-8 text-center"><div><div class="text-2xl">🔔</div><strong class="mt-3 block text-sm font-extrabold text-slate-800">Tudo silencioso por aqui.</strong><p class="mt-1 text-sm text-slate-500">Novos sinais e mensagens aparecerão aqui.</p></div></div>
       </section>
@@ -440,7 +440,7 @@
             <span class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-700">Novo atendimento</span>
             <h2 id="signal-composer-title" class="mt-1 text-xl font-extrabold tracking-[-0.02em] text-slate-950">Mandar um sinal</h2>
           </div>
-          <button data-close-signal-composer type="button" class="grid h-11 w-11 place-items-center rounded-xl text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
+          <button data-close-signal-composer type="button" class="ui-icon-button text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
         </div>
 
         <form id="signal-form" class="space-y-5 px-5 py-6 sm:px-6" novalidate>
@@ -500,7 +500,7 @@
             <span id="detail-code" class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400"></span>
             <h2 id="ticket-detail-title" class="ticket-detail-title mt-1 text-xl font-extrabold tracking-[-0.02em] text-slate-950">Sinal</h2>
           </div>
-          <button data-close-ticket-detail type="button" class="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
+          <button data-close-ticket-detail type="button" class="ui-icon-button shrink-0 text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
         </div>
 
         <div id="ticket-details-view" class="min-h-0 flex-1 overflow-hidden">
