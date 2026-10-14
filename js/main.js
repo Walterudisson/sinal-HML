@@ -1,6 +1,6 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { createTicket, claimTicket, resolveTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { createTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
@@ -171,6 +171,10 @@ function ensureDetailInitialized(context) {
     onResolve: async (ticket, details) => {
       await resolveTicket(currentContext, ticket, details);
       showToast(`${ticket.code} foi resolvido com sucesso.`, 'success', { title: 'Sinal resolvido' });
+    },
+    onReopen: async (ticket) => {
+      await reopenTicket(currentContext, ticket);
+      showToast(`${ticket.code} voltou para atendimento.`, 'success', { title: 'Sinal reaberto' });
     },
     onGetPrivateResolution: (ticketId) => getPrivateResolution(currentContext, ticketId),
     onObserveStatusEvents: (ticketId, onData, onError) =>
