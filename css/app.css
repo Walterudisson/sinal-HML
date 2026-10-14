@@ -643,3 +643,49 @@ body.overlay-open { overflow: hidden; }
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
+
+.ticket-timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: .75rem;
+  padding-bottom: 1rem;
+}
+
+.ticket-timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: .4375rem;
+  top: 1rem;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.ticket-timeline-dot {
+  position: relative;
+  z-index: 1;
+  width: .95rem;
+  height: .95rem;
+  margin-top: .18rem;
+  border: 3px solid #e0f2fe;
+  border-radius: 9999px;
+  background: #0284c7;
+}
+
+.ticket-timeline-content {
+  min-width: 0;
+}
+
+.ticket-timeline-content strong {
+  display: block;
+  font-size: .82rem;
+  color: #1e293b;
+}
+
+.ticket-timeline-content span {
+  display: block;
+  margin-top: .2rem;
+  font-size: .72rem;
+  color: #64748b;
+}

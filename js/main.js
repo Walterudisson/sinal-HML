@@ -4,7 +4,7 @@ import { createTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResol
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, renderTickets } from './ui/signal-composer.js';
-import { initCentral, updateCentralTickets } from './ui/central.js';
+import { initCentral, updateCentralTickets, updateCentralUnreadMessages } from './ui/central.js';
 import { initTicketDetail, setTicketDetailContext, resetTicketDetailUi, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
@@ -190,6 +190,17 @@ function openConversation(ticket, options = {}) {
       observeMessages(currentContext, selectedTicket.id, onData, onError),
     options
   );
+
+  if (options.view === 'conversation') {
+    const unreadMessageNotifications = currentNotifications.filter(
+      (item) => item.type === 'new_message' && !item.isRead && item.ticketId === ticket.id
+    );
+    void Promise.all(
+      unreadMessageNotifications.map((item) =>
+        markNotificationRead(currentContext, item.id).catch(() => {})
+      )
+    );
+  }
 }
 
 function ensureCentralInitialized(context) {
@@ -363,6 +374,11 @@ async function renderSignedIn(user) {
       (items, changes) => {
         currentNotifications = items;
         renderNotifications(items, changes, showToast);
+        updateCentralUnreadMessages(
+          items
+            .filter((item) => item.type === 'new_message' && !item.isRead && item.ticketId)
+            .map((item) => item.ticketId)
+        );
       },
       () => showToast('Não foi possível atualizar suas notificações.', 'error')
     );

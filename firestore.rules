@@ -13,6 +13,9 @@ service cloud.firestore {
     function statusEventPath(tenantId, ticketId, eventId) {
       return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId)/statusEvents/$(eventId);
     }
+    function messagePath(tenantId, ticketId, messageId) {
+      return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId)/messages/$(messageId);
+    }
 
     function activeUser() {
       return signedIn() && exists(userPath()) && get(userPath()).data.status == 'active';
@@ -174,6 +177,22 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','updatedAt'
           ])
+        ) || (
+          canReplyToTicket(tenantId, ticketId)
+          && request.resource.data.lastInteractionAt == request.time
+          && request.resource.data.lastInteractionType == 'message'
+          && request.resource.data.lastInteractionByUid == request.auth.uid
+          && request.resource.data.lastInteractionMessageId is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastInteractionAt','lastInteractionType',
+            'lastInteractionByUid','lastInteractionMessageId'
+          ])
+          && getAfter(messagePath(
+            tenantId, ticketId, request.resource.data.lastInteractionMessageId
+          )).data.authorUid == request.auth.uid
+          && getAfter(messagePath(
+            tenantId, ticketId, request.resource.data.lastInteractionMessageId
+          )).data.createdAt == request.time
         );
 
         allow delete: if false;

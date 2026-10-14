@@ -1,11 +1,12 @@
 import {
-  addDoc,
   collection,
+  doc,
   limit,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 import { db } from '../config/firebase.js';
@@ -22,9 +23,11 @@ export function observeMessages(context, ticketId, onData, onError) {
 }
 
 export async function sendMessage(context, ticket, body) {
-  const ref = collection(db, 'tenants', context.tenant.id, 'tickets', ticket.id, 'messages');
+  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
+  const messageRef = doc(collection(ticketRef, 'messages'));
+  const batch = writeBatch(db);
 
-  await addDoc(ref, {
+  batch.set(messageRef, {
     body: body.trim(),
     visibility: 'public',
     authorUid: context.firebaseUser.uid,
@@ -33,4 +36,13 @@ export async function sendMessage(context, ticket, body) {
     authorRole: context.membership.role,
     createdAt: serverTimestamp()
   });
+
+  batch.update(ticketRef, {
+    lastInteractionAt: serverTimestamp(),
+    lastInteractionType: 'message',
+    lastInteractionByUid: context.firebaseUser.uid,
+    lastInteractionMessageId: messageRef.id
+  });
+
+  await batch.commit();
 }
