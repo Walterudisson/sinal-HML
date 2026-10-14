@@ -138,18 +138,34 @@ function renderCentral() {
     });
   });
 
-  list.querySelectorAll('[data-open-ticket]').forEach((card) => {
-    const open = () => {
-      const ticket = tickets.find((item) => item.id === card.dataset.openTicket);
+  list.querySelectorAll('[data-card-flip]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const shell = button.closest('[data-ticket-card]');
+      if (!shell) return;
+      shell.classList.toggle('is-flipped');
+      const flipped = shell.classList.contains('is-flipped');
+      shell.setAttribute('aria-expanded', String(flipped));
+
+      const front = shell.querySelector('.ticket-face-front');
+      const back = shell.querySelector('.ticket-face-back');
+      front?.setAttribute('aria-hidden', String(flipped));
+      back?.setAttribute('aria-hidden', String(!flipped));
+
+      front?.querySelectorAll('button').forEach((control) => {
+        control.tabIndex = flipped ? -1 : 0;
+      });
+      back?.querySelectorAll('button').forEach((control) => {
+        control.tabIndex = flipped ? 0 : -1;
+      });
+    });
+  });
+
+  list.querySelectorAll('[data-open-ticket]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const ticket = tickets.find((item) => item.id === button.dataset.openTicket);
       if (ticket) onOpenTicket?.(ticket);
-    };
-    card.addEventListener('click', open);
-    card.addEventListener('keydown', (event) => {
-      if (event.target !== card) return;
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        open();
-      }
     });
   });
 }
@@ -227,32 +243,73 @@ function markup(ticket) {
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
   const contextLabel = centralContext(ticket);
+  const assignee = ticket.assigneeName || 'Ainda não atribuído';
 
   return `
-    <article data-open-ticket="${escapeHtml(ticket.id)}" tabindex="0" role="button"
-      aria-label="Abrir ${escapeHtml(ticket.code || 'sinal')}"
-      class="central-ticket ticket-smart priority-${priorityKey}">
-      <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code)}</span>
-          <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
-          <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
-        </div>
-        <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
-        <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
-        <div class="ticket-smart-meta">
-          <span>${escapeHtml(ticket.requesterName)}</span>
-          <span>${escapeHtml(category)}</span>
-          <span title="${escapeHtml(formatDate(ticket.createdAt))}">${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        ${ticket.status === 'open' && !ticket.assigneeUid ? `
-          <button data-claim-ticket="${escapeHtml(ticket.id)}" type="button"
-            class="min-h-10 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
-            Assumir
-          </button>` : ''}
-        <span class="ticket-smart-open" aria-hidden="true">→</span>
+    <article data-ticket-card aria-expanded="false" class="ticket-flip-shell ticket-smart priority-${priorityKey}">
+      <div class="ticket-flip-inner">
+        <section class="ticket-face ticket-face-front" aria-hidden="false" aria-label="Resumo do sinal ${escapeHtml(ticket.code || '')}">
+          <div class="central-ticket">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code)}</span>
+                <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
+                <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
+              </div>
+              <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
+              <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
+              <div class="ticket-smart-meta">
+                <span>${escapeHtml(ticket.requesterName)}</span>
+                <span>${escapeHtml(category)}</span>
+                <span title="${escapeHtml(formatDate(ticket.createdAt))}">${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              ${ticket.status === 'open' && !ticket.assigneeUid ? `
+                <button data-claim-ticket="${escapeHtml(ticket.id)}" type="button"
+                  class="min-h-10 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
+                  Assumir
+                </button>` : ''}
+              <button data-card-flip type="button" class="ticket-card-secondary-action" aria-label="Ver resumo do sinal">Resumo</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="ticket-face ticket-face-back" aria-hidden="true" aria-label="Informações rápidas do sinal ${escapeHtml(ticket.code || '')}">
+          <div class="ticket-back-content">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <span class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">${escapeHtml(ticket.code)}</span>
+                <h3 class="ticket-title-clamp mt-1 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
+              </div>
+              <button data-card-flip type="button" tabindex="-1" class="ticket-card-secondary-action shrink-0" aria-label="Voltar para a frente do cartão">Voltar</button>
+            </div>
+
+            <dl class="ticket-back-grid">
+              <div>
+                <dt>Solicitante</dt>
+                <dd>${escapeHtml(ticket.requesterName || 'Não informado')}</dd>
+              </div>
+              <div>
+                <dt>Responsável</dt>
+                <dd>${escapeHtml(assignee)}</dd>
+              </div>
+              <div>
+                <dt>Aberto</dt>
+                <dd>${escapeHtml(formatDate(ticket.createdAt))}</dd>
+              </div>
+              <div>
+                <dt>Classificação</dt>
+                <dd>${escapeHtml(category)} · ${escapeHtml(priority)}</dd>
+              </div>
+            </dl>
+
+            <button data-open-ticket="${escapeHtml(ticket.id)}" type="button" tabindex="-1" class="ticket-open-details">
+              Abrir detalhes
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </section>
       </div>
     </article>`;
 }
