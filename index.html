@@ -264,17 +264,60 @@
               </button>
             </div>
 
-            <div class="mt-5 flex flex-wrap gap-2">
-              <button data-central-filter="all" class="central-filter">Todos</button>
-              <button data-central-filter="new" class="central-filter is-active">Novos</button>
-              <button data-central-filter="mine" class="central-filter">Meus</button>
-              <button data-central-filter="unassigned" class="central-filter">Sem responsável</button>
+            <div class="mt-5 flex gap-2 overflow-x-auto pb-1">
+              <button data-central-filter="all" class="central-filter shrink-0">Todos</button>
+              <button data-central-filter="new" class="central-filter is-active shrink-0">Novos</button>
+              <button data-central-filter="attention" class="central-filter shrink-0">Atenção <span id="central-attention-count" class="ml-1 opacity-70">0</span></button>
+              <button data-central-filter="mine" class="central-filter shrink-0">Meus</button>
+              <button data-central-filter="unassigned" class="central-filter shrink-0">Sem responsável</button>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,.7fr))]">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Buscar</span>
+                  <input id="central-search" type="search" placeholder="Código, título ou solicitante"
+                    class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Prioridade</span>
+                  <select id="central-priority" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                    <option value="all">Todas</option>
+                    <option value="urgente">Urgente</option>
+                    <option value="alta">Alta</option>
+                    <option value="normal">Normal</option>
+                    <option value="baixa">Baixa</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Categoria</span>
+                  <select id="central-category" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                    <option value="all">Todas</option>
+                    <option value="acesso">Acesso</option>
+                    <option value="equipamento">Equipamento</option>
+                    <option value="rede">Rede</option>
+                    <option value="sistemas">Sistemas</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Ordenar</span>
+                  <select id="central-sort" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                    <option value="priority" selected>Prioridade</option>
+                    <option value="newest">Mais recentes</option>
+                    <option value="oldest">Mais antigos</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div class="border-b border-slate-200 px-5 py-4">
-                <h2 id="central-list-title" class="font-extrabold text-slate-950">Novos sinais</h2>
-                <p id="central-list-subtitle" class="mt-1 text-sm text-slate-500">Sinais recebidos que ainda não entraram em atendimento.</p>
+              <div class="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 id="central-list-title" class="font-extrabold text-slate-950">Novos sinais</h2>
+                  <p id="central-list-subtitle" class="mt-1 text-sm text-slate-500">Sinais recebidos que ainda não entraram em atendimento.</p>
+                </div>
+                <span id="central-result-count" class="text-xs font-bold text-slate-400">0 sinais</span>
               </div>
               <div id="central-ticket-list" class="divide-y divide-slate-100"></div>
               <div id="central-empty-state" class="grid min-h-48 place-items-center px-5 py-10 text-center">
