@@ -40,8 +40,13 @@ function setTicketView(view) {
   }
   const back = document.querySelector('#ticket-view-back');
   back.classList.toggle('hidden', view === 'details');
+  const isRequester = selectedTicket?.requesterUid === currentContext?.firebaseUser?.uid;
   document.querySelector('#ticket-view-label').textContent =
-    view === 'details' ? 'Detalhes do sinal' : view === 'conversation' ? 'Conversa com o solicitante' : 'Finalizar atendimento';
+    view === 'details'
+      ? 'Detalhes do sinal'
+      : view === 'conversation'
+        ? (isRequester ? 'Conversa com o atendimento' : 'Conversa com o solicitante')
+        : 'Finalizar atendimento';
   document.querySelector('#ticket-detail .ticket-detail-panel').classList.toggle('is-immersive', view !== 'details');
   document.querySelectorAll('#ticket-detail [data-close-ticket-detail]').forEach((element) => {
     if (element.tagName === 'BUTTON') element.classList.toggle('hidden', view !== 'details');
@@ -235,8 +240,10 @@ export function initTicketDetail(options) {
     const spinner = document.querySelector('#message-submit-spinner');
     const label = document.querySelector('#message-submit-label');
 
+    const icon = document.querySelector('#message-submit-icon');
     button.disabled = true;
     spinner.classList.remove('hidden');
+    icon?.classList.add('hidden');
     label.textContent = 'Enviando...';
     try {
       await onSendMessage(selectedTicket, body);
@@ -245,6 +252,7 @@ export function initTicketDetail(options) {
     } finally {
       button.disabled = false;
       spinner.classList.add('hidden');
+      icon?.classList.remove('hidden');
       label.textContent = 'Enviar';
     }
   });
@@ -252,7 +260,7 @@ export function initTicketDetail(options) {
   document.querySelector('#message-body').addEventListener('input', (event) => {
     const el = event.currentTarget;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   });
 
   document.querySelector('#ticket-detail').addEventListener('keydown', (event) => {
@@ -418,6 +426,21 @@ function renderTicket(ticket) {
   }
 }
 
+function formatMessageStamp(timestamp) {
+  if (!timestamp?.toDate) return 'agora';
+  const date = timestamp.toDate();
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  return new Intl.DateTimeFormat('pt-BR', sameDay
+    ? { hour: '2-digit', minute: '2-digit' }
+    : { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }
+  ).format(date);
+}
+
 function renderMessages(messages) {
   const list = document.querySelector('#conversation-list');
   const empty = document.querySelector('#conversation-empty');
@@ -439,9 +462,12 @@ function renderMessages(messages) {
   list.innerHTML = messages.map((message) => {
     const mine = message.authorUid === uid;
     return `
-      <article class="message-bubble ${mine ? 'mine' : 'theirs'}">
-        <div class="whitespace-pre-wrap break-words text-sm leading-6">${escapeHtml(message.body)}</div>
-        <div class="message-meta">${escapeHtml(message.authorName || 'Usuário')} · ${escapeHtml(formatDate(message.createdAt))}</div>
+      <article class="message-row ${mine ? 'mine' : 'theirs'}">
+        <div class="message-bubble ${mine ? 'mine' : 'theirs'}">
+          ${mine ? '' : `<div class="message-author">${escapeHtml(message.authorName || 'Usuário')}</div>`}
+          <div class="message-text">${escapeHtml(message.body)}</div>
+          <div class="message-meta">${escapeHtml(formatMessageStamp(message.createdAt))}</div>
+        </div>
       </article>`;
   }).join('');
 
