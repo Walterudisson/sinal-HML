@@ -1,5 +1,5 @@
 import {
-  categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, escapeHtml
+  categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, formatRelativeAge, escapeHtml
 } from './signal-composer.js';
 
 let currentContext = null;
@@ -61,10 +61,17 @@ function renderCentral() {
   document.querySelector('#central-empty-state').classList.toggle('hidden', filtered.length > 0);
   list.innerHTML = filtered.map(markup).join('');
 
-  list.querySelectorAll('[data-open-ticket]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const ticket = tickets.find((item) => item.id === button.dataset.openTicket);
+  list.querySelectorAll('[data-open-ticket]').forEach((card) => {
+    const open = () => {
+      const ticket = tickets.find((item) => item.id === card.dataset.openTicket);
       if (ticket) onOpenTicket?.(ticket);
+    };
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        open();
+      }
     });
   });
 }
@@ -76,28 +83,39 @@ function filterTickets(items, filter, uid) {
   return items;
 }
 
+function centralContext(ticket) {
+  if (ticket.status === 'open') return ticket.assigneeName ? `Com ${ticket.assigneeName}` : 'Aguardando responsável';
+  if (ticket.status === 'in_progress') return ticket.assigneeName ? `Com ${ticket.assigneeName}` : 'Em atendimento';
+  if (ticket.status === 'resolved') return 'Atendimento concluído';
+  return 'Atendimento atualizado';
+}
+
 function markup(ticket) {
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
+  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
+  const contextLabel = centralContext(ticket);
 
   return `
-    <article class="central-ticket">
+    <article data-open-ticket="${escapeHtml(ticket.id)}" tabindex="0" role="button"
+      aria-label="Abrir ${escapeHtml(ticket.code || 'sinal')}"
+      class="central-ticket ticket-smart priority-${priorityKey}">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code)}</span>
-          <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'}">${escapeHtml(status)}</span>
+          <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
           <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
         </div>
         <h3 class="mt-2 truncate text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
-        <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+        <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
+        <div class="ticket-smart-meta">
           <span>${escapeHtml(ticket.requesterName)}</span>
           <span>${escapeHtml(category)}</span>
-          <span>${escapeHtml(formatDate(ticket.createdAt))}</span>
-          <span>${escapeHtml(ticket.assigneeName || 'Sem responsável')}</span>
+          <span title="${escapeHtml(formatDate(ticket.createdAt))}">${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
         </div>
       </div>
-      <button data-open-ticket="${escapeHtml(ticket.id)}" class="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-slate-700 hover:bg-slate-50">Abrir</button>
+      <span class="ticket-smart-open" aria-hidden="true">→</span>
     </article>`;
 }
