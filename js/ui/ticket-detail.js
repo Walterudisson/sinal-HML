@@ -314,7 +314,7 @@ export function initTicketDetail(options) {
   });
 }
 
-export function openTicketDetail(ticket, observeMessages) {
+export function openTicketDetail(ticket, observeMessages, options = {}) {
   const ticketChanged = selectedTicket?.id !== ticket.id;
   if (ticketChanged) {
     document.querySelector('#message-body').value = '';
@@ -358,6 +358,14 @@ export function openTicketDetail(ticket, observeMessages) {
   );
 
   openOverlayHistory('ticket-detail', finalizeClose);
+
+  if (options.view === 'conversation') {
+    requestAnimationFrame(() => {
+      if (selectedTicket?.id === ticket.id && activeView === 'details') {
+        openSubView('conversation');
+      }
+    });
+  }
 }
 
 export function updateSelectedTicket(ticket) {
@@ -466,10 +474,12 @@ function renderTicket(ticket) {
   if (canMessage) {
     textarea.placeholder = 'Mensagem...';
   } else {
-    textarea.placeholder = ticket.status === 'resolved' ? (canReopen ? 'Reabra o sinal para continuar a conversa.' : 'Conversa encerrada neste sinal.') :
-      canClaim ? 'Assuma este sinal para responder.' : 'Mensagem indisponível neste atendimento.';
-    help.textContent = ticket.status === 'resolved' ? (canReopen ? 'Reabra o sinal para enviar uma nova mensagem.' : 'Este sinal foi resolvido.') :
-      'Somente o solicitante ou o atendente responsável pode enviar mensagens.';
+    textarea.placeholder = 'Mensagem indisponível';
+    help.textContent = ticket.status === 'resolved'
+      ? (canReopen ? 'Este sinal foi resolvido. Reabra para continuar a conversa.' : 'Conversa encerrada: este sinal foi resolvido.')
+      : canClaim
+        ? 'Assuma este sinal para responder ao solicitante.'
+        : 'Somente o solicitante ou o atendente responsável pode enviar mensagens.';
   }
 }
 
@@ -486,6 +496,33 @@ function formatMessageStamp(timestamp) {
     ? { hour: '2-digit', minute: '2-digit' }
     : { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }
   ).format(date);
+}
+
+function messageDayKey(timestamp) {
+  if (!timestamp?.toDate) return '';
+  const date = timestamp.toDate();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatMessageDay(timestamp) {
+  if (!timestamp?.toDate) return 'Hoje';
+  const date = timestamp.toDate();
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const sameDay = (a, b) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (sameDay(date, today)) return 'Hoje';
+  if (sameDay(date, yesterday)) return 'Ontem';
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short'
+  }).format(date).replace('.', '');
 }
 
 function renderMessages(messages) {
@@ -509,9 +546,16 @@ function renderMessages(messages) {
   count.textContent = String(messages.length);
   empty.classList.toggle('hidden', messages.length > 0);
 
+  let previousDay = '';
   list.innerHTML = messages.map((message) => {
     const mine = message.authorUid === uid;
-    return `
+    const dayKey = messageDayKey(message.createdAt);
+    const separator = dayKey && dayKey !== previousDay
+      ? `<div class="message-day-separator" role="separator"><span>${escapeHtml(formatMessageDay(message.createdAt))}</span></div>`
+      : '';
+    previousDay = dayKey || previousDay;
+
+    return `${separator}
       <article class="message-row ${mine ? 'mine' : 'theirs'}">
         <div class="message-bubble ${mine ? 'mine' : 'theirs'}">
           ${mine ? '' : `<div class="message-author">${escapeHtml(message.authorName || 'Usuário')}</div>`}
