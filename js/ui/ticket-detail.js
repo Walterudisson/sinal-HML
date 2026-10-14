@@ -47,7 +47,9 @@ function setTicketView(view) {
       : view === 'conversation'
         ? (isRequester ? 'Conversa com o atendimento' : 'Conversa com o solicitante')
         : 'Finalizar atendimento';
-  document.querySelector('#ticket-detail .ticket-detail-panel').classList.toggle('is-immersive', view !== 'details');
+  const panel = document.querySelector('#ticket-detail .ticket-detail-panel');
+  panel.classList.toggle('is-immersive', view !== 'details');
+  panel.classList.toggle('is-conversation', view === 'conversation');
   document.querySelectorAll('#ticket-detail [data-close-ticket-detail]').forEach((element) => {
     if (element.tagName === 'BUTTON') element.classList.toggle('hidden', view !== 'details');
   });
