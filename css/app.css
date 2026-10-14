@@ -445,6 +445,29 @@ body.overlay-open { overflow: hidden; }
 .conversation-send:active { transform: scale(.96); }
 .conversation-send:disabled { cursor: not-allowed; opacity: .45; }
 
+.ticket-view-back {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 9999px;
+  color: #334155;
+  transition: background-color .14s ease, transform .12s ease;
+}
+
+.ticket-view-back svg {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.ticket-view-back:hover {
+  background: #f1f5f9;
+}
+
+.ticket-view-back:active {
+  transform: scale(.96);
+}
+
 .ticket-detail-panel.is-conversation .ticket-detail-header {
   align-items: center;
   padding-top: .65rem;
