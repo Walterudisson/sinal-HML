@@ -39,6 +39,7 @@ export function initCentral(options) {
     button.addEventListener('click', () => {
       currentFilter = button.dataset.centralFilter;
       resetAdvancedFilters();
+      persistCentralState();
       renderCentral();
     });
   });
