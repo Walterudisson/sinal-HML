@@ -190,6 +190,17 @@ function openConversation(ticket, options = {}) {
       observeMessages(currentContext, selectedTicket.id, onData, onError),
     options
   );
+
+  if (options.view === 'conversation') {
+    const unreadMessageNotifications = currentNotifications.filter(
+      (item) => item.type === 'new_message' && !item.isRead && item.ticketId === ticket.id
+    );
+    void Promise.all(
+      unreadMessageNotifications.map((item) =>
+        markNotificationRead(currentContext, item.id).catch(() => {})
+      )
+    );
+  }
 }
 
 function ensureCentralInitialized(context) {
