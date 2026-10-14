@@ -45,7 +45,8 @@ export function renderNotifications(nextItems, changes, showToast) {
       if (!item) return;
       if (!item.isRead) await onMarkRead?.(item.id);
       if (item.ticketId) {
-        requestOverlayClose('notifications', finalizeClose, () => onOpenTicket?.(item.ticketId));
+        const view = item.type === 'new_message' ? 'conversation' : 'details';
+        requestOverlayClose('notifications', finalizeClose, () => onOpenTicket?.(item.ticketId, { view }));
       }
     });
   });

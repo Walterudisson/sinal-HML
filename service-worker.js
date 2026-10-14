@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.5.6.2-chat-placeholder1';
+const CACHE_NAME = 'sinal-shell-hml-1.5.7-chat1';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
@@ -79,12 +79,15 @@ self.addEventListener('notificationclick', (event) => {
 
   let target;
   let ticketId;
+  let view = 'details';
   try {
     target = new URL(link, self.registration.scope);
     const scope = new URL(self.registration.scope);
     ticketId = new URLSearchParams(target.hash.slice(1)).get('ticket');
+    view = payload?.data?.type === 'new_message' ? 'conversation' : 'details';
     if (target.origin !== scope.origin || !target.pathname.startsWith(scope.pathname)
         || !ticketId || ticketId.length > 160) return;
+    target.hash = `ticket=${encodeURIComponent(ticketId)}&view=${view}`;
   } catch (_) {
     return;
   }
@@ -110,11 +113,11 @@ self.addEventListener('notificationclick', (event) => {
       if (navigated) await navigated.focus();
       else {
         await existing.focus();
-        existing.postMessage({ type: 'sinal:open-ticket', ticketId });
+        existing.postMessage({ type: 'sinal:open-ticket', ticketId, view });
       }
     } catch (_) {
       await existing.focus();
-      existing.postMessage({ type: 'sinal:open-ticket', ticketId });
+      existing.postMessage({ type: 'sinal:open-ticket', ticketId, view });
     }
   })());
 });
