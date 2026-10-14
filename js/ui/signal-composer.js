@@ -369,6 +369,7 @@ function ticketMarkup(ticket, compact = false) {
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
   const contextLabel = requesterContext(ticket);
+  const activityAt = ticket.lastInteractionAt || ticket.updatedAt || ticket.createdAt;
 
   return `
     <article data-my-ticket="${escapeHtml(ticket.id)}" class="ticket-card ticket-smart priority-${priorityKey} rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -382,7 +383,8 @@ function ticketMarkup(ticket, compact = false) {
         <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
         <div class="ticket-smart-meta">
           <span>${escapeHtml(category)}</span>
-          <span title="${escapeHtml(formatDate(ticket.createdAt))}">${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
+          <span title="${escapeHtml(formatDate(ticket.createdAt))}">Aberto ${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
+          <span title="${escapeHtml(formatDate(activityAt))}">Atividade ${escapeHtml(formatRelativeAge(activityAt))}</span>
         </div>
       </div>
     </article>
