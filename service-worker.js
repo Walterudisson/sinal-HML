@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.5.4.2-cards3';
+const CACHE_NAME = 'sinal-shell-hml-1.5.4.3-update1';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
@@ -10,7 +10,14 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(APP_SHELL.map(async (path) => {
+      const request = new Request(new URL(path, self.registration.scope).href, { cache: 'reload' });
+      const response = await fetch(request);
+      await cache.put(path, response);
+    }));
+  })());
   self.skipWaiting();
 });
 
@@ -28,7 +35,28 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match('./offline.html')));
+    event.respondWith(
+      fetch(new Request(request, { cache: 'no-store' }))
+        .catch(() => caches.match('./offline.html'))
+    );
+    return;
+  }
+
+  const isAppCode =
+    request.destination === 'script' ||
+    request.destination === 'style';
+
+  if (isAppCode) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(new Request(request, { cache: 'no-store' }));
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, fresh.clone());
+        return fresh;
+      } catch (_) {
+        return caches.match(request);
+      }
+    })());
     return;
   }
 
