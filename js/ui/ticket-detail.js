@@ -16,6 +16,7 @@ let onObserveStatusEvents = null;
 let privateRequestId = 0;
 let messagesSnapshotInitialized = false;
 let previousMessageIds = [];
+let currentStatusEvents = [];
 let activeView = 'details';
 let substateClosePending = false;
 let followKeyboardViewport = false;
@@ -126,17 +127,52 @@ async function loadPrivateResolution(ticket) {
 }
 
 function renderStatusHistory(events) {
+  currentStatusEvents = Array.isArray(events) ? events : [];
   const list = document.querySelector('#detail-status-history');
-  if (!events.length) {
-    list.innerHTML = '<li>Sem mudanças registradas nesta versão.</li>';
+  const timeline = [];
+
+  if (selectedTicket?.createdAt) {
+    timeline.push({
+      type: 'created',
+      actorName: selectedTicket.requesterName || 'Solicitante',
+      createdAt: selectedTicket.createdAt
+    });
+  }
+
+  timeline.push(...currentStatusEvents);
+
+  const lastResolved = [...currentStatusEvents].reverse().find((event) => event.type === 'resolved');
+  const updatedMillis = selectedTicket?.updatedAt?.toMillis?.() ?? 0;
+  const resolvedMillis = lastResolved?.createdAt?.toMillis?.() ?? 0;
+  if (
+    selectedTicket?.status === 'in_progress' &&
+    lastResolved &&
+    updatedMillis > resolvedMillis
+  ) {
+    timeline.push({
+      type: 'reopened',
+      actorName: selectedTicket.requesterName || 'Solicitante',
+      createdAt: selectedTicket.updatedAt
+    });
+  }
+
+  if (!timeline.length) {
+    list.innerHTML = '<li class="text-sm text-slate-500">Sem eventos registrados.</li>';
     return;
   }
-  list.innerHTML = events.map((event) => {
-    const label = event.type === 'claimed' ? 'Sinal em atendimento' :
-      event.type === 'resolved' ? 'Sinal resolvido' : 'Atualização';
-    return `<li class="rounded-xl border border-slate-100 bg-slate-50 p-3">
-      <strong class="block text-slate-800">${escapeHtml(label)}</strong>
-      <span class="mt-1 block text-xs text-slate-500">${escapeHtml(event.actorName || 'Equipe')} · ${escapeHtml(formatDate(event.createdAt))}</span>
+
+  list.innerHTML = timeline.map((event) => {
+    const label = event.type === 'created' ? 'Sinal recebido' :
+      event.type === 'claimed' ? 'Atendimento iniciado' :
+      event.type === 'resolved' ? 'Sinal resolvido' :
+      event.type === 'reopened' ? 'Sinal reaberto' : 'Atualização';
+
+    return `<li class="ticket-timeline-item">
+      <span class="ticket-timeline-dot" aria-hidden="true"></span>
+      <div class="ticket-timeline-content">
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(event.actorName || 'Equipe')} · ${escapeHtml(formatDate(event.createdAt))}</span>
+      </div>
     </li>`;
   }).join('');
 }
@@ -372,6 +408,7 @@ export function updateSelectedTicket(ticket) {
   if (selectedTicket?.id === ticket.id) {
     selectedTicket = ticket;
     renderTicket(ticket);
+    renderStatusHistory(currentStatusEvents);
     if (ticket.status === 'resolved') void loadPrivateResolution(ticket);
   }
 }
@@ -398,6 +435,7 @@ function finalizeClose() {
   selectedTicket = null;
   messagesSnapshotInitialized = false;
   previousMessageIds = [];
+  currentStatusEvents = [];
   document.querySelector('#detail-private-resolution-text').textContent = '';
   document.querySelector('#detail-private-resolution').classList.add('hidden');
   document.querySelector('#detail-public-resolution-text').textContent = '';
