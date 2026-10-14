@@ -258,7 +258,7 @@ function ticketMarkup(ticket, compact = false) {
   const contextLabel = requesterContext(ticket);
 
   return `
-    <article data-my-ticket="${escapeHtml(ticket.id)}" class="ticket-card ticket-smart priority-${priorityKey} ${compact ? 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm' : ''}">
+    <article data-my-ticket="${escapeHtml(ticket.id)}" class="ticket-card ticket-smart priority-${priorityKey} rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code ?? 'Sinal')}</span>
