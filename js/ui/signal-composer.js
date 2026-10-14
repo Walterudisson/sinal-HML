@@ -265,7 +265,7 @@ function ticketMarkup(ticket, compact = false) {
           <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
           <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
         </div>
-        <h3 class="mt-2 truncate text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title ?? '')}</h3>
+        <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title ?? '')}</h3>
         <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
         <div class="ticket-smart-meta">
           <span>${escapeHtml(category)}</span>

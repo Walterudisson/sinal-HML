@@ -124,6 +124,21 @@ body.composer-open { overflow: hidden; }
 .ticket-smart.priority-alta::before { background: #f59e0b; }
 .ticket-smart.priority-urgente::before { background: #e11d48; }
 
+.ticket-title-clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.ticket-detail-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
 .ticket-smart-context {
   margin-top: .45rem;
   overflow: hidden;
