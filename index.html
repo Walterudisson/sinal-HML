@@ -264,12 +264,12 @@
               </button>
             </div>
 
-            <div class="mt-5 flex gap-2 overflow-x-auto pb-1">
-              <button data-central-filter="all" class="central-filter shrink-0">Todos</button>
-              <button data-central-filter="new" class="central-filter is-active shrink-0">Novos</button>
-              <button data-central-filter="attention" class="central-filter shrink-0">Atenção <span id="central-attention-count" class="ml-1 opacity-70">0</span></button>
-              <button data-central-filter="mine" class="central-filter shrink-0">Meus</button>
-              <button data-central-filter="unassigned" class="central-filter shrink-0">Sem responsável</button>
+            <div class="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <button data-central-filter="all" class="central-filter w-full sm:w-auto">Todos</button>
+              <button data-central-filter="new" class="central-filter is-active w-full sm:w-auto">Novos</button>
+              <button data-central-filter="attention" class="central-filter w-full sm:w-auto">Atenção <span id="central-attention-count" class="ml-1 opacity-70">0</span></button>
+              <button data-central-filter="mine" class="central-filter w-full sm:w-auto">Meus</button>
+              <button data-central-filter="unassigned" class="central-filter col-span-2 w-full sm:col-auto sm:w-auto">Sem responsável</button>
             </div>
 
             <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
