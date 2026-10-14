@@ -33,22 +33,26 @@ export function initCentral(options) {
   document.querySelectorAll('[data-central-filter]').forEach((button) => {
     button.addEventListener('click', () => {
       currentFilter = button.dataset.centralFilter;
+      resetAdvancedFilters();
       renderCentral();
     });
   });
 
   document.querySelector('#central-search')?.addEventListener('input', (event) => {
     currentSearch = event.currentTarget.value;
+    if (currentSearch.trim()) currentFilter = 'all';
     renderCentral();
   });
 
   document.querySelector('#central-priority')?.addEventListener('change', (event) => {
     currentPriority = event.currentTarget.value;
+    if (currentPriority !== 'all') currentFilter = 'all';
     renderCentral();
   });
 
   document.querySelector('#central-category')?.addEventListener('change', (event) => {
     currentCategory = event.currentTarget.value;
+    if (currentCategory !== 'all') currentFilter = 'all';
     renderCentral();
   });
 
@@ -61,6 +65,20 @@ export function initCentral(options) {
 export function updateCentralTickets(nextTickets) {
   tickets = nextTickets;
   renderCentral();
+}
+
+function resetAdvancedFilters() {
+  currentSearch = '';
+  currentPriority = 'all';
+  currentCategory = 'all';
+
+  const search = document.querySelector('#central-search');
+  const priority = document.querySelector('#central-priority');
+  const category = document.querySelector('#central-category');
+
+  if (search) search.value = '';
+  if (priority) priority.value = 'all';
+  if (category) category.value = 'all';
 }
 
 function renderCentral() {
