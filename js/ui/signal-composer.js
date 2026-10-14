@@ -231,26 +231,45 @@ function formatDate(timestamp) {
   }).format(timestamp.toDate());
 }
 
+function formatRelativeAge(timestamp) {
+  if (!timestamp?.toDate) return 'agora';
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp.toDate().getTime()) / 60000));
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? 'há 1 dia' : `há ${days} dias`;
+}
+
+function requesterContext(ticket) {
+  if (ticket.status === 'open') return 'Aguardando atendimento';
+  if (ticket.status === 'in_progress') return ticket.assigneeName ? `Com ${ticket.assigneeName}` : 'Em atendimento';
+  if (ticket.status === 'resolved') return 'Atendimento concluído';
+  return 'Atendimento atualizado';
+}
+
 function ticketMarkup(ticket, compact = false) {
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
+  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
+  const contextLabel = requesterContext(ticket);
 
   return `
-    <article data-my-ticket="${escapeHtml(ticket.id)}" class="${compact ? 'ticket-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm' : 'ticket-card'}">
-      <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code ?? 'Sinal')}</span>
-            <span class="ticket-badge bg-emerald-50 text-emerald-700">${escapeHtml(status)}</span>
-            <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
-          </div>
-          <h3 class="mt-2 truncate text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title ?? '')}</h3>
-          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-            <span>${escapeHtml(category)}</span>
-            <span>${escapeHtml(formatDate(ticket.createdAt))}</span>
-          </div>
+    <article data-my-ticket="${escapeHtml(ticket.id)}" class="ticket-card ticket-smart priority-${priorityKey} ${compact ? 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm' : ''}">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code ?? 'Sinal')}</span>
+          <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
+          <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
+        </div>
+        <h3 class="mt-2 truncate text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title ?? '')}</h3>
+        <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
+        <div class="ticket-smart-meta">
+          <span>${escapeHtml(category)}</span>
+          <span title="${escapeHtml(formatDate(ticket.createdAt))}">${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
         </div>
       </div>
     </article>
@@ -309,4 +328,4 @@ export function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-export { categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate };
+export { categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, formatRelativeAge };
