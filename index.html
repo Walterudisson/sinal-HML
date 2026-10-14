@@ -341,7 +341,47 @@
                 <span class="text-lg">+</span> Mandar um sinal
               </button>
             </div>
-            <div id="ticket-list-secondary" class="mt-6 space-y-3"></div>
+            <div class="mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <button data-my-signals-status="all" class="my-signals-filter is-active">Todos</button>
+              <button data-my-signals-status="open" class="my-signals-filter">Recebidos</button>
+              <button data-my-signals-status="in_progress" class="my-signals-filter">Em atendimento</button>
+              <button data-my-signals-status="resolved" class="my-signals-filter">Resolvidos</button>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.8fr)]">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Buscar</span>
+                  <input id="my-signals-search" type="search" placeholder="Código, título ou descrição"
+                    class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Categoria</span>
+                  <select id="my-signals-category" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                    <option value="all">Todas</option>
+                    <option value="acesso">Acesso</option>
+                    <option value="equipamento">Equipamento</option>
+                    <option value="rede">Rede</option>
+                    <option value="sistemas">Sistemas</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Ordenar</span>
+                  <select id="my-signals-sort" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
+                    <option value="activity" selected>Atividade recente</option>
+                    <option value="newest">Mais recentes</option>
+                    <option value="oldest">Mais antigos</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-5 flex items-center justify-between gap-4">
+              <span class="text-sm font-extrabold text-slate-950">Resultados</span>
+              <span id="my-signals-result-count" class="text-xs font-bold text-slate-400">0 sinais</span>
+            </div>
+            <div id="ticket-list-secondary" class="mt-3 space-y-3"></div>
             <div id="ticket-empty-state-secondary" class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">Nenhum sinal enviado.</div>
           </section>
 
