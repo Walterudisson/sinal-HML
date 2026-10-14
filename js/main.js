@@ -183,9 +183,12 @@ function ensureDetailInitialized(context) {
   detailInitialized = true;
 }
 
-function openConversation(ticket) {
-  openTicketDetail(ticket, (selectedTicket, onData, onError) =>
-    observeMessages(currentContext, selectedTicket.id, onData, onError)
+function openConversation(ticket, options = {}) {
+  openTicketDetail(
+    ticket,
+    (selectedTicket, onData, onError) =>
+      observeMessages(currentContext, selectedTicket.id, onData, onError),
+    options
   );
 }
 
@@ -249,10 +252,10 @@ function refreshInstallUi() {
   }
 }
 
-async function openTicketById(ticketId) {
+async function openTicketById(ticketId, options = {}) {
   try {
     const ticket = await getTicketById(currentContext, ticketId);
-    openConversation(ticket);
+    openConversation(ticket, options);
   } catch (error) {
     showToast(error?.message || 'Não foi possível abrir este sinal.', 'error', { title: 'Sinal indisponível' });
   }
@@ -264,8 +267,9 @@ function handleTicketDeepLink() {
   const params = new URLSearchParams(location.hash.replace(/^#/, ''));
   const ticketId = params.get('ticket');
   if (!ticketId || ticketId.length > 160) return;
+  const view = params.get('view') === 'conversation' ? 'conversation' : 'details';
   history.replaceState(history.state, '', `${location.pathname}${location.search}`);
-  void openTicketById(ticketId);
+  void openTicketById(ticketId, { view });
 }
 
 // Na PWA em segundo plano, o clique no push não dispara um novo login.
@@ -281,8 +285,9 @@ if ('serviceWorker' in navigator) {
     if (event.data?.type !== 'sinal:open-ticket') return;
     const ticketId = event.data.ticketId;
     if (typeof ticketId !== 'string' || !ticketId || ticketId.length > 160) return;
-    if (currentContext) void openTicketById(ticketId);
-    else location.hash = `ticket=${encodeURIComponent(ticketId)}`;
+    const view = event.data.view === 'conversation' ? 'conversation' : 'details';
+    if (currentContext) void openTicketById(ticketId, { view });
+    else location.hash = `ticket=${encodeURIComponent(ticketId)}&view=${view}`;
   });
 }
 
