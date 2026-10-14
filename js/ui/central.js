@@ -146,6 +146,18 @@ function renderCentral() {
       shell.classList.toggle('is-flipped');
       const flipped = shell.classList.contains('is-flipped');
       shell.setAttribute('aria-expanded', String(flipped));
+
+      const front = shell.querySelector('.ticket-face-front');
+      const back = shell.querySelector('.ticket-face-back');
+      front?.setAttribute('aria-hidden', String(flipped));
+      back?.setAttribute('aria-hidden', String(!flipped));
+
+      front?.querySelectorAll('button').forEach((control) => {
+        control.tabIndex = flipped ? -1 : 0;
+      });
+      back?.querySelectorAll('button').forEach((control) => {
+        control.tabIndex = flipped ? 0 : -1;
+      });
     });
   });
 
@@ -236,7 +248,7 @@ function markup(ticket) {
   return `
     <article data-ticket-card aria-expanded="false" class="ticket-flip-shell ticket-smart priority-${priorityKey}">
       <div class="ticket-flip-inner">
-        <section class="ticket-face ticket-face-front" aria-label="Resumo do sinal ${escapeHtml(ticket.code || '')}">
+        <section class="ticket-face ticket-face-front" aria-hidden="false" aria-label="Resumo do sinal ${escapeHtml(ticket.code || '')}">
           <div class="central-ticket">
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
@@ -263,14 +275,14 @@ function markup(ticket) {
           </div>
         </section>
 
-        <section class="ticket-face ticket-face-back" aria-label="Informações rápidas do sinal ${escapeHtml(ticket.code || '')}">
+        <section class="ticket-face ticket-face-back" aria-hidden="true" aria-label="Informações rápidas do sinal ${escapeHtml(ticket.code || '')}">
           <div class="ticket-back-content">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <span class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">${escapeHtml(ticket.code)}</span>
                 <h3 class="ticket-title-clamp mt-1 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
               </div>
-              <button data-card-flip type="button" class="ticket-card-secondary-action shrink-0" aria-label="Voltar para a frente do cartão">Voltar</button>
+              <button data-card-flip type="button" tabindex="-1" class="ticket-card-secondary-action shrink-0" aria-label="Voltar para a frente do cartão">Voltar</button>
             </div>
 
             <dl class="ticket-back-grid">
@@ -292,7 +304,7 @@ function markup(ticket) {
               </div>
             </dl>
 
-            <button data-open-ticket="${escapeHtml(ticket.id)}" type="button" class="ticket-open-details">
+            <button data-open-ticket="${escapeHtml(ticket.id)}" type="button" tabindex="-1" class="ticket-open-details">
               Abrir detalhes
               <span aria-hidden="true">→</span>
             </button>
