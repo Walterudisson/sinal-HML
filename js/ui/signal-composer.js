@@ -32,6 +32,119 @@ const statusLabels = Object.freeze({
 });
 
 let lastFocusedElement = null;
+let mySignalsItems = [];
+let mySignalsOpenHandler = null;
+let mySignalsStatus = 'all';
+let mySignalsCategory = 'all';
+let mySignalsSort = 'activity';
+let mySignalsSearch = '';
+
+export function initMySignalsFilters() {
+  document.querySelectorAll('[data-my-signals-status]').forEach((button) => {
+    button.addEventListener('click', () => {
+      mySignalsStatus = button.dataset.mySignalsStatus;
+      renderMySignals();
+    });
+  });
+
+  document.querySelector('#my-signals-search')?.addEventListener('input', (event) => {
+    mySignalsSearch = event.currentTarget.value;
+    renderMySignals();
+  });
+
+  document.querySelector('#my-signals-category')?.addEventListener('change', (event) => {
+    mySignalsCategory = event.currentTarget.value;
+    renderMySignals();
+  });
+
+  document.querySelector('#my-signals-sort')?.addEventListener('change', (event) => {
+    mySignalsSort = event.currentTarget.value;
+    renderMySignals();
+  });
+}
+
+function mySignalsTimestamp(ticket) {
+  return ticket.lastInteractionAt || ticket.updatedAt || ticket.createdAt;
+}
+
+function mySignalsMillis(timestamp) {
+  return timestamp?.toMillis?.() ?? timestamp?.toDate?.().getTime?.() ?? 0;
+}
+
+function normalizeSearch(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function applyMySignalsFilters(items) {
+  const search = normalizeSearch(mySignalsSearch.trim());
+  const filtered = items.filter((ticket) => {
+    if (mySignalsStatus !== 'all' && ticket.status !== mySignalsStatus) return false;
+    if (mySignalsCategory !== 'all' && ticket.category !== mySignalsCategory) return false;
+
+    if (search) {
+      const haystack = normalizeSearch([
+        ticket.code,
+        ticket.title,
+        ticket.description
+      ].filter(Boolean).join(' '));
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  return [...filtered].sort((a, b) => {
+    if (mySignalsSort === 'newest') return mySignalsMillis(b.createdAt) - mySignalsMillis(a.createdAt);
+    if (mySignalsSort === 'oldest') return mySignalsMillis(a.createdAt) - mySignalsMillis(b.createdAt);
+    return mySignalsMillis(mySignalsTimestamp(b)) - mySignalsMillis(mySignalsTimestamp(a));
+  });
+}
+
+function bindMySignalCards(container, items) {
+  if (typeof mySignalsOpenHandler !== 'function') return;
+  container.querySelectorAll('[data-my-ticket]').forEach((element) => {
+    element.classList.add('is-clickable');
+    element.setAttribute('tabindex', '0');
+    element.setAttribute('role', 'button');
+
+    const open = () => {
+      const ticket = items.find((item) => item.id === element.dataset.myTicket);
+      if (ticket) mySignalsOpenHandler(ticket);
+    };
+
+    element.addEventListener('click', open);
+    element.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
+function renderMySignals() {
+  const list = document.querySelector('#ticket-list-secondary');
+  const empty = document.querySelector('#ticket-empty-state-secondary');
+  if (!list || !empty) return;
+
+  const filtered = applyMySignalsFilters(mySignalsItems);
+  const count = document.querySelector('#my-signals-result-count');
+  if (count) count.textContent = filtered.length === 1 ? '1 sinal' : `${filtered.length} sinais`;
+
+  document.querySelectorAll('[data-my-signals-status]').forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.mySignalsStatus === mySignalsStatus);
+  });
+
+  empty.classList.toggle('hidden', filtered.length > 0);
+  empty.textContent = mySignalsItems.length === 0
+    ? 'Nenhum sinal enviado.'
+    : 'Nenhum sinal corresponde aos filtros selecionados.';
+
+  list.innerHTML = filtered.map((ticket) => ticketMarkup(ticket, true)).join('');
+  bindMySignalCards(list, filtered);
+}
 
 export function initSignalComposer({ onSubmit }) {
   const composer = document.querySelector('#signal-composer');
@@ -278,11 +391,12 @@ function ticketMarkup(ticket, compact = false) {
 
 export function renderTickets(tickets, onOpenTicket = null) {
   const primaryList = document.querySelector('#ticket-list');
-  const secondaryList = document.querySelector('#ticket-list-secondary');
   const primaryEmpty = document.querySelector('#ticket-empty-state');
-  const secondaryEmpty = document.querySelector('#ticket-empty-state-secondary');
   const count = document.querySelector('#ticket-count');
   const countLabel = document.querySelector('#ticket-count-label');
+
+  mySignalsItems = tickets;
+  mySignalsOpenHandler = onOpenTicket;
 
   count.textContent = String(tickets.length);
   countLabel.textContent = tickets.length === 0
@@ -292,31 +406,13 @@ export function renderTickets(tickets, onOpenTicket = null) {
       : `${tickets.length} sinais enviados.`;
 
   primaryEmpty.classList.toggle('hidden', tickets.length > 0);
-  secondaryEmpty.classList.toggle('hidden', tickets.length > 0);
-
   primaryList.innerHTML = tickets.map((ticket) => ticketMarkup(ticket, false)).join('');
-  secondaryList.innerHTML = tickets.map((ticket) => ticketMarkup(ticket, true)).join('');
 
   if (typeof onOpenTicket === 'function') {
-    [...primaryList.querySelectorAll('[data-my-ticket]'), ...secondaryList.querySelectorAll('[data-my-ticket]')].forEach((element) => {
-      element.classList.add('is-clickable');
-      element.setAttribute('tabindex', '0');
-      element.setAttribute('role', 'button');
-
-      const open = () => {
-        const ticket = tickets.find((item) => item.id === element.dataset.myTicket);
-        if (ticket) onOpenTicket(ticket);
-      };
-
-      element.addEventListener('click', open);
-      element.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          open();
-        }
-      });
-    });
+    bindMySignalCards(primaryList, tickets);
   }
+
+  renderMySignals();
 }
 
 export function escapeHtml(value) {
