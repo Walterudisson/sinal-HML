@@ -121,7 +121,7 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
 
         // Atribuição e resolução são transições distintas, vinculadas ao histórico.
-        allow update: if supportMember(tenantId) && (
+        allow update: if (supportMember(tenantId) && (
           (
             resource.data.status == 'open'
             && resource.data.assigneeUid == null
@@ -165,6 +165,15 @@ service cloud.firestore {
             && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.type == 'resolved'
             && getAfter(statusEventPath(tenantId, ticketId, request.resource.data.lastEventId)).data.createdAt == request.time
           )
+        )) || (
+          activeMember(tenantId)
+          && resource.data.status == 'resolved'
+          && resource.data.requesterUid == request.auth.uid
+          && request.resource.data.status == 'in_progress'
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','updatedAt'
+          ])
         );
 
         allow delete: if false;
