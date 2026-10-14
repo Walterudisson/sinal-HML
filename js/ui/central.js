@@ -255,7 +255,6 @@ function markup(ticket) {
               class="min-h-10 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
               Assumir
             </button>` : ''}
-          <span class="ticket-smart-open" aria-hidden="true">→</span>
         </div>
       </div>
     </article>`;
