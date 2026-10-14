@@ -7,6 +7,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   writeBatch,
   orderBy,
   where
@@ -117,6 +118,19 @@ export async function resolveTicket(context, ticket, details) {
     createdAt: serverTimestamp()
   });
   await batch.commit();
+}
+
+export async function reopenTicket(context, ticket) {
+  if (!navigator.onLine) throw new Error('Você está sem conexão. Reconecte-se para reabrir este sinal.');
+  if (ticket.status !== 'resolved' || ticket.requesterUid !== context.firebaseUser.uid) {
+    throw new Error('Somente o solicitante pode reabrir um sinal resolvido.');
+  }
+
+  const ref = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
+  await updateDoc(ref, {
+    status: 'in_progress',
+    updatedAt: serverTimestamp()
+  });
 }
 
 export async function getPrivateResolution(context, ticketId) {
