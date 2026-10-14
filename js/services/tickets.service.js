@@ -7,34 +7,13 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   writeBatch,
   orderBy,
   where
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 import { db } from '../config/firebase.js';
-import {
-  TICKET_EVENT,
-  TICKET_STATUS,
-  canActorTransition
-} from '../domain/ticket-lifecycle.mjs';
-
-function actorName(context, fallback = 'Usuário') {
-  return context.userProfile.displayName
-    || context.firebaseUser.displayName
-    || context.firebaseUser.email
-    || fallback;
-}
-
-function transitionAllowed(context, ticket, event) {
-  return canActorTransition({
-    from: ticket.status,
-    event,
-    role: context.membership.role,
-    isRequester: ticket.requesterUid === context.firebaseUser.uid,
-    isAssignee: ticket.assigneeUid === context.firebaseUser.uid
-  });
-}
 
 export async function createTicket(context, input) {
   const { firebaseUser, userProfile, tenant } = context;
@@ -47,7 +26,7 @@ export async function createTicket(context, input) {
     description: input.description.trim(),
     category: input.category,
     priority: input.priority,
-    status: TICKET_STATUS.OPEN,
+    status: 'open',
     requesterUid: firebaseUser.uid,
     requesterName: userProfile.displayName || firebaseUser.displayName || firebaseUser.email || 'Usuário',
     requesterEmail: firebaseUser.email || userProfile.email || '',
@@ -65,56 +44,26 @@ export async function createTicket(context, input) {
 }
 
 export async function claimTicket(context, ticket) {
-  if (!transitionAllowed(context, ticket, TICKET_EVENT.CLAIMED)) {
-    throw new Error('Este sinal não pode ser assumido neste estado.');
-  }
-
   const { firebaseUser, userProfile, tenant } = context;
   const ticketRef = doc(db, 'tenants', tenant.id, 'tickets', ticket.id);
-  const name = actorName(context, 'Atendente');
+
+  const actorName = userProfile.displayName || firebaseUser.displayName || firebaseUser.email || 'Atendente';
   const historyRef = doc(collection(ticketRef, 'statusEvents'));
   const batch = writeBatch(db);
-
   batch.update(ticketRef, {
-    status: TICKET_STATUS.IN_PROGRESS,
+    status: 'in_progress',
     assigneeUid: firebaseUser.uid,
-    assigneeName: name,
+    assigneeName: actorName,
     assigneeEmail: firebaseUser.email || userProfile.email || '',
     updatedAt: serverTimestamp(),
     lastEventId: historyRef.id
   });
   batch.set(historyRef, {
-    type: TICKET_EVENT.CLAIMED,
-    from: TICKET_STATUS.OPEN,
-    to: TICKET_STATUS.IN_PROGRESS,
+    type: 'claimed',
+    from: 'open',
+    to: 'in_progress',
     actorUid: firebaseUser.uid,
-    actorName: name,
-    createdAt: serverTimestamp()
-  });
-  await batch.commit();
-}
-
-export async function waitForRequester(context, ticket) {
-  if (!transitionAllowed(context, ticket, TICKET_EVENT.WAITING_REQUESTER)) {
-    throw new Error('Somente o atendente responsável pode aguardar o solicitante.');
-  }
-
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const name = actorName(context, 'Atendente');
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.WAITING_REQUESTER,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
-  });
-  batch.set(eventRef, {
-    type: TICKET_EVENT.WAITING_REQUESTER,
-    from: TICKET_STATUS.IN_PROGRESS,
-    to: TICKET_STATUS.WAITING_REQUESTER,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
+    actorName,
     createdAt: serverTimestamp()
   });
   await batch.commit();
@@ -122,7 +71,7 @@ export async function waitForRequester(context, ticket) {
 
 export async function resolveTicket(context, ticket, details) {
   if (!navigator.onLine) throw new Error('Você está sem conexão. Reconecte-se para resolver este sinal.');
-  if (!transitionAllowed(context, ticket, TICKET_EVENT.RESOLVED)) {
+  if (ticket.status !== 'in_progress' || ticket.assigneeUid !== context.firebaseUser.uid) {
     throw new Error('Somente o técnico responsável pode resolver um sinal em atendimento.');
   }
 
@@ -136,121 +85,59 @@ export async function resolveTicket(context, ticket, details) {
     throw new Error('Preencha a mensagem compartilhada (3 a 2.000 caracteres).');
   }
 
-  const name = actorName(context, 'Atendente');
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const privateRef = doc(ticketRef, 'privateResolutions', eventRef.id);
+  const actorName = context.userProfile.displayName || context.firebaseUser.displayName || context.firebaseUser.email || 'Atendente';
+  const ref = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
+  const privateRef = doc(ref, 'private', 'resolution');
+  const eventRef = doc(collection(ref, 'statusEvents'));
   const batch = writeBatch(db);
 
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.RESOLVED,
+  batch.update(ref, {
+    status: 'resolved',
     resolvedAt: serverTimestamp(),
     resolvedByUid: context.firebaseUser.uid,
-    resolvedByName: name,
+    resolvedByName: actorName,
     resolutionShared: share,
     publicResolution: publicText,
-    latestResolutionId: eventRef.id,
     updatedAt: serverTimestamp(),
     lastEventId: eventRef.id
   });
-
-  // Resoluções 1.5 são append-only. O ID coincide com o evento resolved.
+  // O texto técnico não fica no documento público do sinal.
   batch.set(privateRef, {
     text: internalText,
     knowledgeCandidate: details.knowledgeCandidate === true,
     createdByUid: context.firebaseUser.uid,
-    createdByName: name,
+    createdByName: actorName,
     createdAt: serverTimestamp()
   });
-
   batch.set(eventRef, {
-    type: TICKET_EVENT.RESOLVED,
-    from: TICKET_STATUS.IN_PROGRESS,
-    to: TICKET_STATUS.RESOLVED,
+    type: 'resolved',
+    from: 'in_progress',
+    to: 'resolved',
     actorUid: context.firebaseUser.uid,
-    actorName: name,
-    resolutionId: eventRef.id,
-    resolutionShared: share,
-    publicResolution: publicText,
-    createdAt: serverTimestamp()
-  });
-
-  await batch.commit();
-}
-
-export async function reopenTicket(context, ticket) {
-  if (!transitionAllowed(context, ticket, TICKET_EVENT.REOPENED)) {
-    throw new Error('Este sinal não pode ser reaberto por este usuário.');
-  }
-
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const name = actorName(context);
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.IN_PROGRESS,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
-  });
-  batch.set(eventRef, {
-    type: TICKET_EVENT.REOPENED,
-    from: TICKET_STATUS.RESOLVED,
-    to: TICKET_STATUS.IN_PROGRESS,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
+    actorName,
     createdAt: serverTimestamp()
   });
   await batch.commit();
 }
 
-export async function closeTicket(context, ticket) {
-  if (!transitionAllowed(context, ticket, TICKET_EVENT.CLOSED)) {
-    throw new Error('Somente o solicitante pode confirmar o encerramento de um sinal resolvido.');
+export async function reopenTicket(context, ticket) {
+  if (!navigator.onLine) throw new Error('Você está sem conexão. Reconecte-se para reabrir este sinal.');
+  if (ticket.status !== 'resolved' || ticket.requesterUid !== context.firebaseUser.uid) {
+    throw new Error('Somente o solicitante pode reabrir um sinal resolvido.');
   }
 
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
-  const eventRef = doc(collection(ticketRef, 'statusEvents'));
-  const name = actorName(context, 'Solicitante');
-  const batch = writeBatch(db);
-
-  batch.update(ticketRef, {
-    status: TICKET_STATUS.CLOSED,
-    closedAt: serverTimestamp(),
-    closedByUid: context.firebaseUser.uid,
-    closedByName: name,
-    updatedAt: serverTimestamp(),
-    lastEventId: eventRef.id
+  const ref = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
+  await updateDoc(ref, {
+    status: 'in_progress',
+    updatedAt: serverTimestamp()
   });
-  batch.set(eventRef, {
-    type: TICKET_EVENT.CLOSED,
-    from: TICKET_STATUS.RESOLVED,
-    to: TICKET_STATUS.CLOSED,
-    actorUid: context.firebaseUser.uid,
-    actorName: name,
-    createdAt: serverTimestamp()
-  });
-  await batch.commit();
 }
 
 export async function getPrivateResolution(context, ticketId) {
   if (!['admin', 'supervisor', 'agente'].includes(context.membership.role)) return null;
-
-  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticketId);
-  const ticketSnapshot = await getDoc(ticketRef);
-  if (!ticketSnapshot.exists()) return null;
-
-  const latestResolutionId = ticketSnapshot.data().latestResolutionId;
-  if (typeof latestResolutionId === 'string' && latestResolutionId) {
-    const latestRef = doc(ticketRef, 'privateResolutions', latestResolutionId);
-    const latestSnapshot = await getDoc(latestRef);
-    if (latestSnapshot.exists()) return { id: latestSnapshot.id, ...latestSnapshot.data() };
-  }
-
-  // Compatibilidade com sinais resolvidos na série 1.4.x.
-  const legacyRef = doc(ticketRef, 'private', 'resolution');
-  const legacySnapshot = await getDoc(legacyRef);
-  return legacySnapshot.exists() ? { id: 'legacy', ...legacySnapshot.data() } : null;
+  const ref = doc(db, 'tenants', context.tenant.id, 'tickets', ticketId, 'private', 'resolution');
+  const snapshot = await getDoc(ref);
+  return snapshot.exists() ? snapshot.data() : null;
 }
 
 export function observeStatusEvents(context, ticketId, onData, onError) {
@@ -259,6 +146,7 @@ export function observeStatusEvents(context, ticketId, onData, onError) {
     onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
   }, onError);
 }
+
 
 export async function getTicketById(context, ticketId) {
   const ref = doc(db, 'tenants', context.tenant.id, 'tickets', ticketId);
