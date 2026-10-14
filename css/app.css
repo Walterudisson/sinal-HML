@@ -239,6 +239,73 @@ body.composer-open { overflow: hidden; }
 
 body.overlay-open { overflow: hidden; }
 
+.home-stat-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.home-stat {
+  display: flex;
+  min-height: 5.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #fff;
+  padding: .7rem .75rem;
+  text-align: center;
+}
+
+.home-stat-accent {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.home-stat-label {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.home-stat-number {
+  margin-top: .25rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.home-stat-help {
+  display: none;
+  margin-top: .45rem;
+  font-size: .76rem;
+  color: #64748b;
+}
+
+@media (min-width: 640px) {
+  .home-stat {
+    min-height: 7.5rem;
+    align-items: flex-start;
+    padding: 1rem 1.1rem;
+    text-align: left;
+  }
+
+  .home-stat-label {
+    font-size: .7rem;
+    letter-spacing: .12em;
+  }
+
+  .home-stat-number {
+    margin-top: .35rem;
+    font-size: 1.9rem;
+  }
+
+  .home-stat-help {
+    display: block;
+  }
+}
+
 .central-stat {
   display: flex;
   min-height: 5.5rem;
