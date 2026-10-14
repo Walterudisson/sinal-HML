@@ -10,7 +10,14 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(APP_SHELL.map(async (path) => {
+      const request = new Request(path, { cache: 'reload' });
+      const response = await fetch(request);
+      await cache.put(path, response);
+    }));
+  })());
   self.skipWaiting();
 });
 
@@ -28,7 +35,28 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match('./offline.html')));
+    event.respondWith(
+      fetch(new Request(request, { cache: 'no-store' }))
+        .catch(() => caches.match('./offline.html'))
+    );
+    return;
+  }
+
+  const isAppCode =
+    request.destination === 'script' ||
+    request.destination === 'style';
+
+  if (isAppCode) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(new Request(request, { cache: 'no-store' }));
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, fresh.clone());
+        return fresh;
+      } catch (_) {
+        return caches.match(request);
+      }
+    })());
     return;
   }
 
