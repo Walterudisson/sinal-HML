@@ -185,17 +185,6 @@ body.composer-open { overflow: hidden; }
   color: #cbd5e1;
 }
 
-.ticket-smart-open {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  align-self: center;
-  border-radius: .65rem;
-  color: #64748b;
-  transition: .15s ease;
-}
-
 .ticket-smart:focus-visible {
   outline: 3px solid rgba(14,165,233,.25);
   outline-offset: -3px;
