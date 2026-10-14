@@ -5,13 +5,25 @@ import {
 let currentContext = null;
 let tickets = [];
 let currentFilter = 'new';
+let currentPriority = 'all';
+let currentCategory = 'all';
+let currentSort = 'priority';
+let currentSearch = '';
 let onOpenTicket = null;
 
 const filterCopy = Object.freeze({
   all: ['Todos os sinais', 'Fila completa da organização.'],
   new: ['Novos sinais', 'Sinais recebidos que ainda não entraram em atendimento.'],
+  attention: ['Precisa de atenção', 'Sinais novos com prioridade alta ou urgente.'],
   mine: ['Meus atendimentos', 'Sinais atualmente atribuídos a você.'],
   unassigned: ['Sem responsável', 'Sinais que ainda não possuem responsável.']
+});
+
+const priorityRank = Object.freeze({
+  urgente: 4,
+  alta: 3,
+  normal: 2,
+  baixa: 1
 });
 
 export function initCentral(options) {
@@ -23,6 +35,26 @@ export function initCentral(options) {
       currentFilter = button.dataset.centralFilter;
       renderCentral();
     });
+  });
+
+  document.querySelector('#central-search')?.addEventListener('input', (event) => {
+    currentSearch = event.currentTarget.value;
+    renderCentral();
+  });
+
+  document.querySelector('#central-priority')?.addEventListener('change', (event) => {
+    currentPriority = event.currentTarget.value;
+    renderCentral();
+  });
+
+  document.querySelector('#central-category')?.addEventListener('change', (event) => {
+    currentCategory = event.currentTarget.value;
+    renderCentral();
+  });
+
+  document.querySelector('#central-sort')?.addEventListener('change', (event) => {
+    currentSort = event.currentTarget.value;
+    renderCentral();
   });
 }
 
@@ -37,11 +69,13 @@ function renderCentral() {
 
   const stats = {
     new: tickets.filter((t) => t.status === 'open').length,
+    attention: tickets.filter(needsAttention).length,
     mine: tickets.filter((t) => t.assigneeUid === uid && t.status === 'in_progress').length,
     unassigned: tickets.filter((t) => !t.assigneeUid).length
   };
 
   document.querySelector('#central-new-count').textContent = String(stats.new);
+  document.querySelector('#central-attention-count').textContent = String(stats.attention);
   document.querySelector('#central-mine-count').textContent = String(stats.mine);
   document.querySelector('#central-unassigned-count').textContent = String(stats.unassigned);
   document.querySelector('#home-central-new-count').textContent = String(stats.new);
@@ -56,9 +90,13 @@ function renderCentral() {
   document.querySelector('#central-list-title').textContent = title;
   document.querySelector('#central-list-subtitle').textContent = subtitle;
 
-  const filtered = filterTickets(tickets, currentFilter, uid);
+  const filtered = applyQueue(tickets, uid);
   const list = document.querySelector('#central-ticket-list');
-  document.querySelector('#central-empty-state').classList.toggle('hidden', filtered.length > 0);
+  const empty = document.querySelector('#central-empty-state');
+  const resultCount = document.querySelector('#central-result-count');
+
+  empty.classList.toggle('hidden', filtered.length > 0);
+  resultCount.textContent = filtered.length === 1 ? '1 sinal' : `${filtered.length} sinais`;
   list.innerHTML = filtered.map(markup).join('');
 
   list.querySelectorAll('[data-open-ticket]').forEach((card) => {
@@ -76,11 +114,63 @@ function renderCentral() {
   });
 }
 
-function filterTickets(items, filter, uid) {
-  if (filter === 'new') return items.filter((t) => t.status === 'open');
-  if (filter === 'mine') return items.filter((t) => t.assigneeUid === uid && t.status === 'in_progress');
-  if (filter === 'unassigned') return items.filter((t) => !t.assigneeUid);
-  return items;
+function applyQueue(items, uid) {
+  const search = normalize(currentSearch.trim());
+
+  const filtered = items.filter((ticket) => {
+    if (!matchesBaseFilter(ticket, currentFilter, uid)) return false;
+    if (currentPriority !== 'all' && ticket.priority !== currentPriority) return false;
+    if (currentCategory !== 'all' && ticket.category !== currentCategory) return false;
+
+    if (search) {
+      const haystack = normalize([
+        ticket.code,
+        ticket.title,
+        ticket.requesterName
+      ].filter(Boolean).join(' '));
+      if (!haystack.includes(search)) return false;
+    }
+
+    return true;
+  });
+
+  return [...filtered].sort(queueComparator);
+}
+
+function matchesBaseFilter(ticket, filter, uid) {
+  if (filter === 'new') return ticket.status === 'open';
+  if (filter === 'attention') return needsAttention(ticket);
+  if (filter === 'mine') return ticket.assigneeUid === uid && ticket.status === 'in_progress';
+  if (filter === 'unassigned') return !ticket.assigneeUid;
+  return true;
+}
+
+function needsAttention(ticket) {
+  return ticket.status === 'open' && ['urgente', 'alta'].includes(ticket.priority);
+}
+
+function queueComparator(a, b) {
+  const aTime = timestampMillis(a.createdAt);
+  const bTime = timestampMillis(b.createdAt);
+
+  if (currentSort === 'newest') return bTime - aTime;
+  if (currentSort === 'oldest') return aTime - bTime;
+
+  const priorityDiff = (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0);
+  if (priorityDiff !== 0) return priorityDiff;
+
+  return aTime - bTime;
+}
+
+function timestampMillis(timestamp) {
+  return timestamp?.toMillis?.() ?? timestamp?.toDate?.().getTime?.() ?? 0;
+}
+
+function normalize(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 function centralContext(ticket) {
