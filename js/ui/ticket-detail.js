@@ -464,7 +464,7 @@ function renderTicket(ticket) {
   help.classList.toggle('hidden', canMessage);
 
   if (canMessage) {
-    textarea.placeholder = isRequester ? 'Escreva uma mensagem para o atendimento...' : 'Escreva uma resposta para o solicitante...';
+    textarea.placeholder = 'Mensagem...';
   } else {
     textarea.placeholder = ticket.status === 'resolved' ? (canReopen ? 'Reabra o sinal para continuar a conversa.' : 'Conversa encerrada neste sinal.') :
       canClaim ? 'Assuma este sinal para responder.' : 'Mensagem indisponível neste atendimento.';
