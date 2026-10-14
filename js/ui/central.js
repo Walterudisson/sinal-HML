@@ -138,6 +138,14 @@ function renderCentral() {
     });
   });
 
+  list.querySelectorAll('[data-open-conversation]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const ticket = tickets.find((item) => item.id === button.dataset.openConversation);
+      if (ticket) onOpenTicket?.(ticket, { view: 'conversation' });
+    });
+  });
+
   list.querySelectorAll('[data-open-ticket]').forEach((card) => {
     const open = () => {
       const ticket = tickets.find((item) => item.id === card.dataset.openTicket);
@@ -228,6 +236,9 @@ function markup(ticket) {
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
   const contextLabel = centralContext(ticket);
+  const isMine =
+    ticket.status === 'in_progress' &&
+    ticket.assigneeUid === currentContext?.firebaseUser?.uid;
 
   return `
     <article data-open-ticket="${escapeHtml(ticket.id)}" tabindex="0" role="button"
@@ -254,6 +265,11 @@ function markup(ticket) {
             <button data-claim-ticket="${escapeHtml(ticket.id)}" type="button"
               class="min-h-11 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
               Assumir
+            </button>` : ''}
+          ${isMine ? `
+            <button data-open-conversation="${escapeHtml(ticket.id)}" type="button"
+              class="min-h-11 rounded-xl border border-sky-200 bg-sky-50 px-3 text-xs font-extrabold text-sky-800 transition hover:bg-sky-100">
+              Conversar
             </button>` : ''}
         </div>
       </div>
