@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.5.4-cards1';
+const CACHE_NAME = 'sinal-shell-hml-1.5.4.1-cards2';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
