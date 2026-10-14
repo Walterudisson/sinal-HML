@@ -11,6 +11,8 @@ let currentSort = 'priority';
 let currentSearch = '';
 let onOpenTicket = null;
 let onClaimTicket = null;
+let unreadMessageTicketIds = new Set();
+let stateRestored = false;
 
 const filterCopy = Object.freeze({
   all: ['Todos os sinais', 'Fila completa da organização.'],
@@ -31,6 +33,7 @@ export function initCentral(options) {
   currentContext = options.context;
   onOpenTicket = options.onOpenTicket;
   onClaimTicket = options.onClaimTicket;
+  restoreCentralState();
 
   document.querySelectorAll('[data-central-filter]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -43,23 +46,27 @@ export function initCentral(options) {
   document.querySelector('#central-search')?.addEventListener('input', (event) => {
     currentSearch = event.currentTarget.value;
     if (currentSearch.trim()) currentFilter = 'all';
+    persistCentralState();
     renderCentral();
   });
 
   document.querySelector('#central-priority')?.addEventListener('change', (event) => {
     currentPriority = event.currentTarget.value;
     if (currentPriority !== 'all') currentFilter = 'all';
+    persistCentralState();
     renderCentral();
   });
 
   document.querySelector('#central-category')?.addEventListener('change', (event) => {
     currentCategory = event.currentTarget.value;
     if (currentCategory !== 'all') currentFilter = 'all';
+    persistCentralState();
     renderCentral();
   });
 
   document.querySelector('#central-sort')?.addEventListener('change', (event) => {
     currentSort = event.currentTarget.value;
+    persistCentralState();
     renderCentral();
   });
 }
@@ -67,6 +74,54 @@ export function initCentral(options) {
 export function updateCentralTickets(nextTickets) {
   tickets = nextTickets;
   renderCentral();
+}
+
+export function updateCentralUnreadMessages(ticketIds) {
+  unreadMessageTicketIds = new Set(ticketIds || []);
+  renderCentral();
+}
+
+function centralStateKey() {
+  const tenantId = currentContext?.tenant?.id || 'tenant';
+  const uid = currentContext?.firebaseUser?.uid || 'user';
+  return `sinal:central:${tenantId}:${uid}`;
+}
+
+function persistCentralState() {
+  if (!currentContext) return;
+  sessionStorage.setItem(centralStateKey(), JSON.stringify({
+    filter: currentFilter,
+    priority: currentPriority,
+    category: currentCategory,
+    sort: currentSort,
+    search: currentSearch
+  }));
+}
+
+function restoreCentralState() {
+  if (!currentContext || stateRestored) return;
+  stateRestored = true;
+  try {
+    const raw = sessionStorage.getItem(centralStateKey());
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (filterCopy[saved.filter]) currentFilter = saved.filter;
+    if (['all','baixa','normal','alta','urgente'].includes(saved.priority)) currentPriority = saved.priority;
+    if (['all','acesso','equipamento','rede','sistemas','outro'].includes(saved.category)) currentCategory = saved.category;
+    if (['priority','activity','newest','oldest'].includes(saved.sort)) currentSort = saved.sort;
+    if (typeof saved.search === 'string') currentSearch = saved.search.slice(0, 120);
+
+    const search = document.querySelector('#central-search');
+    const priority = document.querySelector('#central-priority');
+    const category = document.querySelector('#central-category');
+    const sort = document.querySelector('#central-sort');
+    if (search) search.value = currentSearch;
+    if (priority) priority.value = currentPriority;
+    if (category) category.value = currentCategory;
+    if (sort) sort.value = currentSort;
+  } catch (_) {
+    sessionStorage.removeItem(centralStateKey());
+  }
 }
 
 function resetAdvancedFilters() {
@@ -175,6 +230,7 @@ function applyQueue(items, uid) {
       const haystack = normalize([
         ticket.code,
         ticket.title,
+        ticket.description,
         ticket.requesterName
       ].filter(Boolean).join(' '));
       if (!haystack.includes(search)) return false;
@@ -202,6 +258,9 @@ function queueComparator(a, b) {
   const aTime = timestampMillis(a.createdAt);
   const bTime = timestampMillis(b.createdAt);
 
+  if (currentSort === 'activity') {
+    return interactionMillis(b) - interactionMillis(a);
+  }
   if (currentSort === 'newest') return bTime - aTime;
   if (currentSort === 'oldest') return aTime - bTime;
 
@@ -213,6 +272,14 @@ function queueComparator(a, b) {
 
 function timestampMillis(timestamp) {
   return timestamp?.toMillis?.() ?? timestamp?.toDate?.().getTime?.() ?? 0;
+}
+
+function interactionTimestamp(ticket) {
+  return ticket.lastInteractionAt || ticket.updatedAt || ticket.createdAt;
+}
+
+function interactionMillis(ticket) {
+  return timestampMillis(interactionTimestamp(ticket));
 }
 
 function normalize(value) {
@@ -236,6 +303,8 @@ function markup(ticket) {
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
   const contextLabel = centralContext(ticket);
+  const hasUnreadMessage = unreadMessageTicketIds.has(ticket.id);
+  const interactionAt = interactionTimestamp(ticket);
   const isMine =
     ticket.status === 'in_progress' &&
     ticket.assigneeUid === currentContext?.firebaseUser?.uid;
@@ -250,6 +319,7 @@ function markup(ticket) {
             <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code)}</span>
             <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
             <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
+            ${hasUnreadMessage ? '<span class="ticket-badge bg-rose-50 text-rose-700">Nova mensagem</span>' : ''}
           </div>
           <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
           <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
@@ -257,6 +327,7 @@ function markup(ticket) {
             <span>${escapeHtml(ticket.requesterName)}</span>
             <span>${escapeHtml(category)}</span>
             <span title="${escapeHtml(formatDate(ticket.createdAt))}">${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
+            <span title="${escapeHtml(formatDate(interactionAt))}">Atividade ${escapeHtml(formatRelativeAge(interactionAt))}</span>
           </div>
         </div>
 
