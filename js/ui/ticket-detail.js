@@ -18,6 +18,7 @@ let messagesSnapshotInitialized = false;
 let previousMessageIds = [];
 let activeView = 'details';
 let substateClosePending = false;
+let followKeyboardViewport = false;
 
 const publicSuggestions = [
   'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
@@ -78,6 +79,23 @@ function openSubView(view) {
     if (selectedTicket && activeView === view) {
       scroller.scrollTop = view === 'conversation' ? scroller.scrollHeight : 0;
     }
+  });
+}
+
+function isConversationNearBottom(threshold = 140) {
+  const scroller = document.querySelector('#conversation-scroll');
+  if (!scroller) return false;
+  return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop < threshold;
+}
+
+function scrollConversationToBottom() {
+  const scroller = document.querySelector('#conversation-scroll');
+  if (!scroller || activeView !== 'conversation') return;
+  requestAnimationFrame(() => {
+    scroller.scrollTop = scroller.scrollHeight;
+    requestAnimationFrame(() => {
+      scroller.scrollTop = scroller.scrollHeight;
+    });
   });
 }
 
@@ -259,10 +277,36 @@ export function initTicketDetail(options) {
     }
   });
 
-  document.querySelector('#message-body').addEventListener('input', (event) => {
+  const messageBody = document.querySelector('#message-body');
+
+  messageBody.addEventListener('focus', () => {
+    followKeyboardViewport = isConversationNearBottom(220);
+    if (followKeyboardViewport) {
+      window.setTimeout(scrollConversationToBottom, 60);
+      window.setTimeout(scrollConversationToBottom, 220);
+    }
+  });
+
+  messageBody.addEventListener('blur', () => {
+    followKeyboardViewport = false;
+  });
+
+  messageBody.addEventListener('input', (event) => {
     const el = event.currentTarget;
+    const shouldFollow = followKeyboardViewport || isConversationNearBottom(180);
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    if (shouldFollow) scrollConversationToBottom();
+  });
+
+  window.visualViewport?.addEventListener('resize', () => {
+    if (
+      activeView === 'conversation' &&
+      document.activeElement === messageBody &&
+      followKeyboardViewport
+    ) {
+      scrollConversationToBottom();
+    }
   });
 
   document.querySelector('#ticket-detail').addEventListener('keydown', (event) => {
@@ -278,6 +322,7 @@ export function openTicketDetail(ticket, observeMessages) {
   }
   selectedTicket = ticket;
   substateClosePending = false;
+  followKeyboardViewport = false;
   setTicketView('details');
   renderTicket(ticket);
   messagesSnapshotInitialized = false;
