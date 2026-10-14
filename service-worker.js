@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.5.6.2-chat-placeholder1';
+const CACHE_NAME = 'sinal-shell-hml-1.5.7-chat1';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
