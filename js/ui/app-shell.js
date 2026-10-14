@@ -51,6 +51,13 @@ export function renderContext(context) {
   mobileGrid.style.gridTemplateColumns = support
     ? 'repeat(5, minmax(0, 1fr))'
     : 'repeat(4, minmax(0, 1fr))';
+
+  const homeStatGrid = document.querySelector('#home-stat-grid');
+  if (homeStatGrid) {
+    homeStatGrid.style.gridTemplateColumns = support
+      ? 'repeat(2, minmax(0, 1fr))'
+      : 'minmax(0, 1fr)';
+  }
 }
 
 export function initNavigation() {
