@@ -154,7 +154,6 @@ function renderCentral() {
   document.querySelector('#central-attention-count').textContent = String(stats.attention);
   document.querySelector('#central-mine-count').textContent = String(stats.mine);
   document.querySelector('#central-unassigned-count').textContent = String(stats.unassigned);
-  document.querySelector('#home-central-new-count').textContent = String(stats.new);
 
   document.querySelectorAll('[data-central-filter]').forEach((button) => {
     const active = button.dataset.centralFilter === currentFilter;
