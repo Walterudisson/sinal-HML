@@ -56,7 +56,7 @@ function renderHome() {
 }
 
 function renderRequesterHome() {
-  setText('#home-requester-open', myTickets.filter((t) => t.status === 'open').length);
+  setText('#home-requester-open', myTickets.length);
   setText('#home-requester-progress', myTickets.filter((t) => t.status === 'in_progress').length);
   setText('#home-requester-resolved', myTickets.filter((t) => t.status === 'resolved').length);
 
