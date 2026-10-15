@@ -9,6 +9,7 @@ import { initTicketDetail, setTicketDetailContext, resetTicketDetailUi, openTick
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
 import { initNotificationsUi, renderNotifications, resetNotificationsUiSession } from './ui/notifications.js';
+import { initHome, updateHomeMyTickets, updateHomeCentralTickets, updateHomeNotifications } from './ui/home.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
 const authView = document.querySelector('#auth-view');
@@ -349,6 +350,19 @@ async function renderSignedIn(user) {
     initAuthenticatedUi();
     ensureDetailInitialized(context);
     setTicketDetailContext(context);
+    initHome({
+      context,
+      onOpenTicket: openConversation,
+      onClaimTicket: async (ticket) => {
+        try {
+          await claimTicket(currentContext, ticket);
+          showToast(`${ticket.code} agora está com você.`, 'success', { title: 'Sinal assumido' });
+        } catch (error) {
+          showToast(error?.message || 'Não foi possível assumir este sinal.', 'error', { title: 'Falha ao assumir' });
+          throw error;
+        }
+      }
+    });
 
     if (!document.body.dataset.sprint13Ui) {
       initSprint13Ui();
@@ -361,6 +375,7 @@ async function renderSignedIn(user) {
       context,
       (tickets) => {
         renderTickets(tickets, openConversation);
+        updateHomeMyTickets(tickets);
         tickets.forEach(updateSelectedTicket);
       },
       () => showToast('Não foi possível atualizar sua lista de sinais.', 'error')
@@ -375,6 +390,7 @@ async function renderSignedIn(user) {
       (items, changes) => {
         currentNotifications = items;
         renderNotifications(items, changes, showToast);
+        updateHomeNotifications(items);
         updateCentralUnreadMessages(
           items
             .filter((item) => item.type === 'new_message' && !item.isRead && item.ticketId)
@@ -392,6 +408,7 @@ async function renderSignedIn(user) {
         context,
         (tickets) => {
           updateCentralTickets(tickets);
+          updateHomeCentralTickets(tickets);
           tickets.forEach(updateSelectedTicket);
         },
         () => showToast('Não foi possível atualizar a Central.', 'error')
