@@ -31,6 +31,13 @@ const statusLabels = Object.freeze({
   resolved: 'Resolvido'
 });
 
+const requesterStatusLabels = Object.freeze({
+  open: 'Enviado',
+  in_progress: 'Em atendimento',
+  waiting_requester: 'Aguardando você',
+  resolved: 'Resolvido'
+});
+
 let lastFocusedElement = null;
 let mySignalsItems = [];
 let mySignalsOpenHandler = null;
@@ -366,7 +373,7 @@ function ticketMarkup(ticket, compact = false) {
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
-  const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
+  const status = requesterStatusLabels[ticket.status] ?? ticket.status ?? 'Enviado';
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
   const contextLabel = requesterContext(ticket);
   const activityAt = ticket.lastInteractionAt || ticket.updatedAt || ticket.createdAt;
@@ -406,4 +413,4 @@ export function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-export { categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, formatRelativeAge };
+export { categoryLabels, priorityLabels, priorityClasses, statusLabels, requesterStatusLabels, formatDate, formatRelativeAge };

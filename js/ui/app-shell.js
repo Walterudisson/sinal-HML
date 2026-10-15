@@ -107,7 +107,7 @@ export function showToast(message, type = 'info', options = {}) {
 
   const title = document.createElement('strong');
   title.className = 'block text-sm font-extrabold';
-  title.textContent = options.title ?? (type === 'success' ? 'Sinal recebido' : type === 'error' ? 'Não foi possível' : 'Sinal');
+  title.textContent = options.title ?? (type === 'success' ? 'Tudo certo' : type === 'error' ? 'Não foi possível' : 'Sinal');
 
   const body = document.createElement('p');
   body.className = 'mt-1 text-sm leading-5 text-slate-600';

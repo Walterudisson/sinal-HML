@@ -143,7 +143,7 @@ function initAuthenticatedUi() {
   initSignalComposer({
     onSubmit: async (payload) => {
       const ticket = await createTicket(currentContext, payload);
-      showToast(`${ticket.code} foi enviado e já aparece em Meus sinais.`, 'success', { title: 'Sinal recebido' });
+      showToast(`${ticket.code} foi enviado e já aparece em Meus sinais.`, 'success', { title: 'Sinal enviado' });
     }
   });
   uiInitialized = true;
