@@ -392,28 +392,8 @@ function ticketMarkup(ticket, compact = false) {
 }
 
 export function renderTickets(tickets, onOpenTicket = null) {
-  const primaryList = document.querySelector('#ticket-list');
-  const primaryEmpty = document.querySelector('#ticket-empty-state');
-  const count = document.querySelector('#ticket-count');
-  const countLabel = document.querySelector('#ticket-count-label');
-
   mySignalsItems = tickets;
   mySignalsOpenHandler = onOpenTicket;
-
-  count.textContent = String(tickets.length);
-  countLabel.textContent = tickets.length === 0
-    ? 'Nenhum sinal enviado.'
-    : tickets.length === 1
-      ? '1 sinal enviado.'
-      : `${tickets.length} sinais enviados.`;
-
-  primaryEmpty.classList.toggle('hidden', tickets.length > 0);
-  primaryList.innerHTML = tickets.map((ticket) => ticketMarkup(ticket, false)).join('');
-
-  if (typeof onOpenTicket === 'function') {
-    bindMySignalCards(primaryList, tickets);
-  }
-
   renderMySignals();
 }
 
