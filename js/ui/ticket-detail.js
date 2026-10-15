@@ -1,5 +1,5 @@
 import {
-  categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, escapeHtml
+  categoryLabels, priorityLabels, priorityClasses, statusLabels, requesterStatusLabels, formatDate, escapeHtml
 } from './signal-composer.js';
 import { forceOverlayClosed, openOverlayHistory, openOverlaySubstate, requestOverlayClose, requestOverlaySubstateClose } from './overlay-history.js';
 
@@ -162,7 +162,8 @@ function renderStatusHistory(events) {
   }
 
   list.innerHTML = timeline.map((event) => {
-    const label = event.type === 'created' ? 'Sinal recebido' :
+    const requesterView = selectedTicket?.requesterUid === currentContext?.firebaseUser?.uid;
+    const label = event.type === 'created' ? (requesterView ? 'Sinal enviado' : 'Sinal recebido') :
       event.type === 'claimed' ? 'Atendimento iniciado' :
       event.type === 'resolved' ? 'Sinal resolvido' :
       event.type === 'reopened' ? 'Sinal reaberto' : 'Atualização';
@@ -458,7 +459,8 @@ function renderTicket(ticket) {
   const canReopen = isRequester && ticket.status === 'resolved';
   const canMessage = (isRequester || isAssignedAgent) && ticket.status !== 'resolved';
 
-  const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
+  const labels = isRequester ? requesterStatusLabels : statusLabels;
+  const status = labels[ticket.status] ?? ticket.status ?? (isRequester ? 'Enviado' : 'Sinal recebido');
   const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
   const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
@@ -468,7 +470,8 @@ function renderTicket(ticket) {
   document.querySelector('#detail-description').textContent = ticket.description ?? '';
   document.querySelector('#detail-requester-name').textContent = ticket.requesterName ?? 'Solicitante';
   document.querySelector('#detail-requester-email').textContent = ticket.requesterEmail ?? '';
-  document.querySelector('#detail-created-at').textContent = `Recebido em ${formatDate(ticket.createdAt)}`;
+  document.querySelector('#detail-created-at').textContent =
+    `${isRequester ? 'Enviado' : 'Recebido'} em ${formatDate(ticket.createdAt)}`;
   document.querySelector('#detail-assignee').textContent = ticket.assigneeName || 'Ainda não atribuído';
   document.querySelector('#open-conversation-label').textContent = isRequester ? 'Conversar com o atendimento' : 'Conversar com o solicitante';
 
