@@ -193,7 +193,8 @@ exports.deactivateSinalTenant = onCall(revocationCallableOptions, async (request
 // A UI não pode definir 'ready': apenas esta função valida a existência e
 // assinatura dos bytes reais, as permissões atuais e a correspondência Storage↔Firestore.
 const {
-  finalizeAttachment, discardPendingAttachment, cleanupOrphanAttachments
+  finalizeAttachment, discardPendingAttachment, cleanupOrphanAttachments,
+  removeCanceledStorageObject
 } = require('./attachment-security');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 
@@ -282,5 +283,46 @@ exports.notifyNewAttachment = onDocumentUpdated({
     body: `${after.contentType === 'application/pdf' ? '📄 PDF' : '🖼️ Imagem'}: ${String(after.fileName || 'Arquivo').slice(0,80)}`,
     ticketId, ticketCode: ticket.code,
     notificationId: 'attachment-' + attachmentId
+  });
+});
+
+
+// Hotfix 1.7.0-B: uma transferência cancelada pode terminar de gravar no
+// Storage após a requisição de cancelamento. A exclusão exige tombstone
+// Firestore 'failed' do mesmo autor, tenant, ticket e objeto.
+const { onObjectFinalized } = require('firebase-functions/v2/storage');
+
+// O bucket HML foi confirmado em US-EAST1; o trigger Storage deve usar
+// região compatível com a origem do evento. Nenhuma publicação em PRD.
+exports.cleanupCanceledSinalUpload = onObjectFinalized({
+  bucket: 'sinaldesk-hml.firebasestorage.app',
+  region: 'us-east1',
+  memory: '256MiB',
+  maxInstances: 3
+}, async event => {
+  const object = event.data;
+  if (!object?.name) return;
+  await removeCanceledStorageObject({
+    db, bucket: getStorage().bucket('sinaldesk-hml.firebasestorage.app'),
+    objectName: object.name, expectedGeneration: object.generation
+  });
+});
+
+// Cobre a ordem inversa: o objeto finalizou ANTES de o cancelamento marcar
+// o documento como failed. Juntos, os dois eventos fecham a corrida.
+exports.cleanupFailedSinalAttachment = onDocumentUpdated({
+  document: 'tenants/{tenantId}/tickets/{ticketId}/attachments/{attachmentId}',
+  region: 'southamerica-east1',
+  memory: '256MiB',
+  maxInstances: 3
+}, async event => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (before?.status === 'failed' || after?.status !== 'failed') return;
+  const { tenantId, ticketId, attachmentId } = event.params;
+  const objectName = `tenants/${tenantId}/tickets/${ticketId}/attachments/${attachmentId}`;
+  await removeCanceledStorageObject({
+    db, bucket: getStorage().bucket('sinaldesk-hml.firebasestorage.app'),
+    objectName
   });
 });
