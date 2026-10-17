@@ -10,7 +10,7 @@ const { join } = require('node:path');
 const {
   initializeTestEnvironment, assertSucceeds, assertFails
 } = require('@firebase/rules-unit-testing');
-const { setDoc, doc } = require('firebase/firestore');
+const { setDoc, doc, getDoc, updateDoc, deleteDoc, serverTimestamp } = require('firebase/firestore');
 const {
   ref, uploadBytes, getMetadata, listAll, deleteObject, updateMetadata
 } = require('firebase/storage');
@@ -62,6 +62,10 @@ before(async () => {
       [orgB, 'mallory', 'agente', 'active']
     ]) {
       await setDoc(doc(db, 'tenants', tenantId, 'members', uid), { role, status });
+    }
+    // Firestore Rules verificam tanto a conta global quanto o vínculo por tenant.
+    for (const uid of ['alice', 'bob', 'carol', 'disabled', 'mallory']) {
+      await setDoc(doc(db, 'users', uid), { status: 'active', displayName: uid, email: uid + '@test.invalid' });
     }
     for (const [ticketId, status, assigneeUid] of [
       [openTicket, 'open', null],
@@ -140,4 +144,64 @@ test('somente objetos no caminho autorizado podem ser criados', async () => {
   await assertFails(uploadBytes(ref(store('alice'), 'public/unsafe.png'), bytes, options('alice', orgA, openTicket)));
   await assertFails(uploadBytes(ref(store('alice'), 'tenants/' + orgA + '/tickets/' + openTicket + '/attachments/short'),
     bytes, options('alice', orgA, openTicket)));
+});
+
+function attachmentRecord(tenantId, ticketId, uid, id, changes = {}) {
+  return {
+    fileName: 'evidencia.png',
+    storagePath: pathFor(tenantId,ticketId,id),
+    contentType: 'image/png',
+    size: 2048,
+    uploadedByUid: uid,
+    origin: 'conversation',
+    status: 'pending',
+    createdAt: serverTimestamp(),
+    ...changes
+  };
+}
+
+test('solicitante pode criar metadados pendentes em sinal ativo', async () => {
+  const database = env.authenticatedContext('alice').firestore();
+  const path='tenants/' + orgA + '/tickets/' + openTicket + '/attachments/' + newId('record-alice');
+  await assertSucceeds(setDoc(doc(database,path),
+    attachmentRecord(orgA,openTicket,'alice','record-alice')));
+  const snapshot=await assertSucceeds(getDoc(doc(database,path)));
+  assert.equal(snapshot.data().status,'pending');
+  await assertFails(updateDoc(doc(database,path),{status:'ready'}));
+  await assertFails(deleteDoc(doc(database,path)));
+});
+
+test('metadados de outros tenants e autores não autorizados são bloqueados', async () => {
+  const database = env.authenticatedContext('mallory').firestore();
+  const path='tenants/' + orgA + '/tickets/' + openTicket + '/attachments/' + newId('record-alice');
+  await assertFails(getDoc(doc(database,path)));
+  await assertFails(setDoc(doc(database,
+    'tenants/' + orgA + '/tickets/' + openTicket + '/attachments/' + newId('record-outsider')),
+    attachmentRecord(orgA,openTicket,'mallory','record-outsider')));
+});
+
+test('somente atendente responsável pode criar metadados em sinal assumido', async () => {
+  const bob = env.authenticatedContext('bob').firestore();
+  const carol = env.authenticatedContext('carol').firestore();
+  const path='tenants/' + orgA + '/tickets/' + assignedTicket + '/attachments/' + newId('record-assigned');
+  await assertSucceeds(setDoc(doc(bob,path),attachmentRecord(orgA,assignedTicket,'bob','record-assigned')));
+  await assertFails(setDoc(doc(carol,
+    'tenants/' + orgA + '/tickets/' + assignedTicket + '/attachments/' + newId('record-supervisor')),
+    attachmentRecord(orgA,assignedTicket,'carol','record-supervisor')));
+});
+
+test('metadados não permitem caminho falso, tipo proibido ou status pronto inventado', async () => {
+  const database=env.authenticatedContext('alice').firestore();
+  for (const [id,changes] of [
+    ['invalid-path',{storagePath:'public/file.png'}],
+    ['invalid-type',{contentType:'text/html'}],
+    ['invalid-ready',{status:'ready'}],
+    ['invalid-size',{size:10*1024*1024+1}],
+    ['invalid-origin',{origin:'opening'}],
+    ['invalid-author',{uploadedByUid:'mallory'}]
+  ]) {
+    await assertFails(setDoc(doc(database,
+      'tenants/' + orgA + '/tickets/' + openTicket + '/attachments/' + newId(id)),
+      attachmentRecord(orgA,openTicket,'alice',id,changes)));
+  }
 });
