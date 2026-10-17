@@ -132,8 +132,16 @@ e interromper o uso enquanto investiga. Qualquer exclusão deve ser deliberada.
 - **IAM cross-service:** Firebase CLI solicitou a função de IAM necessária, operador confirmou `Yes` e o terminal informou `updated service account for cross-service rules`.
 - **Orçamento:** usuário confirmou que o orçamento já existe. Limiares e destinatários não verificados.
 
-**Ainda não homologado:** comportamento real do app após os deployments, correspondência visual das Rules do Storage no Console, operações de leitura/upload autorizadas e negadas no Firebase real, callables com autenticação de teste, fluxo `pending → ready`, proteção contra anexos órfãos e conferência de cotas. Os 33 testes anteriores passaram somente em CI/emuladores.
+**Conferido após a implantação:** conteúdo das regras do Firestore e do Storage enviado pelo operador, incluindo o caminho de anexos e o bloqueio residual. **Smoke test da aplicação concluído pelo usuário:** 5/5 verificações passaram (login e Início solicitante, Meus sinais, mensagem, Central atendente e recebimento da mensagem).
 
-**Ação seguinte de baixo risco:** verificar a aba Storage > Regras do bucket HML e realizar smoke test de login, Central, Meus sinais e conversa com solicitante/atendente; nenhuma ação de desativação com conta real. Evitar novos uploads antes da fase B.
+**Ainda não homologado:** operações reais de leitura/upload autorizadas e negadas no Firebase Storage, callables com autenticação de teste, fluxo `pending → ready`, proteção contra anexos órfãos e conferência de cotas. Os 33 testes de segurança e regressão anteriores passaram em CI/emuladores.
+
+**Próxima etapa:** Sprint 1.7.0-B, implementar confirmação de upload `pending → ready` no backend, limpeza de órfãos, visualização privada, controles de custo/abuso e testes integrados com contas HML de teste. Nenhuma ação de desativação com conta real. Não liberar upload aos usuários antes da homologação funcional.
 
 **Observação de custos:** limites de 10 MiB por objeto não evitam muitos objetos por usuário. Até implantar controles de limpeza/cotas, os uploads ainda não devem ser habilitados na UI para o público.
+
+## Homologação da infraestrutura e regressão (17/10/2026)
+
+**Resultado:** Sprint 1.7.0-A **homologada para implantação de infraestrutura HML e regressão funcional básica**. O operador confirmou os cinco testes funcionais no app web. Não houve promoção para PRD nem mudança de versão visível da interface (HML 1.6.3.1).
+
+**Escopo fora da homologação:** segurança das Rules em solicitações reais ao Firebase Storage, integração ponta a ponta de envio, processamento de arquivos, chamadas administrativas reais e limites de uso. Permanecem exigências da Sprint 1.7.0-B antes de habilitar botão de anexos.
