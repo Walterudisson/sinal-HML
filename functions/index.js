@@ -1,4 +1,4 @@
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { buildStatusNotice, createNotificationOnce } = require('./status-notifications');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
@@ -248,4 +248,39 @@ exports.cleanupSinalOrphanAttachments = onSchedule({
   maxInstances: 1
 }, async () => {
   await cleanupOrphanAttachments({ db, bucket: getStorage().bucket() });
+});
+
+
+// Notificação privada apenas após confirmação: um anexo pendente não aparece
+// no histórico visível nem gera push para outro usuário.
+exports.notifyNewAttachment = onDocumentUpdated({
+  document: 'tenants/{tenantId}/tickets/{ticketId}/attachments/{attachmentId}',
+  region: 'southamerica-east1'
+}, async event => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!after || before?.status === 'ready' || after.status !== 'ready') return;
+
+  const { tenantId, ticketId, attachmentId } = event.params;
+  const ticketSnap = await db.doc(`tenants/${tenantId}/tickets/${ticketId}`).get();
+  if (!ticketSnap.exists) return;
+  const ticket = ticketSnap.data();
+  const authorUid = after.uploadedByUid;
+  let recipientUid = null;
+  if (authorUid === ticket.requesterUid) recipientUid = ticket.assigneeUid || null;
+  else if (authorUid === ticket.assigneeUid) recipientUid = ticket.requesterUid || null;
+  if (!recipientUid || recipientUid === authorUid) return;
+
+  const [member, user] = await Promise.all([
+    db.doc(`tenants/${tenantId}/members/${recipientUid}`).get(),
+    db.doc('users/' + recipientUid).get()
+  ]);
+  if (member.data()?.status !== 'active' || user.data()?.status !== 'active') return;
+  await createAndPush({
+    tenantId, uid: recipientUid, type: 'new_message', actorUid: authorUid,
+    title: 'Novo anexo na conversa',
+    body: `${after.contentType === 'application/pdf' ? '📄 PDF' : '🖼️ Imagem'}: ${String(after.fileName || 'Arquivo').slice(0,80)}`,
+    ticketId, ticketCode: ticket.code,
+    notificationId: 'attachment-' + attachmentId
+  });
 });
