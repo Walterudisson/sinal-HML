@@ -251,6 +251,39 @@ service cloud.firestore {
           allow update, delete: if false;
         }
 
+        // Anexos: metadados visíveis apenas a quem pode ler o sinal.
+        // Cliente pode criar somente um pedido pendente; apenas backend poderá
+        // confirmar que o arquivo realmente existe e liberar sua apresentação.
+        match /attachments/{attachmentId} {
+          allow read: if canReadTicket(tenantId, ticketId);
+          allow create: if canReplyToTicket(tenantId, ticketId)
+            && attachmentId.matches('^[A-Za-z0-9_-]{20,64}$')
+            && request.resource.data.keys().hasOnly([
+              'fileName','storagePath','contentType','size',
+              'uploadedByUid','origin','status','createdAt'
+            ])
+            && request.resource.data.keys().hasAll([
+              'fileName','storagePath','contentType','size',
+              'uploadedByUid','origin','status','createdAt'
+            ])
+            && request.resource.data.fileName is string
+            && request.resource.data.fileName.size() >= 1
+            && request.resource.data.fileName.size() <= 120
+            && request.resource.data.storagePath ==
+              'tenants/' + tenantId + '/tickets/' + ticketId + '/attachments/' + attachmentId
+            && request.resource.data.contentType in [
+              'image/jpeg', 'image/png', 'image/webp', 'application/pdf'
+            ]
+            && request.resource.data.size is int
+            && request.resource.data.size > 0
+            && request.resource.data.size <= 10 * 1024 * 1024
+            && request.resource.data.uploadedByUid == request.auth.uid
+            && request.resource.data.origin == 'conversation'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.createdAt == request.time;
+          allow update, delete: if false;
+        }
+
         match /messages/{messageId} {
           allow read: if canReadTicket(tenantId, ticketId);
 

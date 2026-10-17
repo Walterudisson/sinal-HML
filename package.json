@@ -1,0 +1,15 @@
+{
+  "name": "sinal-security-tests",
+  "private": true,
+  "version": "1.7.0-a",
+  "description": "Harness isolado de regras Firebase para o Sinal (não utilizado no frontend).",
+  "scripts": {
+    "test:storage:static": "node --test tests/storage-rules-1.7.0-a.test.cjs",
+    "test:storage:emulator": "firebase emulators:exec --only firestore,storage --project demo-sinal-storage-170a 'node --test tests/storage-emulator-1.7.0-a.test.cjs && node --test functions/access-revocation.test.cjs'"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.0.0",
+    "firebase-tools": "15.32.0"
+  }
+}

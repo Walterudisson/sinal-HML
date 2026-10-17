@@ -130,3 +130,59 @@ async function createAndPush({ tenantId, uid, type, actorUid, title, body, ticke
   });
   await Promise.all(cleanup);
 }
+
+
+// Sprint 1.7.0-A: endpoints administrativos exclusivamente para Superadmin.
+// Ainda NÃO implantados em HML. Requerem testes de integração e aprovação.
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { authorizeSuperadmin, deactivateUserAccess, deactivateTenantAccess } = require('./access-revocation');
+
+async function requireGlobalSuperadmin(request) {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Autenticação obrigatória.');
+  try {
+    return await authorizeSuperadmin(db, uid);
+  } catch (_) {
+    throw new HttpsError('permission-denied', 'Operação exclusiva do Superadmin global.');
+  }
+}
+
+const revocationCallableOptions = {
+  region: 'southamerica-east1',
+  timeoutSeconds: 300,
+  maxInstances: 2,
+  memory: '256MiB'
+};
+
+exports.deactivateSinalUser = onCall(revocationCallableOptions, async (request) => {
+  const actorUid = await requireGlobalSuperadmin(request);
+  const uid = request.data?.uid;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{3,128}$/.test(uid)) {
+    throw new HttpsError('invalid-argument', 'UID inválido.');
+  }
+  if (actorUid === uid) {
+    throw new HttpsError('failed-precondition', 'Não é possível desativar sua própria conta.');
+  }
+  try {
+    return await deactivateUserAccess(db, uid, actorUid);
+  } catch (error) {
+    console.error('[Sinal][Access] Falha na revogação de usuário:', error);
+    throw new HttpsError('failed-precondition',
+      'Não foi possível concluir a desativação. Confira o status de revogação e tente novamente.');
+  }
+});
+
+exports.deactivateSinalTenant = onCall(revocationCallableOptions, async (request) => {
+  const actorUid = await requireGlobalSuperadmin(request);
+  const tenantId = request.data?.tenantId;
+  if (typeof tenantId !== 'string' || !/^[A-Za-z0-9_-]{3,128}$/.test(tenantId)) {
+    throw new HttpsError('invalid-argument', 'Identificação da organização inválida.');
+  }
+  try {
+    return await deactivateTenantAccess(db, tenantId, actorUid);
+  } catch (error) {
+    console.error('[Sinal][Access] Falha na revogação de organização:', error);
+    throw new HttpsError('failed-precondition',
+      'Não foi possível concluir a desativação. Confira o status de revogação e tente novamente.');
+  }
+});
