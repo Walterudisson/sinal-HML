@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.6.3.1-conversation-notifications';
+const CACHE_NAME = 'sinal-shell-hml-1.7.0-b-attachments';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
