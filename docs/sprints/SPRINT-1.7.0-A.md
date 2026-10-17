@@ -2,17 +2,21 @@
 
 **Iniciada:** 17/10/2026  
 **Base funcional:** HML v1.6.3.1  
-**Status:** proposta de arquitetura; nenhuma operação de upload habilitada
+**Status:** bucket/Blaze confirmados por capturas; Storage Rules propostas na branch; testes de segurança no emulador pendentes; nenhum upload habilitado
 
 ## Objetivo
 Preparar a infraestrutura e as regras para anexos em sinais, com segurança multi-tenant
 e experiência mobile-first, antes da implementação do botão de clipe.
 
 ## Entregas previstas
-1. Validar pré-requisitos do Storage em `sinaldesk-hml`: existência do bucket, plano Blaze
-   de faturamento e alertas de orçamento. **Ter o campo `storageBucket` no código não prova
-   que o bucket está provisionado.**
-2. Criar e testar um `storage.rules` exclusivo de HML, com permissão de leitura somente
+1. **Confirmado por imagem em 17/10/2026:** projeto `sinaldesk-hml` em plano Blaze,
+   bucket `sinaldesk-hml.firebasestorage.app` criado e vazio. Alertas de orçamento ainda
+   precisam ser verificados no console.
+   Na captura de Regras, o Storage continua com `allow read, write: if false;`.
+   **Nenhuma regra foi implantada pelo GitHub nesta fase.**
+2. Regra `storage.rules` criada nesta branch, referenciada por `firebase.json`.
+   Testes textuais locais passaram; falta executar testes no Emulator Suite, verificando
+   autenticação, bloqueios e tipo/tamanho. A permissão de leitura deve ser somente
    para quem já pode ler o sinal e escrita restrita a quem pode interagir nele.
 3. Modelar metadados de anexos no Firestore, vinculados a `tenantId`, `ticketId`,
    autor e origem (abertura/conversa), com identificador de armazenamento não adivinhável.
@@ -76,3 +80,41 @@ Não implantar regras permissivas para contornar falhas de desenvolvimento.
 - https://firebase.google.com/docs/storage/security/get-started
 - https://firebase.google.com/docs/rules/manage-deploy
 - https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024
+
+## Restrição crítica de segurança descoberta nesta etapa
+
+As Storage Rules podem ler **no máximo dois documentos distintos do Firestore**
+por avaliação de acesso, conforme documentação oficial. No Sinal, a autorização
+atual consulta usuário global, vínculo de membro no tenant e sinal, totalizando três.
+
+A versão proposta de `storage.rules` consulta **apenas membro + sinal**,
+verificando `status=active` no vínculo e permissão de leitura/escrita no próprio sinal.
+
+**Gate obrigatório antes da implantação:** definir/testar a propagação de
+desativação de `users/{uid}.status` para `tenants/{tenantId}/members/{uid}.status`,
+em todos os tenants correspondentes. Sem essa garantia, uma conta desativada
+globalmente poderia continuar com acesso direto ao Storage até seu vínculo ser
+revogado. Não tratar esta diferença como um risco resolvido.
+
+Também é necessário verificar se a integração de IAM entre Storage e Firestore
+será autorizada ao publicar regras com `firestore.get/exists`.
+
+## Situação do trabalho em GitHub
+
+- `storage.rules`: política proposta; leitura apenas de objeto individual (`get`),
+  escrita somente criação (`create`) quando solicitante ou responsável ativo pode
+  interagir no sinal, com MIME permitido, tamanho e metadados obrigatórios.
+- `firebase.json`: referência ao arquivo de regras para futura implantação.
+- `tests/storage-rules-1.7.0-a.test.cjs`: cinco testes estáticos aprovados.
+- **Não realizado:** compilação da DSL Firebase, testes de usuário/tenant no emulador,
+  publicação de regras, habilitação de uploads, regras de metadados Firestore.
+- A aba **Regras** do console permanece na política `deny all` até a implantação
+  deliberada e validada; não colar regras diretamente sem essa validação.
+
+### Atenções para a próxima fase
+
+- O MIME declarado pelo cliente não comprova o conteúdo real do arquivo.
+- Evitar URLs persistentes de download com token público: preferir leitura via SDK
+  autenticado e criação de URLs locais temporárias para visualização.
+- Definir política de limpeza de arquivos órfãos e total de armazenamento por tenant.
+- Os testes estáticos não comprovam permissões efetivas no Firebase.
