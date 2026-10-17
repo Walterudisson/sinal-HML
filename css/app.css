@@ -896,3 +896,75 @@ body.overlay-open { overflow: hidden; }
     padding-right: 1.25rem;
   }
 }
+
+/* Sprint 1.7.0-B: anexo seguro na conversa, mantendo alvos confortáveis no mobile. */
+.attachment-choose {
+  display: grid;
+  width: 2.85rem;
+  height: 2.85rem;
+  flex: 0 0 2.85rem;
+  place-items: center;
+  border-radius: 9999px;
+  color: #475569;
+  background: #f1f5f9;
+  transition: background .14s ease, opacity .14s ease;
+}
+.attachment-choose:hover { background: #e0f2fe; color: #0369a1; }
+.attachment-choose:disabled { cursor: not-allowed; opacity: .35; }
+.attachment-choose:focus-visible, .attachment-open:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+.attachment-upload-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem .75rem;
+  margin: .45rem .1rem 0;
+  font-size: .74rem;
+  font-weight: 700;
+  color: #0369a1;
+}
+.attachment-upload-status.hidden { display: none; }
+.attachment-upload-status.is-error { color: #be123c; }
+.attachment-progress { flex: 1 1 8rem; height: .5rem; accent-color: #0284c7; }
+.attachment-cancel {
+  min-height: 2.5rem;
+  padding: 0 .75rem;
+  border-radius: .65rem;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: .72rem;
+  font-weight: 800;
+}
+.attachment-open {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: .65rem;
+  border-radius: .7rem;
+  padding: .35rem;
+  text-align: left;
+  color: inherit;
+}
+.attachment-open:hover { background: rgba(148,163,184,.12); }
+.attachment-open:disabled { opacity: .45; cursor: progress; }
+.attachment-file-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  place-items: center;
+  border-radius: .6rem;
+  background: rgba(148,163,184,.18);
+  font-size: 1.25rem;
+}
+.attachment-file-details { min-width: 0; }
+.attachment-file-details strong {
+  display: block;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .78rem;
+}
+.attachment-file-details small { display: block; margin-top: .12rem; font-size: .66rem; opacity: .75; }
+.attachment-message { min-width: 11rem; max-width: min(75vw, 20rem); }
