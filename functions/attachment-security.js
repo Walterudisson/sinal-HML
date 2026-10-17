@@ -145,13 +145,22 @@ async function discardPendingAttachment({ db, bucket, uid, tenantId, ticketId, a
       throw new Error('permission-denied');
     }
   }
-  // Race com a confirmação: marca 'failed' apenas se o documento ainda for pending.
-  if (data) {
+  // Tombstone transacional: mesmo sem documento pending, impede que o cliente
+  // crie o metadado após iniciarmos o descarte de um objeto já existente.
+  if (data || object) {
     await db.runTransaction(async tx => {
       const current = await tx.get(refs.attachment);
-      if (!current.exists || current.data().uploadedByUid !== uid ||
-          current.data().status !== 'pending') throw new Error('failed-precondition');
-      tx.update(refs.attachment, { status: 'failed', failedAt: FieldValue.serverTimestamp() });
+      if (current.exists) {
+        if (current.data().uploadedByUid !== uid ||
+            current.data().storagePath !== path ||
+            current.data().status !== 'pending') throw new Error('failed-precondition');
+        tx.update(refs.attachment, { status: 'failed', failedAt: FieldValue.serverTimestamp() });
+      } else if (object) {
+        tx.create(refs.attachment, {
+          status: 'failed', uploadedByUid: uid, storagePath: path,
+          failedAt: FieldValue.serverTimestamp(), origin: 'conversation'
+        });
+      }
     });
   }
   if (object) await file.delete({ ifGenerationMatch: object.generation });
@@ -181,7 +190,16 @@ async function cleanupOrphanAttachments({ db, bucket, now = Date.now(), maxResul
     let deleteAllowed = false;
     await db.runTransaction(async tx => {
       const snap = await tx.get(ref);
-      if (!snap.exists) { deleteAllowed = true; return; }
+      if (!snap.exists) {
+        // Impede um novo documento pending sobre um objeto destinado à exclusão.
+        tx.create(ref, {
+          status: 'failed', storagePath: file.name,
+          uploadedByUid: String(file.metadata?.metadata?.uploadedByUid || ''),
+          origin: 'conversation', failedAt: FieldValue.serverTimestamp()
+        });
+        deleteAllowed = true;
+        return;
+      }
       if (snap.data().status === 'ready') return;
       if (snap.data().status === 'pending') {
         tx.update(ref, { status: 'failed', failedAt: FieldValue.serverTimestamp() });
