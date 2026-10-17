@@ -18,6 +18,7 @@ let messagesSnapshotInitialized = false;
 let previousMessageIds = [];
 let currentStatusEvents = [];
 let activeView = 'details';
+let onConversationVisible = null;
 let substateClosePending = false;
 let followKeyboardViewport = false;
 
@@ -28,6 +29,19 @@ const publicSuggestions = [
 ];
 
 export function setTicketDetailContext(context) { currentContext = context; }
+
+// Notificações só devem ser silenciosas quando a conversa deste sinal está
+// efetivamente na tela e o aplicativo está em primeiro plano.
+export function isConversationVisible(ticketId) {
+  const overlay = document.querySelector('#ticket-detail');
+  return Boolean(
+    ticketId &&
+    selectedTicket?.id === ticketId &&
+    activeView === 'conversation' &&
+    document.visibilityState === 'visible' &&
+    overlay && !overlay.classList.contains('hidden')
+  );
+}
 
 function setTicketView(view) {
   activeView = view;
@@ -55,6 +69,7 @@ function setTicketView(view) {
   document.querySelectorAll('#ticket-detail [data-close-ticket-detail]').forEach((element) => {
     if (element.tagName === 'BUTTON') element.classList.toggle('hidden', view !== 'details');
   });
+  if (view === 'conversation') onConversationVisible?.();
 }
 
 function goToDetails() {
@@ -186,6 +201,7 @@ export function initTicketDetail(options) {
   onReopen = options.onReopen;
   onGetPrivateResolution = options.onGetPrivateResolution;
   onObserveStatusEvents = options.onObserveStatusEvents;
+  onConversationVisible = options.onConversationVisible;
 
   const form = document.querySelector('#resolve-form');
   const internal = document.querySelector('#resolution-internal');
