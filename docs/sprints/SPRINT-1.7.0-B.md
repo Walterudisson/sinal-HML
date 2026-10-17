@@ -93,3 +93,9 @@ São testes funcionais positivos da interface e da obtenção do arquivo autenti
 O usuário relatou **“cancelou perfeitamente”** após executar o roteiro de cancelamento de envio durante a transferência de uma imagem de teste em HML. O comportamento de cancelamento foi aprovado pelo usuário. A confirmação não substitui uma auditoria técnica do estado do objeto no Storage e da ausência de metadados órfãos, que permanece pendente de verificação.
 
 **Próximos testes:** rejeição por tamanho acima de 10 MiB e formato não permitido, isolamento de outros usuários/tenants e comportamento de limpeza/falhas. Não promover para produção antes de aprovação explícita.
+
+## Teste de limite de tamanho — 17/10/2026
+
+O usuário testou o envio de arquivo com mais de **10 MiB** em HML e confirmou que o Sinal **recusou o arquivo e apresentou mensagem informativa**. **Resultado: aprovado** para a validação do limite na interface.
+
+Este teste demonstra a rejeição pelo cliente; as regras do Firebase Storage foram verificadas separadamente em testes automatizados/emuladores. Permanecem pendentes o teste de formato não permitido, os controles de acesso multi-tenant no Firebase real e a validação de limpeza de órfãos/custos antes da homologação completa.
