@@ -240,7 +240,7 @@ exports.discardSinalAttachment = onCall(attachmentOptions, async request => {
 // Agenda diária; varredura paginada e limitada a 100 objetos por execução.
 // Não usa URLs públicas e nunca exclui um documento em estado ready.
 exports.cleanupSinalOrphanAttachments = onSchedule({
-  schedule: 'every day 03:00',
+  schedule: '0 3 * * *',
   timeZone: 'America/Sao_Paulo',
   region: 'southamerica-east1',
   timeoutSeconds: 300,
