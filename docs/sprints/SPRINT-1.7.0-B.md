@@ -11,6 +11,7 @@
 - Tipos JPEG, PNG, WebP e PDF; 1 arquivo por seleção, tamanho máximo de 10 MiB.
 - Upload recuperável com indicador de progresso e cancelamento.
 - Cartão de anexo na linha do tempo, sem expor um link persistente de download.
+- Notificação para o outro participante somente após confirmação `ready`; atualização da atividade do sinal no Firestore.
 - Imagem: pré-visualização com URL `blob:` temporária; PDF: download autenticado com link temporário local.
 - Botão desabilitado quando o usuário não tem permissão de resposta ou quando o sinal está resolvido.
 
@@ -28,8 +29,8 @@
 ## Implantação controlada em HML (somente após CI/revisão)
 
 1. Revisar o PR e CI; instalar dependências no Cloud Shell e manter versões Node 22 para Functions.
-2. Publicar **somente** `finalizeSinalAttachment`, `discardSinalAttachment` e `cleanupSinalOrphanAttachments` em `sinaldesk-hml`. O job agendado pode pedir habilitação de Cloud Scheduler e implicar custo; parar em solicitações não previstas.
-3. Configurar **CORS do bucket HML** para origem `https://walterudisson.github.io` e operação `GET` (necessário para `getBlob` no navegador).
+2. Publicar **somente** `finalizeSinalAttachment`, `discardSinalAttachment`, `cleanupSinalOrphanAttachments` e `notifyNewAttachment` em `sinaldesk-hml`. O job agendado pode pedir habilitação de Cloud Scheduler e implicar custo; parar em solicitações não previstas.
+3. Configurar **CORS do bucket HML** usando o arquivo `docs/deploy/cors-hml.json`, restrito à origem `https://walterudisson.github.io` (necessário para `getBlob` no navegador). Conforme a documentação Firebase, essa configuração deve ser feita no bucket. Conferir o nome do bucket e a configuração atual antes de qualquer alteração.
 4. Validar callable com Firebase Auth e Rules reais: solicitante, responsável, não responsável, outro tenant, conta revogada, documento resolved, arquivos PNG/JPG/WebP/PDF válidos, arquivo de tipo adulterado e acima de 10 MiB.
 5. **Só então** efetuar merge da branch em `main` para disponibilizar UI em GitHub Pages HML e realizar o smoke test mobile/web.
 6. Homologação explícita antes de considerar promoção a PRD.
@@ -56,3 +57,11 @@
 - [ ] Usuário homologou explicitamente.
 
 **Produção:** inalterada.
+
+## Primeira entrega de código e integração contínua
+
+- Branch: `sprint/1.7.0-b-attachments-conversation`; PR #41 aberto **como rascunho**, sem merge.
+- GitHub Actions `Sinal Segurança HML - Anexos`: **sucesso** no commit `2e551b1a709fa6872ba84e07c5cc3903681ef6aa`, execução https://github.com/Walterudisson/sinal-HML/actions/runs/39057763302.
+- Regressão dos testes das regras/emuladores, testes de funções e verificações sintáticas executadas no CI.
+- **Não houve publicação da Sprint 1.7.0-B no Firebase nem no GitHub Pages.** O backend precisa ser implantado antes do frontend.
+- **Pendência:** smoke test real em HML por perfis e CORS; só depois liberar a interface e considerar PR pronto para merge.
