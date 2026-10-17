@@ -18,6 +18,17 @@ function assertId(value, label) {
 // Usa paginação determinística, sem buscar todos os tenants na memória.
 // Como ainda não existe provisionamento público, novas adesões precisam
 // respeitar o estado "deactivating" ao serem implementadas.
+// Autorização verificada no servidor, nunca baseada em papel informado pelo cliente.
+async function authorizeSuperadmin(db, uid) {
+  if (typeof uid !== 'string' || !uid) throw new Error('unauthenticated');
+  const profile = await db.doc('users/' + uid).get();
+  if (!profile.exists || profile.data().status !== 'active' ||
+      profile.data().platformRole !== 'superadmin') {
+    throw new Error('permission-denied');
+  }
+  return uid;
+}
+
 async function revokeUserMemberships(db, uid) {
   let cursor = null;
   let total = 0;
@@ -118,6 +129,7 @@ async function deactivateTenantAccess(db, tenantId, actorUid) {
 }
 
 module.exports = {
+  authorizeSuperadmin,
   deactivateUserAccess, deactivateTenantAccess,
   revokeUserMemberships, revokeTenantMemberships
 };
