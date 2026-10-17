@@ -251,50 +251,20 @@ service cloud.firestore {
           allow update, delete: if false;
         }
 
-        // Anexos: metadados visíveis apenas para participantes do sinal.
-        // Fase A: apenas solicitações de anexo de conversa (status pending).
-        // A confirmação ready e a limpeza de órfãos serão realizadas por backend
-        // privilegiado na fase B, depois de conferir o objeto no Storage.
+        // Anexos: metadados visíveis apenas a quem pode ler o sinal.
+        // Cliente pode criar somente um pedido pendente; apenas backend poderá
+        // confirmar que o arquivo realmente existe e liberar sua apresentação.
         match /attachments/{attachmentId} {
           allow read: if canReadTicket(tenantId, ticketId);
-
           allow create: if canReplyToTicket(tenantId, ticketId)
-            && attachmentId.matches('^[A-Za-z0-9_-]{20,64}
-          allow read: if canReadTicket(tenantId, ticketId);
-
-          allow create: if canReplyToTicket(tenantId, ticketId)
+            && attachmentId.matches('^[A-Za-z0-9_-]{20,64}$')
             && request.resource.data.keys().hasOnly([
-              'body','visibility','authorUid','authorName',
-              'authorEmail','authorRole','createdAt'
-            ])
-            && request.resource.data.body is string
-            && request.resource.data.body.size() >= 1
-            && request.resource.data.body.size() <= 4000
-            && request.resource.data.visibility == 'public'
-            && request.resource.data.authorUid == request.auth.uid
-            && request.resource.data.authorName == get(userPath()).data.displayName
-            && request.resource.data.authorEmail == get(userPath()).data.email
-            && request.resource.data.authorRole == get(memberPath(tenantId)).data.role
-            && request.resource.data.createdAt == request.time;
-
-          allow update, delete: if false;
-        }
-      }
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-)
-            && request.resource.data.keys().hasOnly([
-              'fileName', 'storagePath', 'contentType', 'size',
-              'uploadedByUid', 'origin', 'status', 'createdAt'
+              'fileName','storagePath','contentType','size',
+              'uploadedByUid','origin','status','createdAt'
             ])
             && request.resource.data.keys().hasAll([
-              'fileName', 'storagePath', 'contentType', 'size',
-              'uploadedByUid', 'origin', 'status', 'createdAt'
+              'fileName','storagePath','contentType','size',
+              'uploadedByUid','origin','status','createdAt'
             ])
             && request.resource.data.fileName is string
             && request.resource.data.fileName.size() >= 1
@@ -311,8 +281,6 @@ service cloud.firestore {
             && request.resource.data.origin == 'conversation'
             && request.resource.data.status == 'pending'
             && request.resource.data.createdAt == request.time;
-
-          // Uma entrada pronta não pode ser fabricada, alterada ou apagada pelo cliente.
           allow update, delete: if false;
         }
 
