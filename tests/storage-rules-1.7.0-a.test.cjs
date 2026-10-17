@@ -40,7 +40,7 @@ test('apenas dois documentos distintos consultados por avaliação', () => {
 
 test('upload privado tem tipo, tamanho e metadados de autoria obrigatórios', () => {
   assert.match(rules, /allow get: if canReadTicket/);
-  assert.match(rules, /allow create: if canUploadTicket/);
+  assert.match(rules, /allow create: if resource == null[\s\S]*canUploadTicket/);
   assert.match(rules, /10 \* 1024 \* 1024/);
   for (const type of ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']) {
     assert.ok(rules.includes(type), type);
