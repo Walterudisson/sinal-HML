@@ -87,3 +87,9 @@ O usuário confirmou, após o primeiro envio real de imagens e PDF:
 - **PDF:** download concluído com sucesso a partir do cartão de anexo na conversa.
 
 São testes funcionais positivos da interface e da obtenção do arquivo autenticado. **Não equivalem, isoladamente, à prova de que nenhum URL público existe ou de isolamento entre organizações.** Continuam pendentes testes de cancelamento, falha de rede, tipos e tamanhos rejeitados, permissão de terceiro/tenant, limpeza automática, custos e regressão.
+
+## Teste de cancelamento de upload — 17/10/2026
+
+O usuário relatou **“cancelou perfeitamente”** após executar o roteiro de cancelamento de envio durante a transferência de uma imagem de teste em HML. O comportamento de cancelamento foi aprovado pelo usuário. A confirmação não substitui uma auditoria técnica do estado do objeto no Storage e da ausência de metadados órfãos, que permanece pendente de verificação.
+
+**Próximos testes:** rejeição por tamanho acima de 10 MiB e formato não permitido, isolamento de outros usuários/tenants e comportamento de limpeza/falhas. Não promover para produção antes de aprovação explícita.
