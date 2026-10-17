@@ -121,3 +121,19 @@ e interromper o uso enquanto investiga. Qualquer exclusão deve ser deliberada.
 - https://firebase.google.com/docs/rules/manage-deploy
 - https://firebase.google.com/docs/cli
 - https://firebase.google.com/docs/storage/security/rules-conditions
+
+## Registro da implantação real em 17/10/2026
+
+**Status:** Cloud Functions, Firestore Rules e Storage Rules publicados no projeto `sinaldesk-hml`, segundo os resultados completos enviados pelo operador do Cloud Shell. A aplicação web permanece v1.6.3.1, sem interface de anexos. Nenhum deploy em `sinaldesk` (PRD).
+
+- **Cloud Functions:** deploy seletivo bem-sucedido para `deactivateSinalUser` e `deactivateSinalTenant` (`southamerica-east1`).
+- **Firestore Rules:** compilação bem-sucedida e confirmação de `released rules firestore.rules to cloud.firestore`.
+- **Storage Rules:** compilação bem-sucedida e confirmação de `released rules storage.rules to firebase.storage`.
+- **IAM cross-service:** Firebase CLI solicitou a função de IAM necessária, operador confirmou `Yes` e o terminal informou `updated service account for cross-service rules`.
+- **Orçamento:** usuário confirmou que o orçamento já existe. Limiares e destinatários não verificados.
+
+**Ainda não homologado:** comportamento real do app após os deployments, correspondência visual das Rules do Storage no Console, operações de leitura/upload autorizadas e negadas no Firebase real, callables com autenticação de teste, fluxo `pending → ready`, proteção contra anexos órfãos e conferência de cotas. Os 33 testes anteriores passaram somente em CI/emuladores.
+
+**Ação seguinte de baixo risco:** verificar a aba Storage > Regras do bucket HML e realizar smoke test de login, Central, Meus sinais e conversa com solicitante/atendente; nenhuma ação de desativação com conta real. Evitar novos uploads antes da fase B.
+
+**Observação de custos:** limites de 10 MiB por objeto não evitam muitos objetos por usuário. Até implantar controles de limpeza/cotas, os uploads ainda não devem ser habilitados na UI para o público.
