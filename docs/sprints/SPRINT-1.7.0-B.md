@@ -45,7 +45,7 @@
 
 ## Critério de homologação
 
-- [ ] Testes CI e emuladores aprovados para todas as mudanças.
+- [x] Testes CI e emuladores aprovados para as mudanças entregues no PR #41.
 - [ ] Backend de confirmação e limpeza implantado e testado no Firebase **HML**.
 - [ ] CORS validado no browser com autenticação, sem links permanentes.
 - [ ] Solicitante envia imagem, responsável visualiza; responsável envia PDF, solicitante baixa.
@@ -65,5 +65,16 @@
 - Regressão dos testes das regras/emuladores, testes de funções e verificações sintáticas executadas no CI.
 - **Cloud Functions implantadas no Firebase HML:** `finalizeSinalAttachment`, `discardSinalAttachment`, `cleanupSinalOrphanAttachments`, `notifyNewAttachment`. Firebase CLI confirmou `Deploy complete!`. A infraestrutura foi implantada **antes** do merge do frontend.
 - **CORS do bucket HML aplicado e verificado:** origem `https://walterudisson.github.io`, métodos GET/HEAD/POST/PUT, cabeçalhos Authorization/Content-Type/x-goog-resumable, expiração 3600 s. Conferência `gcloud storage buckets describe ... --format="default(cors_config)"`.
-- **Merge HML #41 realizado:** confirmação de GitHub. Aguardar publicação pelo GitHub Pages e teste real do navegador antes de declarar a UI funcionando.
+- **Merge HML #41 realizado:** confirmação de GitHub. Frontend em operação no GitHub Pages HML, comprovado por captura e relato de teste do usuário em 17/10/2026.
 - **Pendência:** smoke test real em HML por perfis, upload/download, isolamento entre tenants, falhas, notificação e CORS no navegador; não promover produção antes da homologação explícita.
+
+## Teste funcional real de anexos, HML — 17/10/2026
+
+O usuário reportou **“funcionou perfeitamente”** e enviou captura da interface `Conversa com o atendimento` após publicar a Sprint 1.7.0-B. Evidências observáveis na imagem:
+
+- Botão de clipe e composer da conversa funcionando, sem perda das mensagens anteriores.
+- Quatro cartões de anexos renderizados, sendo três imagens e um PDF, tanto nas bolhas do solicitante quanto do atendente.
+- Nomes (truncados), ícones, tamanho e horário apresentados. Tamanhos visíveis: aproximadamente 347 KiB (imagem), 456 KiB (PDF), 4,5 MiB (imagem) e 4,7 MiB (imagem).
+- A interface foi publicada em HML e o envio resultou em itens efetivamente apresentados como anexos confirmados.
+
+**Estado:** fluxo feliz de envio e exibição de imagens/PDFs **validado pelo usuário em HML**, mas ainda não é homologação integral da Sprint B. A captura e o relato não isolam os testes de pré-visualização/download, cancelamento, arquivo inválido, limites, leitura cruzada entre tenants, tentativa de acesso de não responsável, expiração, limpeza, concorrência e custos. Realizar esses testes com contas e dados de teste antes de promover qualquer código ou regras para produção.
