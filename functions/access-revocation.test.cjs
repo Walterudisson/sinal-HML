@@ -8,7 +8,7 @@ const { ref, uploadBytes, getMetadata } = require('firebase/storage');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const {
-  deactivateUserAccess, deactivateTenantAccess
+  authorizeSuperadmin, deactivateUserAccess, deactivateTenantAccess
 } = require('./access-revocation');
 
 const projectId = 'demo-sinal-storage-170a';
@@ -136,4 +136,15 @@ test('ações administrativas deixam trilha de auditoria', async () => {
   assert.ok(types.includes('user_deactivated'));
   assert.ok(types.includes('tenant_deactivated'));
   assert.ok(audit.docs.every(s=>s.data().actorUid===actorUid));
+});
+
+test('somente Superadmin global ativo é autorizado a administrar revogações', async () => {
+  await db.doc('users/' + actorUid).set({status:'active',platformRole:'superadmin'});
+  await db.doc('users/user_regular').set({status:'active',platformRole:'user'});
+  assert.equal(await authorizeSuperadmin(db,actorUid),actorUid);
+  await assert.rejects(authorizeSuperadmin(db,'user_regular'), /permission-denied/);
+  await assert.rejects(authorizeSuperadmin(db,'missing_account'), /permission-denied/);
+  await assert.rejects(authorizeSuperadmin(db,null), /unauthenticated/);
+  await db.doc('users/' + actorUid).update({status:'inactive'});
+  await assert.rejects(authorizeSuperadmin(db,actorUid), /permission-denied/);
 });
