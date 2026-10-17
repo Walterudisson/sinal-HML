@@ -21,6 +21,16 @@ let activeView = 'details';
 let onConversationVisible = null;
 let substateClosePending = false;
 let followKeyboardViewport = false;
+let onUploadAttachment = null;
+let onObserveAttachments = null;
+let onFetchAttachment = null;
+let unsubscribeAttachments = null;
+let latestMessages = [];
+let latestAttachments = [];
+let activeUploadTask = null;
+let uploadBusy = false;
+let activePreviewUrl = null;
+let previewRequestId = 0;
 
 const publicSuggestions = [
   'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
@@ -44,6 +54,7 @@ export function isConversationVisible(ticketId) {
 }
 
 function setTicketView(view) {
+  if (view !== 'conversation') closeAttachmentPreview();
   activeView = view;
   for (const [name, id] of [
     ['details', 'ticket-details-view'],
@@ -113,6 +124,74 @@ function scrollConversationToBottom() {
       scroller.scrollTop = scroller.scrollHeight;
     });
   });
+}
+
+function closeAttachmentPreview() {
+  ++previewRequestId;
+  const overlay = document.querySelector('#attachment-preview');
+  if (overlay) overlay.classList.add('hidden');
+  const image = document.querySelector('#attachment-preview-image');
+  if (image) image.removeAttribute('src');
+  if (activePreviewUrl) URL.revokeObjectURL(activePreviewUrl);
+  activePreviewUrl = null;
+}
+
+async function openPrivateAttachment(attachment, button) {
+  if (!selectedTicket || attachment.status !== 'ready' || !onFetchAttachment) return;
+  const ticket = selectedTicket;
+  const requestId = ++previewRequestId;
+  button.disabled = true;
+  button.dataset.loading = 'true';
+  try {
+    const blob = await onFetchAttachment(ticket, attachment);
+    if (requestId !== previewRequestId || selectedTicket?.id !== ticket.id) return;
+    const url = URL.createObjectURL(blob);
+    if (attachment.contentType === 'application/pdf') {
+      // Download local, sem URL permanente do Firebase com token compartilhável.
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.fileName || 'anexo.pdf';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } else {
+      closeAttachmentPreview();
+      activePreviewUrl = url;
+      document.querySelector('#attachment-preview-name').textContent = attachment.fileName || 'Imagem';
+      document.querySelector('#attachment-preview-image').src = url;
+      document.querySelector('#attachment-preview').classList.remove('hidden');
+      document.querySelector('#attachment-preview-close').focus();
+    }
+  } catch (error) {
+    console.error('[Sinal][Attachments] Falha ao abrir anexo:', error?.code || 'indisponível');
+    showAttachmentStatus('Não foi possível abrir o anexo. Tente novamente.', { failed: true });
+  } finally {
+    button.disabled = false;
+    button.removeAttribute('data-loading');
+  }
+}
+
+function showAttachmentStatus(message, { percentage = null, failed = false, busy = false } = {}) {
+  const area = document.querySelector('#attachment-upload-status');
+  if (!area) return;
+  area.classList.remove('hidden');
+  area.classList.toggle('is-error', failed);
+  document.querySelector('#attachment-progress-label').textContent = message;
+  const bar = document.querySelector('#attachment-upload-progress');
+  bar.classList.toggle('hidden', percentage == null);
+  if (percentage != null) bar.value = percentage;
+  document.querySelector('#attachment-cancel-button').classList.toggle('hidden', !busy);
+}
+
+function syncAttachmentButton() {
+  const button = document.querySelector('#attachment-choose-button');
+  if (!button || !selectedTicket || !currentContext) return;
+  const uid = currentContext.firebaseUser.uid;
+  const authorized = selectedTicket.requesterUid === uid ||
+    (['admin', 'supervisor', 'agente'].includes(currentContext.membership.role) &&
+     selectedTicket.assigneeUid === uid);
+  button.disabled = uploadBusy || !authorized || selectedTicket.status === 'resolved';
 }
 
 function setResolvePanel(open) {
@@ -202,6 +281,9 @@ export function initTicketDetail(options) {
   onGetPrivateResolution = options.onGetPrivateResolution;
   onObserveStatusEvents = options.onObserveStatusEvents;
   onConversationVisible = options.onConversationVisible;
+  onUploadAttachment = options.onUploadAttachment;
+  onObserveAttachments = options.onObserveAttachments;
+  onFetchAttachment = options.onFetchAttachment;
 
   const form = document.querySelector('#resolve-form');
   const internal = document.querySelector('#resolution-internal');
@@ -330,6 +412,56 @@ export function initTicketDetail(options) {
     }
   });
 
+  const fileInput = document.querySelector('#attachment-file-input');
+  document.querySelector('#attachment-choose-button').addEventListener('click', () => {
+    if (!uploadBusy && selectedTicket && activeView === 'conversation') fileInput.click();
+  });
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = ''; // permite selecionar o mesmo arquivo após uma falha.
+    if (!file || uploadBusy || !selectedTicket || activeView !== 'conversation') return;
+    const ticket = selectedTicket;
+    uploadBusy = true;
+    syncAttachmentButton();
+    showAttachmentStatus('Preparando anexo...', { percentage: 0, busy: true });
+    try {
+      await onUploadAttachment(ticket, file, {
+        onTask: task => { activeUploadTask = task; },
+        onProgress: percentage => {
+          if (selectedTicket?.id === ticket.id) showAttachmentStatus(
+            percentage === 100 ? 'Conferindo segurança do arquivo...' : `Enviando anexo: ${percentage}%`,
+            { percentage, busy: percentage < 100 }
+          );
+        }
+      });
+      if (selectedTicket?.id === ticket.id) {
+        showAttachmentStatus('Anexo enviado com sucesso!');
+        scrollConversationToBottom();
+      }
+    } catch (error) {
+      if (selectedTicket?.id === ticket.id) {
+        const message = error?.code === 'storage/canceled' ? 'Envio cancelado.' :
+          error?.message?.startsWith('Formato') || error?.message?.startsWith('O arquivo')
+            ? error.message : 'Não foi possível enviar o anexo. Tente novamente.';
+        showAttachmentStatus(message, { failed: true });
+      }
+    } finally {
+      uploadBusy = false;
+      activeUploadTask = null;
+      syncAttachmentButton();
+    }
+  });
+  document.querySelector('#attachment-cancel-button').addEventListener('click', () => {
+    activeUploadTask?.cancel();
+  });
+  document.querySelector('#attachment-preview-close').addEventListener('click', closeAttachmentPreview);
+  document.querySelector('#conversation-list').addEventListener('click', event => {
+    const button = event.target.closest('[data-open-attachment]');
+    if (!button) return;
+    const attachment = latestAttachments.find(item => item.id === button.dataset.openAttachment);
+    if (attachment?.status === 'ready') void openPrivateAttachment(attachment, button);
+  });
+
   const messageBody = document.querySelector('#message-body');
 
   messageBody.addEventListener('focus', () => {
@@ -370,6 +502,11 @@ export function initTicketDetail(options) {
 export function openTicketDetail(ticket, observeMessages, options = {}) {
   const ticketChanged = selectedTicket?.id !== ticket.id;
   if (ticketChanged) {
+    closeAttachmentPreview();
+    activeUploadTask?.cancel();
+    latestAttachments = [];
+    latestMessages = [];
+    document.querySelector('#attachment-upload-status').classList.add('hidden');
     document.querySelector('#message-body').value = '';
     document.querySelector('#message-body').style.height = '';
   }
@@ -400,9 +537,19 @@ export function openTicketDetail(ticket, observeMessages, options = {}) {
   });
 
   unsubscribeMessages?.();
-  unsubscribeMessages = observeMessages(ticket, renderMessages, (error) => {
+  unsubscribeMessages = observeMessages(ticket, messages => {
+    if (selectedTicket?.id !== ticket.id) return;
+    latestMessages = messages;
+    renderMessages(messages);
+  }, (error) => {
     console.error('[Sinal][Messages] Falha ao acompanhar conversa:', error);
   });
+  unsubscribeAttachments?.();
+  unsubscribeAttachments = onObserveAttachments?.(ticket.id, attachments => {
+    if (selectedTicket?.id !== ticket.id) return;
+    latestAttachments = attachments;
+    renderMessages(latestMessages);
+  }, error => console.error('[Sinal][Attachments] Falha ao acompanhar anexos:', error?.code || error));
   unsubscribeStatusEvents?.();
   unsubscribeStatusEvents = onObserveStatusEvents?.(
     ticket.id,
@@ -440,9 +587,16 @@ export function closeTicketDetail() {
 
 function finalizeClose() {
   unsubscribeMessages?.();
+  unsubscribeAttachments?.();
   unsubscribeStatusEvents?.();
+  activeUploadTask?.cancel();
+  closeAttachmentPreview();
   unsubscribeMessages = null;
+  unsubscribeAttachments = null;
   unsubscribeStatusEvents = null;
+  latestMessages = [];
+  latestAttachments = [];
+  document.querySelector('#attachment-upload-status').classList.add('hidden');
   ++privateRequestId;
   substateClosePending = false;
   setTicketView('details');
@@ -526,6 +680,7 @@ function renderTicket(ticket) {
 
   textarea.disabled = !canMessage;
   submit.disabled = !canMessage;
+  syncAttachmentButton();
   help.classList.toggle('hidden', canMessage);
 
   if (canMessage) {
@@ -591,26 +746,53 @@ function renderMessages(messages) {
   const scroller = document.querySelector('#conversation-scroll');
   const nearBottom = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop < 100;
   const firstSnapshot = !messagesSnapshotInitialized;
-  const nextMessageIds = messages.map((message) => message.id);
-  const hasNewMessage = !firstSnapshot && messages.length > previousMessageIds.length
-    && nextMessageIds.some((id) => !previousMessageIds.includes(id));
+  const readyAttachments = latestAttachments.filter(item => item.status === 'ready');
+  const events = [
+    ...messages.map(message => ({ kind: 'message', data: message })),
+    ...readyAttachments.map(attachment => ({ kind: 'attachment', data: attachment }))
+  ].sort((a, b) => {
+    const timestamp = item => item.data.createdAt?.toMillis?.() || 0;
+    return timestamp(a) - timestamp(b) || String(a.data.id).localeCompare(String(b.data.id));
+  });
+  const nextMessageIds = events.map(event => event.kind + ':' + event.data.id);
+  const hasNewMessage = !firstSnapshot && events.length > previousMessageIds.length
+    && nextMessageIds.some(id => !previousMessageIds.includes(id));
   previousMessageIds = nextMessageIds;
-  const shouldFollow =
-    activeView === 'conversation' &&
+  const shouldFollow = activeView === 'conversation' &&
     (firstSnapshot || (hasNewMessage && nearBottom));
   messagesSnapshotInitialized = true;
 
-  count.textContent = String(messages.length);
-  empty.classList.toggle('hidden', messages.length > 0);
+  count.textContent = String(events.length);
+  empty.classList.toggle('hidden', events.length > 0);
 
   let previousDay = '';
-  list.innerHTML = messages.map((message) => {
-    const mine = message.authorUid === uid;
+  list.innerHTML = events.map(event => {
+    const message = event.data;
+    const mine = (event.kind === 'attachment' ? message.uploadedByUid : message.authorUid) === uid;
     const dayKey = messageDayKey(message.createdAt);
     const separator = dayKey && dayKey !== previousDay
       ? `<div class="message-day-separator" role="separator"><span>${escapeHtml(formatMessageDay(message.createdAt))}</span></div>`
       : '';
     previousDay = dayKey || previousDay;
+
+    if (event.kind === 'attachment') {
+      const image = message.contentType?.startsWith('image/');
+      const formattedSize = message.size >= 1024 * 1024
+        ? (message.size / (1024 * 1024)).toFixed(1) + ' MiB'
+        : Math.max(1, Math.ceil(message.size / 1024)) + ' KiB';
+      return `${separator}
+        <article class="message-row ${mine ? 'mine' : 'theirs'}">
+          <div class="message-bubble ${mine ? 'mine' : 'theirs'} attachment-message">
+            <button type="button" class="attachment-open" data-open-attachment="${escapeHtml(message.id)}"
+              aria-label="${image ? 'Visualizar imagem' : 'Baixar PDF'}: ${escapeHtml(message.fileName)}">
+              <span class="attachment-file-icon" aria-hidden="true">${image ? '🖼️' : '📄'}</span>
+              <span class="attachment-file-details"><strong>${escapeHtml(message.fileName || 'Arquivo')}</strong>
+                <small>${escapeHtml(formattedSize)} · ${image ? 'Ver imagem' : 'Baixar PDF'}</small></span>
+            </button>
+            <div class="message-meta">${escapeHtml(formatMessageStamp(message.createdAt))}</div>
+          </div>
+        </article>`;
+    }
 
     return `${separator}
       <article class="message-row ${mine ? 'mine' : 'theirs'}">
@@ -622,8 +804,6 @@ function renderMessages(messages) {
       </article>`;
   }).join('');
 
-  // Ao entrar na conversa, mostrar a mensagem mais recente.
-  // Depois disso, só acompanhar novas mensagens se o usuário já estiver perto do final.
   if (shouldFollow) {
     requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
   }

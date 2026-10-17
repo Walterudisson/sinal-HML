@@ -1,0 +1,19 @@
+[
+  {
+    "origin": [
+      "https://walterudisson.github.io"
+    ],
+    "method": [
+      "GET",
+      "HEAD",
+      "POST",
+      "PUT"
+    ],
+    "responseHeader": [
+      "Authorization",
+      "Content-Type",
+      "x-goog-resumable"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
