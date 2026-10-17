@@ -54,6 +54,7 @@ export function isConversationVisible(ticketId) {
 }
 
 function setTicketView(view) {
+  if (view !== 'conversation') closeAttachmentPreview();
   activeView = view;
   for (const [name, id] of [
     ['details', 'ticket-details-view'],
