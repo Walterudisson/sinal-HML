@@ -3,7 +3,7 @@
 **Data de início:** 17/10/2026  
 **Alvo:** HML somente (`sinaldesk-hml`), versão visual `1.7.0-B` após publicação.  
 **Base homologada:** 1.7.0-A (infraestrutura, Rules e 5/5 smoke tests).  
-**Situação:** desenvolvimento na branch, **sem deploy** de Functions nem Pages e **sem promoção a PRD**.
+**Situação (17/10/2026):** as quatro Cloud Functions foram implantadas no Firebase HML; CORS do bucket HML aplicado e conferido; PR #41 integrado à `main` de `sinal-HML` para testes de interface. **Aguardando publicação efetiva via GitHub Pages e homologação de upload/download com usuários HML. Nenhuma promoção a PRD.**
 
 ## Funcionalidade
 
@@ -26,7 +26,7 @@
 
 **Pendências a verificar na revisão:** limpeza completa de documentos `pending` sem objeto Storage, corridas entre descarte e confirmação, custos/alertas do Cloud Scheduler, conformidade de tamanho real na leitura e assinatura de MIME, concorrência de abas.
 
-## Implantação controlada em HML (somente após CI/revisão)
+## Implantação controlada em HML (realizada para backend; testes reais pendentes)
 
 1. Revisar o PR e CI; instalar dependências no Cloud Shell e manter versões Node 22 para Functions.
 2. Publicar **somente** `finalizeSinalAttachment`, `discardSinalAttachment`, `cleanupSinalOrphanAttachments` e `notifyNewAttachment` em `sinaldesk-hml`. O job agendado pode pedir habilitação de Cloud Scheduler e implicar custo; parar em solicitações não previstas.
@@ -60,8 +60,10 @@
 
 ## Primeira entrega de código e integração contínua
 
-- Branch: `sprint/1.7.0-b-attachments-conversation`; PR #41 aberto **como rascunho**, sem merge.
+- Branch: `sprint/1.7.0-b-attachments-conversation`; PR #41 **integrado à `main` HML** em 17/10/2026, merge `765663e89e2589ae051203a018bbae1adad3d444`.
 - GitHub Actions `Sinal Segurança HML - Anexos`: **sucesso** no commit `2e551b1a709fa6872ba84e07c5cc3903681ef6aa`, execução https://github.com/Walterudisson/sinal-HML/actions/runs/39057763302.
 - Regressão dos testes das regras/emuladores, testes de funções e verificações sintáticas executadas no CI.
-- **Não houve publicação da Sprint 1.7.0-B no Firebase nem no GitHub Pages.** O backend precisa ser implantado antes do frontend.
-- **Pendência:** smoke test real em HML por perfis e CORS; só depois liberar a interface e considerar PR pronto para merge.
+- **Cloud Functions implantadas no Firebase HML:** `finalizeSinalAttachment`, `discardSinalAttachment`, `cleanupSinalOrphanAttachments`, `notifyNewAttachment`. Firebase CLI confirmou `Deploy complete!`. A infraestrutura foi implantada **antes** do merge do frontend.
+- **CORS do bucket HML aplicado e verificado:** origem `https://walterudisson.github.io`, métodos GET/HEAD/POST/PUT, cabeçalhos Authorization/Content-Type/x-goog-resumable, expiração 3600 s. Conferência `gcloud storage buckets describe ... --format="default(cors_config)"`.
+- **Merge HML #41 realizado:** confirmação de GitHub. Aguardar publicação pelo GitHub Pages e teste real do navegador antes de declarar a UI funcionando.
+- **Pendência:** smoke test real em HML por perfis, upload/download, isolamento entre tenants, falhas, notificação e CORS no navegador; não promover produção antes da homologação explícita.
