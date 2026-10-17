@@ -243,3 +243,24 @@ test('exclusão repetida e objeto já ausente são idempotentes',async()=>{
   })};
   assert.equal(await removeCanceledStorageObject({db,bucket,objectName:path}),false);
 });
+
+test('cancelamento antes de o objeto existir marca pending como failed e impede finalize',async()=>{
+  const db=fakeDatabase();
+  const bucket={file:()=>({
+    getMetadata:async()=>{throw Object.assign(new Error('Not found'),{code:'404'});},
+    delete:async()=>{throw new Error('não deve deletar objeto ausente');}
+  })};
+  assert.deepEqual(await discardPendingAttachment(request(db,bucket)),{status:'discarded'});
+  assert.equal(db.values[path].status,'failed');
+  await assert.rejects(finalizeAttachment(request(db,fakeBucket())),/failed-precondition/);
+});
+
+test('descarte é idempotente quando gatilho já removeu objeto',async()=>{
+  const db=fakeDatabase();
+  const bucket={file:()=>({
+    getMetadata:async()=>[meta],
+    delete:async()=>{throw Object.assign(new Error('precondition'),{code:412});}
+  })};
+  assert.deepEqual(await discardPendingAttachment(request(db,bucket)),{status:'discarded'});
+  assert.equal(db.values[path].status,'failed');
+});
