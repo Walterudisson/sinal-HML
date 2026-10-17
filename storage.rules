@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// Sprint 1.7.0-A: proposta de regras do Storage para anexos do Sinal.
+// Não publicar antes da validação no Emulator Suite e revisão das Rules do Firestore.
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Consulta a base default do Firestore. Exige autorização de ligação Storage↔Firestore.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function activeUser() {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active';
+    }
+
+    function activeMember(tenantId) {
+      return activeUser()
+        && firestore.exists(/databases/(default)/documents/tenants/$(tenantId)/members/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.status == 'active';
+    }
+
+    function supportMember(tenantId) {
+      return activeMember(tenantId)
+        && firestore.get(/databases/(default)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.role
+          in ['admin', 'supervisor', 'agente'];
+    }
+
+    function canReadTicket(tenantId, ticketId) {
+      return activeMember(tenantId)
+        && firestore.exists(/databases/(default)/documents/tenants/$(tenantId)/tickets/$(ticketId))
+        && (
+          firestore.get(/databases/(default)/documents/tenants/$(tenantId)/tickets/$(ticketId)).data.requesterUid == request.auth.uid
+          || supportMember(tenantId)
+        );
+    }
+
+    function canUploadTicket(tenantId, ticketId) {
+      return canReadTicket(tenantId, ticketId)
+        && firestore.get(/databases/(default)/documents/tenants/$(tenantId)/tickets/$(ticketId)).data.status != 'resolved'
+        && (
+          firestore.get(/databases/(default)/documents/tenants/$(tenantId)/tickets/$(ticketId)).data.requesterUid == request.auth.uid
+          || (
+            supportMember(tenantId)
+            && firestore.get(/databases/(default)/documents/tenants/$(tenantId)/tickets/$(ticketId)).data.assigneeUid == request.auth.uid
+          )
+        );
+    }
+
+    function acceptableUpload(tenantId, ticketId, attachmentId) {
+      return attachmentId.matches('^[A-Za-z0-9_-]{20,64}$')
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+        && request.resource.metadata != null
+        && request.resource.metadata.keys().hasAll(['tenantId', 'ticketId', 'uploadedByUid'])
+        && request.resource.metadata.tenantId == tenantId
+        && request.resource.metadata.ticketId == ticketId
+        && request.resource.metadata.uploadedByUid == request.auth.uid;
+    }
+
+    // Sem listagem do bucket. A interface deve listar metadados protegidos do Firestore.
+    match /tenants/{tenantId}/tickets/{ticketId}/attachments/{attachmentId} {
+      allow get: if canReadTicket(tenantId, ticketId);
+      allow list: if false;
+      allow create: if canUploadTicket(tenantId, ticketId)
+        && acceptableUpload(tenantId, ticketId, attachmentId);
+      allow update, delete: if false;
+    }
+
+    // Todo o resto permanece fechado.
+    match /{otherPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
