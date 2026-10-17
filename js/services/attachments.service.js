@@ -7,6 +7,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js';
 import { firebaseApp, db } from '../config/firebase.js';
+import { createAttachmentCancellation } from './attachment-cancel.mjs';
 
 const storage = getStorage(firebaseApp);
 const functions = getFunctions(firebaseApp, 'southamerica-east1');
@@ -53,22 +54,14 @@ export async function uploadConversationAttachment(context, ticket, file, { onPr
   const uploadedByUid = context.firebaseUser.uid;
   const path = attachmentPath(tenantId, ticketId, id);
   const fileRef = storageRef(storage, path);
-  const task = uploadBytesResumable(fileRef, file, {
-    contentType: file.type,
-    customMetadata: { tenantId, ticketId, uploadedByUid }
-  });
-  onTask?.(task);
-  let uploaded = false;
+  const cancellation = createAttachmentCancellation();
+  const canceledError = () => Object.assign(new Error('Envio cancelado.'), { code: 'storage/canceled' });
+  onTask?.(cancellation);
+  let metadataCreated = false;
+
   try {
-    await new Promise((resolve, reject) => {
-      task.on('state_changed', snapshot => {
-        const pct = snapshot.totalBytes
-          ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0;
-        onProgress?.(pct);
-      }, reject, resolve);
-    });
-    uploaded = true;
-    // O cliente apenas pede aprovação (pending). Nunca escreve status ready.
+    // Primeiro gravar o metadado pending. Se ocorrer cancelamento durante o
+    // envio, o backend terá uma referência que pode marcar failed e limpar.
     await setDoc(doc(db, 'tenants', tenantId, 'tickets', ticketId, 'attachments', id), {
       fileName: fileNameForDisplay(file.name),
       storagePath: path,
@@ -79,18 +72,37 @@ export async function uploadConversationAttachment(context, ticket, file, { onPr
       status: 'pending',
       createdAt: serverTimestamp()
     });
+    metadataCreated = true;
+    if (cancellation.requested) throw canceledError();
+
+    const task = uploadBytesResumable(fileRef, file, {
+      contentType: file.type,
+      customMetadata: { tenantId, ticketId, uploadedByUid }
+    });
+    cancellation.bind(task);
+    await new Promise((resolve, reject) => {
+      task.on('state_changed', snapshot => {
+        const pct = snapshot.totalBytes
+          ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0;
+        onProgress?.(pct);
+      }, reject, resolve);
+    });
+    if (!cancellation.seal()) throw canceledError();
+
+    // Só o servidor define status ready. Após cancelar nunca chamar finalize.
     await confirm({ tenantId, ticketId, attachmentId: id });
     return { id, fileName: fileNameForDisplay(file.name) };
   } catch (error) {
-    // Upload concluído mas metadados/confirmador falharam: descarte privilegiado.
-    // Se estiver offline, a limpeza agendada removerá objetos órfãos antigos.
-    if (uploaded && navigator.onLine) {
+    // Tentar descartar em TODOS os cancelamentos, inclusive antes do fim do
+    // upload. A rotina privilegiada marca o pending como failed e elimina
+    // o objeto, caso já exista. Triggers corrigem corridas de finalização.
+    if (metadataCreated && navigator.onLine) {
       try { await discard({ tenantId, ticketId, attachmentId: id }); }
       catch (cleanupError) {
         console.warn('[Sinal][Attachments] Limpeza posterior necessária:', cleanupError?.code || 'indisponível');
       }
     }
-    throw error;
+    throw cancellation.requested ? canceledError() : error;
   }
 }
 

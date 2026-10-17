@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const {
   typeMatchesSignature, pathFor, allowedToUpload, verifyPendingMetadata,
   verifyObjectMetadata, orphanCandidate, finalizeAttachment,
-  discardPendingAttachment, cleanupOrphanAttachments
+  discardPendingAttachment, cleanupOrphanAttachments, removeCanceledStorageObject
 } = require('./attachment-security');
 
 const tenantId='tenant-alpha', ticketId='ticket-abc123', attachmentId='attachment_valid_123456789';
@@ -195,4 +195,72 @@ test('limpeza paginada mantém ready e elimina órfãos e pendentes antigos',asy
   assert.equal(db.values[readyPath].status,'ready');
   assert.equal(db.values[orphanPath].status,'failed');
   assert.equal(db.values['maintenance/attachmentCleanup'].removed,2);
+});
+
+test('objeto concluído após cancelamento é removido, mesmo se não havia objeto no discard', async()=>{
+  const db=fakeDatabase({[path]:{...pending,status:'failed'}});
+  let deleted=0;
+  const bucket={file:name=>{
+    assert.equal(name,path);
+    return {
+      getMetadata:async()=>[meta],
+      delete:async options=>{
+        assert.equal(options.ifGenerationMatch,'123');
+        deleted++;
+      }
+    };
+  }};
+  assert.equal(await removeCanceledStorageObject({db,bucket,objectName:path,expectedGeneration:'123'}),true);
+  assert.equal(deleted,1);
+});
+
+test('não remove arquivos ready ou pending e nem geração/autor divergente', async()=>{
+  const ready=fakeDatabase({[path]:{...pending,status:'ready'}});
+  const pendingDb=fakeDatabase();
+  const failed=fakeDatabase({[path]:{...pending,status:'failed'}});
+  let deleted=0;
+  const bucket={file:()=>({
+    getMetadata:async()=>[meta],
+    delete:async()=>{deleted++;}
+  })};
+  for (const db of [ready,pendingDb]) {
+    assert.equal(await removeCanceledStorageObject({db,bucket,objectName:path}),false);
+  }
+  assert.equal(await removeCanceledStorageObject({db:failed,bucket,objectName:path,expectedGeneration:'other'}),false);
+  const mismatchBucket={file:()=>({
+    getMetadata:async()=>[{...meta, metadata:{...meta.metadata,uploadedByUid:'other'}}],
+    delete:async()=>{deleted++;}
+  })};
+  assert.equal(await removeCanceledStorageObject({db:failed,bucket:mismatchBucket,objectName:path}),false);
+  assert.equal(await removeCanceledStorageObject({db:failed,bucket,objectName:'other/'+path}),false);
+  assert.equal(deleted,0);
+});
+
+test('exclusão repetida e objeto já ausente são idempotentes',async()=>{
+  const db=fakeDatabase({[path]:{...pending,status:'failed'}});
+  const bucket={file:()=>({
+    getMetadata:async()=>{throw Object.assign(new Error('Not found'),{code:404});}
+  })};
+  assert.equal(await removeCanceledStorageObject({db,bucket,objectName:path}),false);
+});
+
+test('cancelamento antes de o objeto existir marca pending como failed e impede finalize',async()=>{
+  const db=fakeDatabase();
+  const bucket={file:()=>({
+    getMetadata:async()=>{throw Object.assign(new Error('Not found'),{code:'404'});},
+    delete:async()=>{throw new Error('não deve deletar objeto ausente');}
+  })};
+  assert.deepEqual(await discardPendingAttachment(request(db,bucket)),{status:'discarded'});
+  assert.equal(db.values[path].status,'failed');
+  await assert.rejects(finalizeAttachment(request(db,fakeBucket())),/failed-precondition/);
+});
+
+test('descarte é idempotente quando gatilho já removeu objeto',async()=>{
+  const db=fakeDatabase();
+  const bucket={file:()=>({
+    getMetadata:async()=>[meta],
+    delete:async()=>{throw Object.assign(new Error('precondition'),{code:412});}
+  })};
+  assert.deepEqual(await discardPendingAttachment(request(db,bucket)),{status:'discarded'});
+  assert.equal(db.values[path].status,'failed');
 });

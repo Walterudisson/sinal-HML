@@ -143,7 +143,7 @@ async function discardPendingAttachment({ db, bucket, uid, tenantId, ticketId, a
   try {
     [object] = await file.getMetadata();
   } catch (error) {
-    if (error.code !== 404) throw error;
+    if (Number(error.code) !== 404) throw error;
   }
   if (object) {
     const custom = object.metadata || {};
@@ -169,8 +169,50 @@ async function discardPendingAttachment({ db, bucket, uid, tenantId, ticketId, a
       }
     });
   }
-  if (object) await file.delete({ ifGenerationMatch: object.generation });
+  if (object) {
+    try {
+      await file.delete({ ifGenerationMatch: object.generation });
+    } catch (error) {
+      // Trigger assíncrono pode ter removido o mesmo objeto primeiro.
+      if (![404, 412].includes(Number(error.code))) throw error;
+    }
+  }
   return { status: 'discarded' };
+}
+
+// Corridas de rede: um objeto pode ser concluído após o usuário cancelar.
+// Eventos Storage e Firestore tentam essa limpeza de forma idempotente.
+// Sem um tombstone 'failed' comprovado, nunca remover anexo pronto/pending.
+async function removeCanceledStorageObject({ db, bucket, objectName, expectedGeneration = null }) {
+  const match = /^tenants\/([A-Za-z0-9_-]{3,128})\/tickets\/([A-Za-z0-9_-]{3,128})\/attachments\/([A-Za-z0-9_-]{20,64})$/.exec(objectName || '');
+  if (!match) return false;
+  const [, tenantId, ticketId, attachmentId] = match;
+  const record = await db.doc(pathFor(tenantId, ticketId, attachmentId)).get();
+  const data = record.data();
+  if (data?.status !== 'failed' || data.storagePath !== objectName ||
+      data.origin !== 'conversation' || !data.uploadedByUid) return false;
+  const file = bucket.file(objectName);
+  let metadata;
+  try {
+    [metadata] = await file.getMetadata();
+  } catch (error) {
+    if (Number(error.code) === 404) return false;
+    throw error;
+  }
+  const custom = metadata.metadata || {};
+  if (custom.tenantId !== tenantId || custom.ticketId !== ticketId ||
+      custom.uploadedByUid !== data.uploadedByUid) return false;
+  if (expectedGeneration != null && String(metadata.generation) !== String(expectedGeneration)) {
+    return false;
+  }
+  try {
+    await file.delete({ ifGenerationMatch: metadata.generation });
+    return true;
+  } catch (error) {
+    // Duplicação de eventos e disputa com o callable de descarte: idempotente.
+    if ([404, 412].includes(Number(error.code))) return false;
+    throw error;
+  }
 }
 
 function orphanCandidate(object, currentTime, minAgeMs = 24 * 60 * 60 * 1000) {
@@ -229,5 +271,6 @@ async function cleanupOrphanAttachments({ db, bucket, now = Date.now(), maxResul
 module.exports = {
   MAX_SIZE, TYPES, validateKeys, pathFor, typeMatchesSignature,
   allowedToUpload, verifyPendingMetadata, verifyObjectMetadata,
-  finalizeAttachment, discardPendingAttachment, orphanCandidate, cleanupOrphanAttachments
+  finalizeAttachment, discardPendingAttachment, removeCanceledStorageObject,
+  orphanCandidate, cleanupOrphanAttachments
 };
