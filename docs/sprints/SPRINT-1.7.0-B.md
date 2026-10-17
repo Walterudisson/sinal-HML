@@ -78,3 +78,12 @@ O usuário reportou **“funcionou perfeitamente”** e enviou captura da interf
 - A interface foi publicada em HML e o envio resultou em itens efetivamente apresentados como anexos confirmados.
 
 **Estado:** fluxo feliz de envio e exibição de imagens/PDFs **validado pelo usuário em HML**, mas ainda não é homologação integral da Sprint B. A captura e o relato não isolam os testes de pré-visualização/download, cancelamento, arquivo inválido, limites, leitura cruzada entre tenants, tentativa de acesso de não responsável, expiração, limpeza, concorrência e custos. Realizar esses testes com contas e dados de teste antes de promover qualquer código ou regras para produção.
+
+## Confirmação adicional de visualização e download em HML — 17/10/2026
+
+O usuário confirmou, após o primeiro envio real de imagens e PDF:
+
+- **Visualização de imagem:** ao tocar em uma imagem enviada pelo atendente, ela abriu corretamente no visualizador privado dentro do próprio Sinal.
+- **PDF:** download concluído com sucesso a partir do cartão de anexo na conversa.
+
+São testes funcionais positivos da interface e da obtenção do arquivo autenticado. **Não equivalem, isoladamente, à prova de que nenhum URL público existe ou de isolamento entre organizações.** Continuam pendentes testes de cancelamento, falha de rede, tipos e tamanhos rejeitados, permissão de terceiro/tenant, limpeza automática, custos e regressão.
