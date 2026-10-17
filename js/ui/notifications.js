@@ -6,15 +6,46 @@ let onOpenTicket = null;
 let onMarkRead = null;
 let onMarkAllRead = null;
 let initialSnapshotSeen = false;
+let isConversationVisible = null;
+const readInFlight = new Set();
+
+function isMessageAlreadyVisible(item) {
+  return item?.type === 'new_message' &&
+    Boolean(item.ticketId) &&
+    isConversationVisible?.(item.ticketId) === true;
+}
+
+// A leitura é registrada sem duplicar gravações enquanto o Firestore confirma
+// a mudança. Vale tanto para avisos novos quanto para uma conversa já aberta.
+export function markVisibleConversationNotifications() {
+  if (!onMarkRead) return;
+  items.filter((item) => !item.isRead && isMessageAlreadyVisible(item)).forEach((item) => {
+    if (readInFlight.has(item.id)) return;
+    readInFlight.add(item.id);
+    let operation;
+    try {
+      operation = onMarkRead(item.id);
+    } catch (error) {
+      readInFlight.delete(item.id);
+      console.warn('[Sinal][Notifications] Falha ao marcar mensagem como lida:', error);
+      return;
+    }
+    Promise.resolve(operation).catch((error) => {
+      console.warn('[Sinal][Notifications] Falha ao marcar mensagem como lida:', error);
+    }).finally(() => readInFlight.delete(item.id));
+  });
+}
 
 export function resetNotificationsUiSession() {
   initialSnapshotSeen = false;
+  readInFlight.clear();
 }
 
 export function initNotificationsUi(options) {
   onOpenTicket = options.onOpenTicket;
   onMarkRead = options.onMarkRead;
   onMarkAllRead = options.onMarkAllRead;
+  isConversationVisible = options.isConversationVisible;
 
   document.querySelector('#notification-bell').addEventListener('click', openPanel);
   document.querySelectorAll('[data-close-notifications]').forEach((button) => button.addEventListener('click', closePanel));
@@ -58,7 +89,7 @@ export function renderNotifications(nextItems, changes, showToast) {
         const item = { id: change.doc.id, ...change.doc.data() };
 
         // Toast apenas para uma notificação realmente nova e ainda não lida.
-        if (item.isRead) return;
+        if (item.isRead || isMessageAlreadyVisible(item)) return;
 
         showToast?.(
           item.body || 'Você tem uma nova atualização.',
@@ -71,6 +102,7 @@ export function renderNotifications(nextItems, changes, showToast) {
     // Ele alimenta a Central e o contador, mas não deve gerar toasts.
     initialSnapshotSeen = true;
   }
+  markVisibleConversationNotifications();
 }
 
 function markup(item) {

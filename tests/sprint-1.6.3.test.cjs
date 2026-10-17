@@ -19,9 +19,9 @@ function between(src, first, second) {
   return src.slice(start, end);
 }
 
-test('identidade HML v1.6.3 e cache renovado', () => {
-  assert.match(version, /APP_VERSION = '1\.6\.3'/);
-  assert.match(sw, /sinal-shell-hml-1\.6\.3-stability/);
+test('identidade HML v1.6.3.1 e cache renovado', () => {
+  assert.match(version, /APP_VERSION = '1\.6\.3\.1'/);
+  assert.match(sw, /sinal-shell-hml-1\.6\.3\.1-conversation-notifications/);
   assert.match(firebase, /projectId: 'sinaldesk-hml'/);
   assert.match(sw, /projectId: 'sinaldesk-hml'/);
   assert.doesNotMatch(sw, /projectId: 'sinaldesk'[,\s]/);
