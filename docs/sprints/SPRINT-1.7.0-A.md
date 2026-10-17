@@ -2,7 +2,7 @@
 
 **Iniciada:** 17/10/2026  
 **Base funcional:** HML v1.6.3.1  
-**Status:** bucket/Blaze confirmados por capturas; 5 testes estáticos e 12 testes em emulador aprovados (GitHub Actions); regras ainda não implantadas e uploads não habilitados
+**Status:** fundação e backend administrativo implementados na branch; 33 testes automatizados aprovados em emuladores. Nada implantado no Firebase HML e uploads indisponíveis.
 
 ## Objetivo
 Preparar a infraestrutura e as regras para anexos em sinais, com segurança multi-tenant
@@ -18,7 +18,8 @@ e experiência mobile-first, antes da implementação do botão de clipe.
    Testes textuais e testes no Emulator Suite passaram, verificando autenticação,
    bloqueios, limites de tamanho, tipos permitidos e isolamento multi-tenant. A permissão de leitura deve ser somente
    para quem já pode ler o sinal e escrita restrita a quem pode interagir nele.
-3. Modelar metadados de anexos no Firestore, vinculados a `tenantId`, `ticketId`,
+3. **Regras de metadados implementadas em `firestore.rules` e testadas no emulador.**
+   Modelar metadados de anexos no Firestore, vinculados ao contexto de `tenantId`, `ticketId`,
    autor e origem (abertura/conversa), com identificador de armazenamento não adivinhável.
 4. Planejar upload recuperável para a próxima fase, com progresso, cancelamento, estados
    `pending/ready/failed` e limpeza segura de uploads incompletos.
@@ -109,8 +110,10 @@ será autorizada ao publicar regras com `firestore.get/exists`.
 - **Concluído:** compilação das Rules no emulador, testes reais de usuário/tenant,
   imutabilidade dos arquivos, tipos, tamanho e metadados. Evidência: 
   https://github.com/Walterudisson/sinal-HML/actions/runs/39044252103
-- **Não realizado:** rotina administrativa de revogação de contas/tenants,
-  publicação de regras, habilitação de uploads, regras de metadados Firestore.
+- **Concluído em código:** rotinas administrativas de revogação de usuários/tenants,
+  autorização pelo Superadmin e regras de metadados em `firestore.rules`.
+- **Não realizado:** implantação das Cloud Functions e Rules no Firebase real,
+  fluxo `pending → ready` e limpeza de anexos órfãos, habilitação de uploads.
 - A aba **Regras** do console permanece na política `deny all` até a implantação
   deliberada e validada; não colar regras diretamente sem essa validação.
 
@@ -137,3 +140,41 @@ será autorizada ao publicar regras com `firestore.get/exists`.
 Essa política precisa sincronizar a desativação global de usuário e de tenant com
 todos os vínculos, pois as regras do Storage não podem consultar três documentos
 do Firestore. Não publicar as regras antes de concluir essa etapa.
+
+
+## Atualização técnica da fase A — 17/10/2026
+
+**GitHub Actions:** https://github.com/Walterudisson/sinal-HML/actions/runs/39052004143
+
+| Testes | Aprovados |
+|---|---:|
+| Verificação estática das Storage Rules | 5/5 |
+| Testes existentes de notificações (regressão) | 6/6 |
+| Storage e metadados Firestore no emulador | 16/16 |
+| Revogação, falha parcial e autorização Superadmin | 6/6 |
+| **Total** | **33/33** |
+
+Arquivos principais:
+- `storage.rules` e `firebase.json`
+- `firestore.rules` (subcoleção de metadados `attachments`, apenas `pending`)
+- `functions/access-revocation.js` e `functions/index.js` (callables Superadmin)
+- `functions/access-revocation.test.cjs` e `tests/storage-emulator-1.7.0-a.test.cjs`
+- `.github/workflows/storage-security.yml`
+
+### Bloqueios antes de liberar anexos em HML
+
+1. Validar permissão cross-service IAM de Storage Rules para Firestore no projeto real.
+2. Garantir que a administração de desativação use os callables e não alterações
+   diretas de status pelo Console (bypass do processo de revogação).
+3. Planejar a implantação controlada das Rules e dos callables, com teste real
+   e procedimento de reversão para `allow read, write: if false;`.
+4. Criar o backend de confirmação do arquivo `pending → ready` e limpeza de
+   objetos/entradas órfãos, antes de habilitar o upload na interface.
+5. Conferir alertas de custo no projeto Blaze.
+
+**Nota:** a política de Firestore permite criar apenas metadados pendentes de
+anexos de conversa em sinais já existentes. Anexos durante a abertura do sinal
+precisarão de estratégia própria de estágio de upload na fase C.
+
+A fase A está pronta para revisão de segurança; não equivale a publicação ou
+homologação funcional do módulo de anexos.
