@@ -3,7 +3,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   typeMatchesSignature, pathFor, allowedToUpload, verifyPendingMetadata,
-  verifyObjectMetadata, orphanCandidate, finalizeAttachment
+  verifyObjectMetadata, orphanCandidate, finalizeAttachment,
+  discardPendingAttachment, cleanupOrphanAttachments
 } = require('./attachment-security');
 
 const tenantId='tenant-alpha', ticketId='ticket-abc123', attachmentId='attachment_valid_123456789';
@@ -74,13 +75,15 @@ function fakeDatabase(initial={}) {
     doc(key){
       const ref={path:key};
       ref.get=async()=>({exists:values[key]!=null,data:()=>values[key]});
+      ref.set=async data=>{values[key]=data;};
       return ref;
     },
     async runTransaction(callback){
       const changes=[];
       const result=await callback({
         get:ref=>Promise.resolve({exists:values[ref.path]!=null,data:()=>values[ref.path]}),
-        update:(ref,data)=>changes.push([ref.path,data])
+        update:(ref,data)=>changes.push([ref.path,data]),
+        create:(ref,data)=>{if(values[ref.path])throw new Error('already-exists');changes.push([ref.path,data]);}
       });
       for(const [key,value] of changes){values[key]={...values[key],...value};writes++;}
       return result;
@@ -139,4 +142,56 @@ test('limpeza considera somente objetos antigos em caminho de anexo',()=>{
     {tenantId,ticketId,attachmentId});
   assert.equal(orphanCandidate({name:path,metadata:{timeCreated:fresh}},now),null);
   assert.equal(orphanCandidate({name:'else/'+path,metadata:{timeCreated:old}},now),null);
+});
+
+
+test('descarta upload pendente e cria proteção de exclusão contra corrida',async()=>{
+  const db=fakeDatabase();
+  let deleted=0;
+  const bucket={file:()=>({
+    getMetadata:async()=>[meta],
+    delete:async()=>{deleted++;}
+  })};
+  assert.deepEqual(await discardPendingAttachment(request(db,bucket)),{status:'discarded'});
+  assert.equal(db.values[path].status,'failed');
+  assert.equal(deleted,1);
+  await assert.rejects(finalizeAttachment(request(db,fakeBucket())),/failed-precondition/);
+
+  const missing=fakeDatabase({[path]:null});
+  await discardPendingAttachment(request(missing,bucket));
+  assert.equal(missing.values[path].status,'failed');
+  assert.equal(deleted,2);
+});
+
+test('não descarta arquivo confirmado nem de outro remetente',async()=>{
+  const ready=fakeDatabase({[path]:{...pending,status:'ready'}});
+  const wrong=fakeDatabase({[path]:{...pending,uploadedByUid:'outro'}});
+  await assert.rejects(discardPendingAttachment(request(ready,fakeBucket())),/permission-denied/);
+  await assert.rejects(discardPendingAttachment(request(wrong,fakeBucket())),/permission-denied/);
+});
+
+test('limpeza paginada mantém ready e elimina órfãos e pendentes antigos',async()=>{
+  const now=Date.parse('2026-10-17T20:00:00Z');
+  const expiredTime=new Date(now-30*3600_000).toISOString();
+  const readyId='attachment_ready_123456789';
+  const orphanId='attachment_orphan_123456789';
+  const readyPath=pathFor(tenantId,ticketId,readyId);
+  const orphanPath=pathFor(tenantId,ticketId,orphanId);
+  const db=fakeDatabase({
+    [readyPath]:{...pending,storagePath:readyPath,status:'ready'},
+    [orphanPath]:null
+  });
+  const deleted=[];
+  const files=[path,readyPath,orphanPath].map(name=>({
+    name,metadata:{timeCreated:expiredTime,generation:'123',metadata:{uploadedByUid:uid}},
+    delete:async()=>{deleted.push(name);}
+  }));
+  const bucket={getFiles:async()=>[files,null]};
+  assert.deepEqual(await cleanupOrphanAttachments({db,bucket,now}),
+    {inspected:3,removed:2});
+  assert.deepEqual(deleted.sort(),[path,orphanPath].sort());
+  assert.equal(db.values[path].status,'failed');
+  assert.equal(db.values[readyPath].status,'ready');
+  assert.equal(db.values[orphanPath].status,'failed');
+  assert.equal(db.values['maintenance/attachmentCleanup'].removed,2);
 });
