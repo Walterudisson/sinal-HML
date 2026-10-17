@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.6.2.2-central-home-fix';
+const CACHE_NAME = 'sinal-shell-hml-1.6.3-stability';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',

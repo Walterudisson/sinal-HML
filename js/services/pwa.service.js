@@ -26,19 +26,23 @@ export async function registerPwa({ onInstallAvailable, onInstalled, onUpdate })
     refreshing = true;
 
     const reloadKey = 'sinal:pwa-controller-reload';
-    if (sessionStorage.getItem(reloadKey) !== '1') {
-      sessionStorage.setItem(reloadKey, '1');
+    let alreadyReloaded = false;
+    try { alreadyReloaded = sessionStorage.getItem(reloadKey) === '1'; } catch (_) { /* Sem armazenamento. */ }
+    if (!alreadyReloaded) {
+      try { sessionStorage.setItem(reloadKey, '1'); } catch (_) { /* Sem armazenamento. */ }
       window.location.reload();
       return;
     }
 
-    sessionStorage.removeItem(reloadKey);
+    try { sessionStorage.removeItem(reloadKey); } catch (_) { /* Sem armazenamento. */ }
     onUpdate?.();
   });
 
   // Libera a trava após uma inicialização estável para que a próxima
   // atualização futura também possa recarregar automaticamente.
-  window.setTimeout(() => sessionStorage.removeItem('sinal:pwa-controller-reload'), 5000);
+  window.setTimeout(() => {
+    try { sessionStorage.removeItem('sinal:pwa-controller-reload'); } catch (_) { /* Sem armazenamento. */ }
+  }, 5000);
 
   return registration;
 }

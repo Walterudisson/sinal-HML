@@ -30,10 +30,9 @@ const priorityRank = Object.freeze({
 });
 
 export function initCentral(options) {
-  currentContext = options.context;
   onOpenTicket = options.onOpenTicket;
   onClaimTicket = options.onClaimTicket;
-  restoreCentralState();
+  setCentralContext(options.context);
 
   document.querySelectorAll('[data-central-filter]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -72,6 +71,21 @@ export function initCentral(options) {
   });
 }
 
+// Reassocia o estado da Central em cada login, inclusive quando a SPA não é recarregada.
+export function setCentralContext(context) {
+  currentContext = context;
+  tickets = [];
+  unreadMessageTicketIds = new Set();
+  currentFilter = 'new';
+  currentPriority = 'all';
+  currentCategory = 'all';
+  currentSort = 'priority';
+  currentSearch = '';
+  stateRestored = false;
+  restoreCentralState();
+  renderCentral();
+}
+
 export function updateCentralTickets(nextTickets) {
   tickets = nextTickets;
   renderCentral();
@@ -90,13 +104,19 @@ function centralStateKey() {
 
 function persistCentralState() {
   if (!currentContext) return;
-  sessionStorage.setItem(centralStateKey(), JSON.stringify({
-    filter: currentFilter,
-    priority: currentPriority,
-    category: currentCategory,
-    sort: currentSort,
-    search: currentSearch
-  }));
+  // O navegador pode bloquear sessionStorage (modo privado, políticas corporativas).
+  // O filtro deve continuar funcionando mesmo sem persistência.
+  try {
+    sessionStorage.setItem(centralStateKey(), JSON.stringify({
+      filter: currentFilter,
+      priority: currentPriority,
+      category: currentCategory,
+      sort: currentSort,
+      search: currentSearch
+    }));
+  } catch (_) {
+    // Persistência opcional; a interação permanece funcional.
+  }
 }
 
 function restoreCentralState() {
@@ -121,7 +141,7 @@ function restoreCentralState() {
     if (category) category.value = currentCategory;
     if (sort) sort.value = currentSort;
   } catch (_) {
-    sessionStorage.removeItem(centralStateKey());
+    try { sessionStorage.removeItem(centralStateKey()); } catch (_) { /* Armazenamento indisponível. */ }
   }
 }
 

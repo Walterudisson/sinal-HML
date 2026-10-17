@@ -4,7 +4,7 @@ import { createTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResol
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, initMySignalsFilters, renderTickets } from './ui/signal-composer.js';
-import { initCentral, updateCentralTickets, updateCentralUnreadMessages } from './ui/central.js';
+import { initCentral, setCentralContext, updateCentralTickets, updateCentralUnreadMessages } from './ui/central.js';
 import { initTicketDetail, setTicketDetailContext, resetTicketDetailUi, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
@@ -82,8 +82,12 @@ function stopObservers() {
   unsubscribeMyTickets = null;
   unsubscribeCentralTickets = null;
   unsubscribeNotifications = null;
+  currentNotifications = [];
   renderTickets([]);
   updateCentralTickets([]);
+  updateCentralUnreadMessages([]);
+  renderNotifications([], [], showToast);
+  resetNotificationsUiSession();
 }
 
 function renderSignedOut() {
@@ -206,7 +210,10 @@ function openConversation(ticket, options = {}) {
 }
 
 function ensureCentralInitialized(context) {
-  if (centralInitialized) return;
+  if (centralInitialized) {
+    setCentralContext(context);
+    return;
+  }
   initCentral({
     context,
     onOpenTicket: openConversation,
