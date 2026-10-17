@@ -9,14 +9,11 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function activeUser() {
-      return signedIn()
-        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active';
-    }
-
+    // Limite do Storage: no máximo dois documentos distintos de Firestore
+    // (vínculo no tenant + sinal). O status global deve ser propagado ao
+    // vínculo quando a conta for desativada, antes da liberação do módulo.
     function activeMember(tenantId) {
-      return activeUser()
+      return signedIn()
         && firestore.exists(/databases/(default)/documents/tenants/$(tenantId)/members/$(request.auth.uid))
         && firestore.get(/databases/(default)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.status == 'active';
     }
