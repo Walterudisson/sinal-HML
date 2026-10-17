@@ -114,6 +114,12 @@ async function finalizeAttachment({ db, bucket, uid, tenantId, ticketId, attachm
       confirmedAt: FieldValue.serverTimestamp(),
       storageGeneration: String(meta.generation)
     });
+    tx.update(refs.ticket, {
+      lastInteractionAt: FieldValue.serverTimestamp(),
+      lastInteractionType: 'attachment',
+      lastInteractionByUid: uid,
+      lastInteractionAttachmentId: attachmentId
+    });
   });
   return { status: 'ready', attachmentId };
 }
