@@ -143,7 +143,7 @@ async function discardPendingAttachment({ db, bucket, uid, tenantId, ticketId, a
   try {
     [object] = await file.getMetadata();
   } catch (error) {
-    if (error.code !== 404) throw error;
+    if (Number(error.code) !== 404) throw error;
   }
   if (object) {
     const custom = object.metadata || {};
@@ -169,7 +169,14 @@ async function discardPendingAttachment({ db, bucket, uid, tenantId, ticketId, a
       }
     });
   }
-  if (object) await file.delete({ ifGenerationMatch: object.generation });
+  if (object) {
+    try {
+      await file.delete({ ifGenerationMatch: object.generation });
+    } catch (error) {
+      // Trigger assíncrono pode ter removido o mesmo objeto primeiro.
+      if (![404, 412].includes(Number(error.code))) throw error;
+    }
+  }
   return { status: 'discarded' };
 }
 
