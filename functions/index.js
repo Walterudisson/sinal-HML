@@ -3,6 +3,7 @@ const { buildStatusNotice, createNotificationOnce } = require('./status-notifica
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getStorage } = require('firebase-admin/storage');
 
 initializeApp();
 const db = getFirestore();
@@ -133,7 +134,7 @@ async function createAndPush({ tenantId, uid, type, actorUid, title, body, ticke
 
 
 // Sprint 1.7.0-A: endpoints administrativos exclusivamente para Superadmin.
-// Ainda NÃO implantados em HML. Requerem testes de integração e aprovação.
+// Publicados em HML; preservar isolamento entre ambientes.
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { authorizeSuperadmin, deactivateUserAccess, deactivateTenantAccess } = require('./access-revocation');
 
@@ -185,4 +186,66 @@ exports.deactivateSinalTenant = onCall(revocationCallableOptions, async (request
     throw new HttpsError('failed-precondition',
       'Não foi possível concluir a desativação. Confira o status de revogação e tente novamente.');
   }
+});
+
+
+// Sprint 1.7.0-B: anexos privados vinculados à conversa.
+// A UI não pode definir 'ready': apenas esta função valida a existência e
+// assinatura dos bytes reais, as permissões atuais e a correspondência Storage↔Firestore.
+const {
+  finalizeAttachment, discardPendingAttachment, cleanupOrphanAttachments
+} = require('./attachment-security');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+
+const attachmentOptions = {
+  region: 'southamerica-east1',
+  timeoutSeconds: 60,
+  memory: '256MiB',
+  maxInstances: 5
+};
+function attachmentArgs(request) {
+  const { tenantId, ticketId, attachmentId } = request.data || {};
+  return { uid: request.auth?.uid, tenantId, ticketId, attachmentId };
+}
+function attachmentError(error) {
+  const code = ['unauthenticated', 'invalid-argument', 'permission-denied',
+    'failed-precondition'].includes(error.message) ? error.message : 'internal';
+  if (code === 'internal') console.error('[Sinal][Attachments] Erro interno:', error);
+  return new HttpsError(code,
+    code === 'permission-denied' ? 'Você não tem permissão para este anexo.' :
+    code === 'unauthenticated' ? 'Faça login para continuar.' :
+    code === 'invalid-argument' ? 'Identificação do arquivo inválida.' :
+    code === 'failed-precondition' ? 'O anexo não pode ser confirmado neste estado.' :
+    'Não foi possível processar o anexo agora.');
+}
+exports.finalizeSinalAttachment = onCall(attachmentOptions, async request => {
+  try {
+    return await finalizeAttachment({
+      db, bucket: getStorage().bucket(), ...attachmentArgs(request)
+    });
+  } catch (error) {
+    throw attachmentError(error);
+  }
+});
+exports.discardSinalAttachment = onCall(attachmentOptions, async request => {
+  try {
+    return await discardPendingAttachment({
+      db, bucket: getStorage().bucket(), ...attachmentArgs(request)
+    });
+  } catch (error) {
+    throw attachmentError(error);
+  }
+});
+
+// Agenda diária; varredura paginada e limitada a 100 objetos por execução.
+// Não usa URLs públicas e nunca exclui um documento em estado ready.
+exports.cleanupSinalOrphanAttachments = onSchedule({
+  schedule: 'every day 03:00',
+  timeZone: 'America/Sao_Paulo',
+  region: 'southamerica-east1',
+  timeoutSeconds: 300,
+  memory: '256MiB',
+  maxInstances: 1
+}, async () => {
+  await cleanupOrphanAttachments({ db, bucket: getStorage().bucket() });
 });
