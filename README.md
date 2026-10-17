@@ -1,11 +1,18 @@
-# Sinal — HML
+# Sinal — Homologação (HML)
 
 ## Sprint atual
-`1.3 — Notificações + PWA`
+**v1.6.3 — Estabilização operacional** (17/10/2026)
 
-Fluxo:
-`Mandar um sinal → Central → Assumir → Conversar → Notificar`
+Foco: integridade do contexto após logout/login, persistência opcional dos filtros da Central,
+segurança visual entre sessões e atualização da PWA. Sem novos recursos ou alterações no
+modelo de dados, nas Rules ou nas Cloud Functions.
 
-Firebase: `sinaldesk-hml`
+Consulte [o plano e o roteiro da Sprint 1.6.3](docs/sprints/SPRINT-1.6.3.md).
 
-Antes da homologação, configure a chave VAPID, publique as Rules e implante as Cloud Functions conforme `docs/FIRESTORE-SETUP.md`.
+## Fluxo de homologação
+1. Publicar HML a partir da branch `main` do repositório `Walterudisson/sinal-HML`.
+2. Conferir identificação `HML v1.6.3` no menu Mais e/ou barra lateral.
+3. Executar o roteiro de homologação da sprint em desktop e celular.
+4. Promover para PRD **somente após aprovação explícita**.
+
+Projeto Firebase HML: `sinaldesk-hml`. Produção utiliza projeto e repositório separados.
