@@ -15,6 +15,8 @@ on:
       - 'functions/attachment-security.test.cjs'
       - 'functions/package.json'
       - 'js/services/attachments.service.js'
+      - 'js/services/attachment-cancel.mjs'
+      - 'tests/attachment-cancel-1.7.0-b.test.mjs'
       - 'js/ui/ticket-detail.js'
       - 'js/main.js'
       - 'index.html'
@@ -47,7 +49,10 @@ jobs:
           node --check functions/attachment-security.js
           node --check js/main.js
           node --check js/services/attachments.service.js
+          node --check js/services/attachment-cancel.mjs
           node --check js/ui/ticket-detail.js
+      - name: Testar cancelamento de uploads no cliente
+        run: node --test tests/attachment-cancel-1.7.0-b.test.mjs
       - name: Validar regras estáticas
         run: npm run test:storage:static
       - name: Validar testes existentes das funções
