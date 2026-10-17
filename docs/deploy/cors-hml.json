@@ -5,7 +5,14 @@
     ],
     "method": [
       "GET",
-      "HEAD"
+      "HEAD",
+      "POST",
+      "PUT"
+    ],
+    "responseHeader": [
+      "Authorization",
+      "Content-Type",
+      "x-goog-resumable"
     ],
     "maxAgeSeconds": 3600
   }
