@@ -7,6 +7,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js';
 import { firebaseApp, db } from '../config/firebase.js';
+import { createAttachmentCancellation } from './attachment-cancel.mjs';
 
 const storage = getStorage(firebaseApp);
 const functions = getFunctions(firebaseApp, 'southamerica-east1');
@@ -41,25 +42,6 @@ export function observeAttachments(context, ticketId, onData, onError) {
     snapshot => onData(snapshot.docs.map(item => ({ id: item.id, ...item.data() }))),
     onError
   );
-}
-
-// A intenção de cancelar é independente do estado da task. O Firebase pode
-// concluir o objeto enquanto o pedido de cancelamento está sendo processado.
-export function createAttachmentCancellation() {
-  let requested = false;
-  let task = null;
-  return {
-    get requested() { return requested; },
-    bind(uploadTask) {
-      task = uploadTask;
-      if (requested) task.cancel();
-    },
-    cancel() {
-      requested = true;
-      task?.cancel();
-      return true;
-    }
-  };
 }
 
 export async function uploadConversationAttachment(context, ticket, file, { onProgress, onTask } = {}) {
@@ -105,7 +87,7 @@ export async function uploadConversationAttachment(context, ticket, file, { onPr
         onProgress?.(pct);
       }, reject, resolve);
     });
-    if (cancellation.requested) throw canceledError();
+    if (!cancellation.seal()) throw canceledError();
 
     // Só o servidor define status ready. Após cancelar nunca chamar finalize.
     await confirm({ tenantId, ticketId, attachmentId: id });
