@@ -61,7 +61,10 @@ service firebase.storage {
     match /tenants/{tenantId}/tickets/{ticketId}/attachments/{attachmentId} {
       allow get: if canReadTicket(tenantId, ticketId);
       allow list: if false;
-      allow create: if canUploadTicket(tenantId, ticketId)
+      // Defense in depth: recusar sobrescrita mesmo em emuladores que classificam
+      // um PUT sobre objeto existente incorretamente como operação de criação.
+      allow create: if resource == null
+        && canUploadTicket(tenantId, ticketId)
         && acceptableUpload(tenantId, ticketId, attachmentId);
       allow update, delete: if false;
     }
