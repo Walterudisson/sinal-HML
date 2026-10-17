@@ -2,7 +2,7 @@
 
 **Iniciada:** 17/10/2026  
 **Base funcional:** HML v1.6.3.1  
-**Status:** bucket/Blaze confirmados por capturas; Storage Rules propostas na branch; testes de segurança no emulador pendentes; nenhum upload habilitado
+**Status:** bucket/Blaze confirmados por capturas; 5 testes estáticos e 12 testes em emulador aprovados (GitHub Actions); regras ainda não implantadas e uploads não habilitados
 
 ## Objetivo
 Preparar a infraestrutura e as regras para anexos em sinais, com segurança multi-tenant
@@ -15,8 +15,8 @@ e experiência mobile-first, antes da implementação do botão de clipe.
    Na captura de Regras, o Storage continua com `allow read, write: if false;`.
    **Nenhuma regra foi implantada pelo GitHub nesta fase.**
 2. Regra `storage.rules` criada nesta branch, referenciada por `firebase.json`.
-   Testes textuais locais passaram; falta executar testes no Emulator Suite, verificando
-   autenticação, bloqueios e tipo/tamanho. A permissão de leitura deve ser somente
+   Testes textuais e testes no Emulator Suite passaram, verificando autenticação,
+   bloqueios, limites de tamanho, tipos permitidos e isolamento multi-tenant. A permissão de leitura deve ser somente
    para quem já pode ler o sinal e escrita restrita a quem pode interagir nele.
 3. Modelar metadados de anexos no Firestore, vinculados a `tenantId`, `ticketId`,
    autor e origem (abertura/conversa), com identificador de armazenamento não adivinhável.
@@ -106,7 +106,10 @@ será autorizada ao publicar regras com `firestore.get/exists`.
   interagir no sinal, com MIME permitido, tamanho e metadados obrigatórios.
 - `firebase.json`: referência ao arquivo de regras para futura implantação.
 - `tests/storage-rules-1.7.0-a.test.cjs`: cinco testes estáticos aprovados.
-- **Não realizado:** compilação da DSL Firebase, testes de usuário/tenant no emulador,
+- **Concluído:** compilação das Rules no emulador, testes reais de usuário/tenant,
+  imutabilidade dos arquivos, tipos, tamanho e metadados. Evidência: 
+  https://github.com/Walterudisson/sinal-HML/actions/runs/39044252103
+- **Não realizado:** rotina administrativa de revogação de contas/tenants,
   publicação de regras, habilitação de uploads, regras de metadados Firestore.
 - A aba **Regras** do console permanece na política `deny all` até a implantação
   deliberada e validada; não colar regras diretamente sem essa validação.
@@ -118,3 +121,19 @@ será autorizada ao publicar regras com `firestore.get/exists`.
   autenticado e criação de URLs locais temporárias para visualização.
 - Definir política de limpeza de arquivos órfãos e total de armazenamento por tenant.
 - Os testes estáticos não comprovam permissões efetivas no Firebase.
+
+
+## Resultado da validação automática de 17/10/2026
+
+- **GitHub Actions:** 5/5 verificações estáticas e 12/12 testes usando Firestore + Storage Emulator.
+- A primeira execução identificou sobrescrita inesperada de anexo.
+- O `allow create` foi endurecido com `resource == null`; segunda execução aprovou
+  o bloqueio de sobrescrita mesmo com a classificação de operações no emulador.
+- **Execução aprovada:** https://github.com/Walterudisson/sinal-HML/actions/runs/39044252103
+- **PR de HML:** https://github.com/Walterudisson/sinal-HML/pull/40 (rascunho; sem merge).
+
+**Bloqueio remanescente:** implementar e testar a política
+[`docs/security/REVOGACAO-ANEXOS.md`](../security/REVOGACAO-ANEXOS.md).
+Essa política precisa sincronizar a desativação global de usuário e de tenant com
+todos os vínculos, pois as regras do Storage não podem consultar três documentos
+do Firestore. Não publicar as regras antes de concluir essa etapa.
