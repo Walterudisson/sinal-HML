@@ -29,10 +29,14 @@ Na versão 1.7.0-B inicial, `uploadConversationAttachment()` apenas chamava `dis
 
 ## Implantação HML
 
-Somente após CI: publicar **apenas** as funções novas
-`cleanupCanceledSinalUpload` e `cleanupFailedSinalAttachment`
-no Firebase `sinaldesk-hml`. A rotina existente de descarte já contém as verificações de tombstone. Uma vez validado o deploy, realizar merge do PR para disponibilizar a mudança do frontend na HML. Nunca publicar na produção `sinaldesk` por este procedimento.
+Somente após CI: publicar **apenas** `discardSinalAttachment` (revisada para lidar com objeto já ausente), `cleanupCanceledSinalUpload` e `cleanupFailedSinalAttachment` no Firebase `sinaldesk-hml`. Não publicar as funções de notificação ou as regras novamente. Uma vez validado o deploy, realizar merge do PR para disponibilizar a mudança do frontend na HML. Nunca publicar na produção `sinaldesk` por este procedimento.
 
 **Atenção a custos/permissões:** gatilhos Cloud Storage/Eventarc podem habilitar permissões e gerar cobranças no Blaze; interromper e revisar qualquer solicitação inesperada.
 
 **Versão pretendida:** `1.7.0-B.1`, homologação pendente.
+
+## Validação CI
+
+- GitHub Actions HML: execução **aprovada** https://github.com/Walterudisson/sinal-HML/actions/runs/39073527951.
+- Testes incluem cancelamento antes de criar task, durante envio, fechamento da janela de cancelamento após confirmar, exclusão mesmo com chegada tardia do objeto, idempotência e preservação de anexos `ready`.
+- A aprovação de CI não é evidência de limpeza real no Storage HML; requer smoke test depois da publicação controlada do backend e frontend.
