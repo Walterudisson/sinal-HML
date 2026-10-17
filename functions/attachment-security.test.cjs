@@ -105,9 +105,10 @@ test('confirma anexo válido somente no servidor e permite retry idempotente',as
   assert.deepEqual(await finalizeAttachment(request(db)),{status:'ready',attachmentId});
   assert.equal(db.values[path].status,'ready');
   assert.equal(db.values[path].storageGeneration,'123');
-  assert.equal(db.writes,1);
+  assert.equal(db.values['tenants/'+tenantId+'/tickets/'+ticketId].lastInteractionType,'attachment');
+  assert.equal(db.writes,2);
   assert.deepEqual(await finalizeAttachment(request(db)),{status:'ready',attachmentId});
-  assert.equal(db.writes,1);
+  assert.equal(db.writes,2);
 });
 
 test('nega arquivo de outro tenant, bytes adulterados e conta revogada',async()=>{
