@@ -1,4 +1,4 @@
-name: Sinal Storage Rules - 1.7.0-A
+name: Sinal Segurança HML - Anexos
 
 on:
   pull_request:
@@ -11,6 +11,13 @@ on:
       - 'functions/access-revocation.js'
       - 'functions/access-revocation.test.cjs'
       - 'functions/index.js'
+      - 'functions/attachment-security.js'
+      - 'functions/attachment-security.test.cjs'
+      - 'functions/package.json'
+      - 'js/services/attachments.service.js'
+      - 'js/ui/ticket-detail.js'
+      - 'js/main.js'
+      - 'index.html'
       - '.github/workflows/storage-security.yml'
   workflow_dispatch:
 
@@ -34,6 +41,13 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Instalar dependências das Cloud Functions de HML
         run: npm ci --prefix functions --ignore-scripts --no-audit --no-fund
+      - name: Verificar sintaxe do frontend e funções
+        run: |
+          node --check functions/index.js
+          node --check functions/attachment-security.js
+          node --check js/main.js
+          node --check js/services/attachments.service.js
+          node --check js/ui/ticket-detail.js
       - name: Validar regras estáticas
         run: npm run test:storage:static
       - name: Validar testes existentes das funções
