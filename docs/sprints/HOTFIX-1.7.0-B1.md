@@ -56,3 +56,9 @@ Somente após CI: publicar **apenas** `discardSinalAttachment` (revisada para li
 - O usuário informou que **testes de envio e cancelamento foram realizados com sucesso** na interface dessa versão.
 - **Pendência crítica:** ainda não foi comprovado pelo usuário, após esse novo teste, se o objeto de upload cancelado desapareceu do **Firebase Storage**. O sucesso visual do cancelamento não encerra o incidente original. Inspecionar diretamente o bucket HML após aguardar processamento assíncrono dos gatilhos e conferir eventuais falhas nos logs.
 - **Homologação:** manter suspensa até essa evidência e os testes de segurança pendentes. Não promover produção.
+
+## Confirmação da limpeza no Firebase Storage após reteste
+
+Em 17/10/2026, após a publicação de `1.7.0-B.1`, o usuário confirmou que a nova tentativa de cancelamento resultou também em **remoção do arquivo no Firebase Storage HML** (resposta “deu certo” à conferência do Storage). O teste da interface de envio/cancelamento já havia sido reportado como bem-sucedido. **O incidente de persistência de objetos cancelados foi corrigido no cenário real testado em HML.**
+
+**Limites da validação:** confirmação manual de um cenário real, sem garantia de todas as condições de corrida, falhas de rede ou retenção; testar segurança entre usuários/tenants e regressões antes da homologação integral da Sprint B. O objeto remanescente de testes anteriores deve ser tratado separadamente, após identificação, sem apagar anexos válidos. **Nenhuma promoção a PRD.**
