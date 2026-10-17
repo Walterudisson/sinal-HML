@@ -40,3 +40,12 @@ Somente após CI: publicar **apenas** `discardSinalAttachment` (revisada para li
 - GitHub Actions HML: execução **aprovada** https://github.com/Walterudisson/sinal-HML/actions/runs/39073527951.
 - Testes incluem cancelamento antes de criar task, durante envio, fechamento da janela de cancelamento após confirmar, exclusão mesmo com chegada tardia do objeto, idempotência e preservação de anexos `ready`.
 - A aprovação de CI não é evidência de limpeza real no Storage HML; requer smoke test depois da publicação controlada do backend e frontend.
+
+## Implantação efetiva e gate de homologação
+
+- **Firebase HML:** em 17/10/2026, o usuário confirmou `Deploy complete!` para `discardSinalAttachment` (atualização), `cleanupCanceledSinalUpload` (criação na região us-east1) e `cleanupFailedSinalAttachment` (criação na região southamerica-east1).
+- **IAM HML:** papel `roles/pubsub.publisher` atribuído ao agente oficial `service-338438459376@gs-project-accounts.iam.gserviceaccount.com` após verificação de identidade. Exclusivamente `sinaldesk-hml`.
+- **Artefatos:** retenção de imagens de contêiner em us-east1 ajustada a 7 dias pelo Firebase CLI.
+- **CI:** GitHub Actions na cabeça do PR #42, `f417f709318e6837f82ca168797eec2eb305e6cb`, execução https://github.com/Walterudisson/sinal-HML/actions/runs/39073621507, conclusão `success`.
+- **Frontend HML:** PR #42 integrado à `main`, merge `50469a491d3d7f4607b08114b96565ce3a0ec762`, com versão `1.7.0-B.1` e atualização do cache da PWA. A publicação pela GitHub Pages deve ser confirmada no navegador antes dos testes.
+- **Homologação:** pendente de teste real do cancelamento seguido de inspeção do Storage e de testes de permissão. Este registro de deploy **não autoriza promoção à produção**.
