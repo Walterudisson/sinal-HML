@@ -2,7 +2,7 @@
 
 **Iniciada:** 17/10/2026  
 **Base funcional:** HML v1.6.3.1  
-**Status:** fundação e backend administrativo implementados na branch; 33 testes automatizados aprovados em emuladores. Nada implantado no Firebase HML e uploads indisponíveis.
+**Status (atualizado em 17/10/2026):** fase A **homologada para infraestrutura HML e regressão básica**. Duas Cloud Functions e regras Firestore/Storage implantadas em `sinaldesk-hml`; 33 testes de CI/emuladores e 5 verificações funcionais no app aprovados. Interface de uploads ainda indisponível. Testes reais de autorização Storage/callables ainda pendentes.
 
 ## Objetivo
 Preparar a infraestrutura e as regras para anexos em sinais, com segurança multi-tenant
@@ -112,10 +112,9 @@ será autorizada ao publicar regras com `firestore.get/exists`.
   https://github.com/Walterudisson/sinal-HML/actions/runs/39044252103
 - **Concluído em código:** rotinas administrativas de revogação de usuários/tenants,
   autorização pelo Superadmin e regras de metadados em `firestore.rules`.
-- **Não realizado:** implantação das Cloud Functions e Rules no Firebase real,
-  fluxo `pending → ready` e limpeza de anexos órfãos, habilitação de uploads.
-- A aba **Regras** do console permanece na política `deny all` até a implantação
-  deliberada e validada; não colar regras diretamente sem essa validação.
+- **Já implantado em 17/10/2026:** duas Cloud Functions e Rules Firestore/Storage exclusivamente no Firebase HML.
+- **Não realizado:** fluxo `pending → ready`, limpeza de anexos órfãos, testes reais ponta a ponta de autorização/arquivos e habilitação de uploads.
+- A aba **Regras** do Console passou da política `deny all` para as regras restritivas de anexos no HML em 17/10/2026. O bloqueio residual dos demais caminhos foi preservado.
 
 ### Atenções para a próxima fase
 
@@ -176,5 +175,15 @@ Arquivos principais:
 anexos de conversa em sinais já existentes. Anexos durante a abertura do sinal
 precisarão de estratégia própria de estágio de upload na fase C.
 
-A fase A está pronta para revisão de segurança; não equivale a publicação ou
-homologação funcional do módulo de anexos.
+A fase A foi implantada no HML e homologada quanto à infraestrutura e aos cinco testes funcionais regressivos. Isso **não** equivale à homologação funcional ou de segurança ponta a ponta do módulo de anexos.
+
+## Resultado da homologação de infraestrutura em HML — 17/10/2026
+
+- Deploy seletivo concluído para `deactivateSinalUser` e `deactivateSinalTenant`, sem substituir as funções de notificações.
+- `firestore.rules` e `storage.rules` compilados e publicados em `sinaldesk-hml`.
+- IAM cross-service Storage↔Firestore autorizado durante o deploy.
+- Operador forneceu conteúdo publicado das duas Rules para revisão; rotas de anexos e bloqueio residual conferidos.
+- **Testes funcionais no app, confirmados pelo usuário: 5/5 aprovados:** login e Início solicitante; Meus sinais; mensagem enviada; Central atendente; mensagem recebida.
+- **Decisão:** Sprint **1.7.0-A homologada para infraestrutura e não regressão**. Não publicar em PRD; não habilitar anexos até testes reais e desenvolvimento da fase B.
+
+**Próxima fase (1.7.0-B):** confirmar upload no backend (`pending → ready`), arquivos órfãos, tratamento de falhas, interface da conversa, isolamento e consumo; validar as permissões reais por diferentes perfis e tenants.
