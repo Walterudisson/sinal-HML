@@ -8,6 +8,9 @@ on:
       - 'firebase.json'
       - 'tests/storage-*'
       - 'package.json'
+      - 'functions/access-revocation.js'
+      - 'functions/access-revocation.test.cjs'
+      - 'functions/index.js'
       - '.github/workflows/storage-security.yml'
   workflow_dispatch:
 
@@ -29,7 +32,11 @@ jobs:
           java-version: '21'
       - name: Instalar dependências isoladas
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Instalar dependências das Cloud Functions de HML
+        run: npm ci --prefix functions --ignore-scripts --no-audit --no-fund
       - name: Validar regras estáticas
         run: npm run test:storage:static
+      - name: Validar testes existentes das funções
+        run: npm test --prefix functions
       - name: Testar permissões reais nos emuladores Firestore e Storage
         run: npm run test:storage:emulator
