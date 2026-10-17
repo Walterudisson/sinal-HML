@@ -5,10 +5,10 @@ import { observeMessages, sendMessage } from './services/messages.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, initMySignalsFilters, renderTickets } from './ui/signal-composer.js';
 import { initCentral, setCentralContext, updateCentralTickets, updateCentralUnreadMessages } from './ui/central.js';
-import { initTicketDetail, setTicketDetailContext, resetTicketDetailUi, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
+import { initTicketDetail, isConversationVisible, setTicketDetailContext, resetTicketDetailUi, openTicketDetail, updateSelectedTicket } from './ui/ticket-detail.js';
 import { enablePushNotifications, disablePushNotifications, getPushState, markAllNotificationsRead, markNotificationRead, observeNotifications } from './services/notifications.service.js';
 import { getPwaState, getServiceWorkerRegistration, promptInstall, registerPwa } from './services/pwa.service.js';
-import { initNotificationsUi, renderNotifications, resetNotificationsUiSession } from './ui/notifications.js';
+import { initNotificationsUi, markVisibleConversationNotifications, renderNotifications, resetNotificationsUiSession } from './ui/notifications.js';
 import { initHome, updateHomeMyTickets, updateHomeCentralTickets, updateHomeNotifications } from './ui/home.js';
 
 const loadingScreen = document.querySelector('#loading-screen');
@@ -35,7 +35,6 @@ let currentContext = null;
 let unsubscribeMyTickets = null;
 let unsubscribeCentralTickets = null;
 let unsubscribeNotifications = null;
-let currentNotifications = [];
 let pwaRegistration = null;
 let uiInitialized = false;
 let centralInitialized = false;
@@ -82,7 +81,6 @@ function stopObservers() {
   unsubscribeMyTickets = null;
   unsubscribeCentralTickets = null;
   unsubscribeNotifications = null;
-  currentNotifications = [];
   renderTickets([]);
   updateCentralTickets([]);
   updateCentralUnreadMessages([]);
@@ -184,7 +182,8 @@ function ensureDetailInitialized(context) {
     },
     onGetPrivateResolution: (ticketId) => getPrivateResolution(currentContext, ticketId),
     onObserveStatusEvents: (ticketId, onData, onError) =>
-      observeStatusEvents(currentContext, ticketId, onData, onError)
+      observeStatusEvents(currentContext, ticketId, onData, onError),
+    onConversationVisible: markVisibleConversationNotifications
   });
   detailInitialized = true;
 }
@@ -197,16 +196,6 @@ function openConversation(ticket, options = {}) {
     options
   );
 
-  if (options.view === 'conversation') {
-    const unreadMessageNotifications = currentNotifications.filter(
-      (item) => item.type === 'new_message' && !item.isRead && item.ticketId === ticket.id
-    );
-    void Promise.all(
-      unreadMessageNotifications.map((item) =>
-        markNotificationRead(currentContext, item.id).catch(() => {})
-      )
-    );
-  }
 }
 
 function ensureCentralInitialized(context) {
@@ -296,7 +285,10 @@ function handleTicketDeepLink() {
 window.addEventListener('hashchange', handleTicketDeepLink);
 window.addEventListener('pageshow', handleTicketDeepLink);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) handleTicketDeepLink();
+  if (!document.hidden) {
+    handleTicketDeepLink();
+    markVisibleConversationNotifications();
+  }
 });
 
 // Alternativa quando o sistema operacional não permite navegar um cliente aberto.
@@ -315,7 +307,8 @@ function initSprint13Ui() {
   initNotificationsUi({
     onOpenTicket: openTicketById,
     onMarkRead: (id) => markNotificationRead(currentContext, id),
-    onMarkAllRead: (items) => markAllNotificationsRead(currentContext, items)
+    onMarkAllRead: (items) => markAllNotificationsRead(currentContext, items),
+    isConversationVisible
   });
 
   document.querySelector('#install-app-button').addEventListener('click', async () => {
@@ -395,7 +388,6 @@ async function renderSignedIn(user) {
     unsubscribeNotifications = observeNotifications(
       context,
       (items, changes) => {
-        currentNotifications = items;
         renderNotifications(items, changes, showToast);
         updateHomeNotifications(items);
         updateCentralUnreadMessages(
