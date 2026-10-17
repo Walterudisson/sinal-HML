@@ -99,3 +99,13 @@ O usuário relatou **“cancelou perfeitamente”** após executar o roteiro de 
 O usuário testou o envio de arquivo com mais de **10 MiB** em HML e confirmou que o Sinal **recusou o arquivo e apresentou mensagem informativa**. **Resultado: aprovado** para a validação do limite na interface.
 
 Este teste demonstra a rejeição pelo cliente; as regras do Firebase Storage foram verificadas separadamente em testes automatizados/emuladores. Permanecem pendentes o teste de formato não permitido, os controles de acesso multi-tenant no Firebase real e a validação de limpeza de órfãos/custos antes da homologação completa.
+
+## Incidente identificado após o teste de cancelamento — 17/10/2026
+
+**Relato do operador:** após a interface apresentar cancelamento com sucesso, uma imagem cancelada continuou armazenada no Firebase Storage HML. **O cancelamento não está homologado quanto à remoção do arquivo.** O teste anterior demonstrou apenas o comportamento visual; foi reclassificado como falho do ponto de vista de integridade/limpeza de dados.
+
+**Causa identificada por revisão de código:** o cliente anterior só chamava o backend de descarte quando o upload terminava normalmente (`uploaded=true`); uploads cancelados antes do término não solicitavam remoção de objetos que tivessem sido parcialmente ou totalmente persistidos.
+
+**Correção em desenvolvimento:** PR #42, hotfix 1.7.0-B.1. Alterar a ordem de metadados `pending`, disparar descarte também em cancelamentos precoces e cobrir corridas de finalização com dois gatilhos idempotentes.
+
+**Decisão:** **homologação da 1.7.0-B suspensa** até implantar e testar a correção em HML, incluindo inspeção direta do Storage para garantir ausência de objeto após cancelamento. Não promover a PRD.
