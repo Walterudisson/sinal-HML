@@ -28,7 +28,7 @@ test('Mais reúne organização, perfil, ambiente e versão', () => {
   }
 });
 test('Versão possui fonte única e é preenchida também na barra lateral', () => {
-  assert.ok(version.includes("export const APP_VERSION = '1.6.3';"));
+  assert.ok(version.includes("export const APP_VERSION = '1.6.3.1';"));
   assert.ok(html.includes('id="sidebar-app-environment"'));
   assert.ok(appShell.includes("'#sidebar-app-environment'"));
   assert.ok(appShell.includes("environment.production ? 'PRD' : 'HML'"));
@@ -37,7 +37,7 @@ test('Versão possui fonte única e é preenchida também na barra lateral', () 
   assert.ok(appShell.includes("import { APP_VERSION } from '../config/version.js'"));
   assert.ok(appShell.includes("'#sidebar-app-version'"));
   assert.ok(appShell.includes("'#more-app-version'"));
-  assert.ok(!html.includes('v1.6.3'), 'Não duplicar versão fixa no HTML');
+  assert.ok(!html.includes('v1.6.3.1'), 'Não duplicar versão fixa no HTML');
 });
 test('Ambiente é obtido do Firebase HML, sem valor PRD no código', () => {
   assert.ok(appShell.includes("import { environment } from '../config/firebase.js'"));
@@ -45,7 +45,7 @@ test('Ambiente é obtido do Firebase HML, sem valor PRD no código', () => {
   assert.ok(firebase.includes("projectId: 'sinaldesk-hml'"));
 });
 test('PWA invalida cache para a nova release sem mudar o projeto Firebase', () => {
-  assert.ok(sw.includes("sinal-shell-hml-1.6.3-stability"));
+  assert.ok(sw.includes("sinal-shell-hml-1.6.3.1-conversation-notifications"));
   assert.ok(sw.includes("projectId: 'sinaldesk-hml'"));
 });
 test('Regras têm alvo HML definido explicitamente', () => {
