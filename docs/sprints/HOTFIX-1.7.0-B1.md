@@ -49,3 +49,10 @@ Somente após CI: publicar **apenas** `discardSinalAttachment` (revisada para li
 - **CI:** GitHub Actions na cabeça do PR #42, `f417f709318e6837f82ca168797eec2eb305e6cb`, execução https://github.com/Walterudisson/sinal-HML/actions/runs/39073621507, conclusão `success`.
 - **Frontend HML:** PR #42 integrado à `main`, merge `50469a491d3d7f4607b08114b96565ce3a0ec762`, com versão `1.7.0-B.1` e atualização do cache da PWA. A publicação pela GitHub Pages deve ser confirmada no navegador antes dos testes.
 - **Homologação:** pendente de teste real do cancelamento seguido de inspeção do Storage e de testes de permissão. Este registro de deploy **não autoriza promoção à produção**.
+
+## Reteste funcional após publicação da versão 1.7.0-B.1
+
+- Em 17/10/2026, o usuário confirmou que o Sinal HML exibe a **versão 1.7.0-B.1**.
+- O usuário informou que **testes de envio e cancelamento foram realizados com sucesso** na interface dessa versão.
+- **Pendência crítica:** ainda não foi comprovado pelo usuário, após esse novo teste, se o objeto de upload cancelado desapareceu do **Firebase Storage**. O sucesso visual do cancelamento não encerra o incidente original. Inspecionar diretamente o bucket HML após aguardar processamento assíncrono dos gatilhos e conferir eventuais falhas nos logs.
+- **Homologação:** manter suspensa até essa evidência e os testes de segurança pendentes. Não promover produção.
