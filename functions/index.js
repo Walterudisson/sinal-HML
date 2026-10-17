@@ -135,17 +135,16 @@ async function createAndPush({ tenantId, uid, type, actorUid, title, body, ticke
 // Sprint 1.7.0-A: endpoints administrativos exclusivamente para Superadmin.
 // Ainda NÃO implantados em HML. Requerem testes de integração e aprovação.
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { deactivateUserAccess, deactivateTenantAccess } = require('./access-revocation');
+const { authorizeSuperadmin, deactivateUserAccess, deactivateTenantAccess } = require('./access-revocation');
 
 async function requireGlobalSuperadmin(request) {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Autenticação obrigatória.');
-  const profile = await db.doc('users/' + uid).get();
-  if (!profile.exists || profile.data().status !== 'active' ||
-      profile.data().platformRole !== 'superadmin') {
+  try {
+    return await authorizeSuperadmin(db, uid);
+  } catch (_) {
     throw new HttpsError('permission-denied', 'Operação exclusiva do Superadmin global.');
   }
-  return uid;
 }
 
 const revocationCallableOptions = {
