@@ -8,7 +8,7 @@
 
 - [x] Bucket HML e Blaze verificados por captura no Console Firebase.
 - [x] Emuladores: Storage + Firestore Rules, múltiplos tenants, revogação, falhas parciais.
-- [ ] Confirmar orçamento e alertas do Google Cloud Billing para `sinaldesk-hml`.
+- [x] Orçamento existente confirmado pelo responsável em 17/10/2026 para o HML. Conferir no Console os alertas configurados (limiares e destinatários) antes de habilitar uploads.
 - [ ] Confirmar que a aba Regras do Storage ainda apresenta `allow read, write: if false;`.
 - [ ] Conferir que não houve edição posterior de Firestore Rules no Console (a CLI substitui a versão do Console).
 - [ ] Registrar um backup/exportação das regras atuais do Firestore. A regra de bloqueio do Storage está no arquivo `docs/deploy/storage-deny-all.rules`.
