@@ -11,6 +11,10 @@ export function initHome(options) {
   currentContext = options.context;
   onOpenTicket = options.onOpenTicket;
   onClaimTicket = options.onClaimTicket;
+  // Evita exibir indicadores e mensagens do usuário anterior durante outro login.
+  myTickets = [];
+  centralTickets = [];
+  notifications = [];
   renderHome();
 }
 
@@ -229,12 +233,16 @@ function bindHomeActions() {
     button.addEventListener('click', async () => {
       const ticket = centralTickets.find((item) => item.id === button.dataset.homeClaim);
       if (!ticket || !onClaimTicket) return;
+      const originalText = button.textContent;
       button.disabled = true;
       button.textContent = 'Assumindo...';
       try {
         await onClaimTicket(ticket);
+      } catch (_) {
+        // O chamador já apresenta o toast de erro. Evita rejeição não tratada.
       } finally {
         button.disabled = false;
+        button.textContent = originalText;
       }
     });
   });
