@@ -2,6 +2,7 @@ import { observeAuth, login, logout, requestPasswordReset } from './services/aut
 import { loadUserContext } from './services/context.service.js';
 import { createTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
+import { observeAttachments, uploadConversationAttachment, fetchPrivateAttachment } from './services/attachments.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
 import { initSignalComposer, initMySignalsFilters, renderTickets } from './ui/signal-composer.js';
 import { initCentral, setCentralContext, updateCentralTickets, updateCentralUnreadMessages } from './ui/central.js';
@@ -183,7 +184,13 @@ function ensureDetailInitialized(context) {
     onGetPrivateResolution: (ticketId) => getPrivateResolution(currentContext, ticketId),
     onObserveStatusEvents: (ticketId, onData, onError) =>
       observeStatusEvents(currentContext, ticketId, onData, onError),
-    onConversationVisible: markVisibleConversationNotifications
+    onConversationVisible: markVisibleConversationNotifications,
+    onObserveAttachments: (ticketId, onData, onError) =>
+      observeAttachments(currentContext, ticketId, onData, onError),
+    onUploadAttachment: (ticket, file, callbacks) =>
+      uploadConversationAttachment(currentContext, ticket, file, callbacks),
+    onFetchAttachment: (ticket, attachment) =>
+      fetchPrivateAttachment(currentContext, ticket, attachment)
   });
   detailInitialized = true;
 }
