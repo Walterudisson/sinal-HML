@@ -18,6 +18,9 @@ on:
       - 'js/services/attachment-cancel.mjs'
       - 'tests/attachment-cancel-1.7.0-b.test.mjs'
       - 'js/ui/ticket-detail.js'
+      - 'js/ui/overlay-history.js'
+      - 'js/ui/signal-composer.js'
+      - 'tests/overlay-preview-navigation-1.7.0-c.test.mjs'
       - 'js/main.js'
       - 'index.html'
       - '.github/workflows/storage-security.yml'
@@ -53,6 +56,8 @@ jobs:
           node --check js/ui/ticket-detail.js
       - name: Testar cancelamento de uploads no cliente
         run: node --test tests/attachment-cancel-1.7.0-b.test.mjs
+      - name: Testar Voltar do Android no visualizador de imagens
+        run: node --test tests/overlay-preview-navigation-1.7.0-c.test.mjs
       - name: Validar regras estáticas
         run: npm run test:storage:static
       - name: Validar testes existentes das funções

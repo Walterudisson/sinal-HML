@@ -144,9 +144,30 @@ function initAuthenticatedUi() {
   initNavigation();
   initMySignalsFilters();
   initSignalComposer({
-    onSubmit: async (payload) => {
-      const ticket = await createTicket(currentContext, payload);
-      showToast(`${ticket.code} foi enviado e já aparece em Meus sinais.`, 'success', { title: 'Sinal enviado' });
+    onSubmit: async (payload, { file, onProgress, onTask, onTicketCreated } = {}) => {
+      const context = currentContext;
+      // Criar o sinal antes de transferir o anexo: nenhuma falha de upload
+      // pode desfazer ou duplicar um sinal que já foi gravado no Firestore.
+      const ticket = await createTicket(context, payload);
+      onTicketCreated?.(ticket.code);
+      if (!file) {
+        showToast(`${ticket.code} foi enviado e já aparece em Meus sinais.`, 'success', { title: 'Sinal enviado' });
+        return;
+      }
+      try {
+        // Reutiliza o protocolo privado de anexos da conversa; a prévia
+        // aparece na linha do tempo, sem alterações de Rules ou Functions.
+        await uploadConversationAttachment(context, ticket, file, { onProgress, onTask });
+        showToast(`${ticket.code} enviado com anexo. Você pode acompanhá-lo em Meus sinais.`, 'success', { title: 'Sinal enviado' });
+      } catch (error) {
+        const canceled = error?.code === 'storage/canceled';
+        showToast(
+          canceled
+            ? `${ticket.code} foi criado. O anexo foi cancelado; você poderá enviá-lo pela conversa.`
+            : `${ticket.code} foi criado, mas o anexo não foi enviado. Você poderá tentar novamente pela conversa.`,
+          'warning', { title: 'Sinal salvo sem anexo' }
+        );
+      }
     }
   });
   uiInitialized = true;
