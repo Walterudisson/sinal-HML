@@ -90,6 +90,7 @@ export function showToast(message, type = 'info', options = {}) {
   const variants = {
     success: { shell: 'border-emerald-200 bg-white text-slate-900', icon: 'bg-emerald-50 text-emerald-700', symbol: '✓' },
     error: { shell: 'border-rose-200 bg-white text-slate-900', icon: 'bg-rose-50 text-rose-700', symbol: '!' },
+    warning: { shell: 'border-amber-200 bg-white text-slate-900', icon: 'bg-amber-50 text-amber-800', symbol: '!' },
     info: { shell: 'border-sky-200 bg-white text-slate-900', icon: 'bg-sky-50 text-sky-700', symbol: 'i' }
   };
 
