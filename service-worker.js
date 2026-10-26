@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.7.0-b.1-cancel-fix';
+const CACHE_NAME = 'sinal-shell-hml-1.7.0-c-opening-attachments-preview-back';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
