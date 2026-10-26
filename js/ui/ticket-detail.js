@@ -1,7 +1,10 @@
 import {
   categoryLabels, priorityLabels, priorityClasses, statusLabels, requesterStatusLabels, formatDate, escapeHtml
 } from './signal-composer.js';
-import { forceOverlayClosed, openOverlayHistory, openOverlaySubstate, requestOverlayClose, requestOverlaySubstateClose } from './overlay-history.js';
+import {
+  forceOverlayClosed, openOverlayHistory, openOverlaySubstate, openOverlayNestedSubstate,
+  requestOverlayClose, requestOverlaySubstateClose, requestOverlayNestedSubstateClose
+} from './overlay-history.js';
 
 let currentContext = null;
 let selectedTicket = null;
@@ -31,6 +34,7 @@ let activeUploadTask = null;
 let uploadBusy = false;
 let activePreviewUrl = null;
 let previewRequestId = 0;
+let previewReturnFocus = null;
 
 const publicSuggestions = [
   'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
@@ -54,7 +58,7 @@ export function isConversationVisible(ticketId) {
 }
 
 function setTicketView(view) {
-  if (view !== 'conversation') closeAttachmentPreview();
+  if (view !== 'conversation') hideAttachmentPreview();
   activeView = view;
   for (const [name, id] of [
     ['details', 'ticket-details-view'],
@@ -126,7 +130,7 @@ function scrollConversationToBottom() {
   });
 }
 
-function closeAttachmentPreview() {
+function hideAttachmentPreview() {
   ++previewRequestId;
   const overlay = document.querySelector('#attachment-preview');
   if (overlay) overlay.classList.add('hidden');
@@ -134,6 +138,15 @@ function closeAttachmentPreview() {
   if (image) image.removeAttribute('src');
   if (activePreviewUrl) URL.revokeObjectURL(activePreviewUrl);
   activePreviewUrl = null;
+  const target = previewReturnFocus;
+  previewReturnFocus = null;
+  if (target?.isConnected && activeView === 'conversation') target.focus({ preventScroll: true });
+}
+
+function closeAttachmentPreview() {
+  const overlay = document.querySelector('#attachment-preview');
+  if (!overlay || overlay.classList.contains('hidden')) return;
+  requestOverlayNestedSubstateClose('ticket-detail', 'attachment-preview', hideAttachmentPreview);
 }
 
 async function openPrivateAttachment(attachment, button) {
@@ -156,7 +169,15 @@ async function openPrivateAttachment(attachment, button) {
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } else {
-      closeAttachmentPreview();
+      hideAttachmentPreview();
+      const historyReady = openOverlayNestedSubstate(
+        'ticket-detail', 'conversation', 'attachment-preview', hideAttachmentPreview
+      );
+      if (!historyReady) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      previewReturnFocus = button;
       activePreviewUrl = url;
       document.querySelector('#attachment-preview-name').textContent = attachment.fileName || 'Imagem';
       document.querySelector('#attachment-preview-image').src = url;
@@ -502,7 +523,7 @@ export function initTicketDetail(options) {
 export function openTicketDetail(ticket, observeMessages, options = {}) {
   const ticketChanged = selectedTicket?.id !== ticket.id;
   if (ticketChanged) {
-    closeAttachmentPreview();
+    hideAttachmentPreview();
     activeUploadTask?.cancel();
     latestAttachments = [];
     latestMessages = [];
@@ -578,6 +599,10 @@ export function updateSelectedTicket(ticket) {
 }
 
 export function closeTicketDetail() {
+  if (!document.querySelector('#attachment-preview')?.classList.contains('hidden')) {
+    closeAttachmentPreview();
+    return;
+  }
   if (activeView !== 'details') {
     goToDetails();
     return;
@@ -590,7 +615,7 @@ function finalizeClose() {
   unsubscribeAttachments?.();
   unsubscribeStatusEvents?.();
   activeUploadTask?.cancel();
-  closeAttachmentPreview();
+  hideAttachmentPreview();
   unsubscribeMessages = null;
   unsubscribeAttachments = null;
   unsubscribeStatusEvents = null;
