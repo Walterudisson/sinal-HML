@@ -35,6 +35,7 @@ let uploadBusy = false;
 let activePreviewUrl = null;
 let previewRequestId = 0;
 let previewReturnFocus = null;
+let previewClosePending = false;
 
 const publicSuggestions = [
   'Informamos que os ajustes necessários foram realizados e o problema relatado foi solucionado.',
@@ -131,6 +132,7 @@ function scrollConversationToBottom() {
 }
 
 function hideAttachmentPreview() {
+  previewClosePending = false;
   ++previewRequestId;
   const overlay = document.querySelector('#attachment-preview');
   if (overlay) overlay.classList.add('hidden');
@@ -145,7 +147,8 @@ function hideAttachmentPreview() {
 
 function closeAttachmentPreview() {
   const overlay = document.querySelector('#attachment-preview');
-  if (!overlay || overlay.classList.contains('hidden')) return;
+  if (!overlay || overlay.classList.contains('hidden') || previewClosePending) return;
+  previewClosePending = true;
   requestOverlayNestedSubstateClose('ticket-detail', 'attachment-preview', hideAttachmentPreview);
 }
 
