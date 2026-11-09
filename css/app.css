@@ -368,6 +368,36 @@ body.overlay-open { overflow: hidden; }
 
 .central-ticket:hover { background: #fbfdff; }
 
+/* Hotfix 1.7.1.1: ações abaixo do conteúdo em telas pequenas. */
+@media (max-width: 639px) {
+  .central-ticket {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: .8rem;
+  }
+
+  .central-ticket-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem;
+  }
+
+  .central-ticket-actions > button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: .5rem;
+    white-space: nowrap;
+  }
+
+  .central-ticket-actions > button:only-child {
+    grid-column: 2;
+  }
+
+  .central-ticket-actions:not(:has(button)) {
+    display: none;
+  }
+}
+
 
 .ticket-detail-panel {
   padding-bottom: env(safe-area-inset-bottom);
