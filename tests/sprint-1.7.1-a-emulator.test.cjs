@@ -273,3 +273,14 @@ test('classificações concorrentes não sobrescrevem histórico desatualizado',
   assert.equal(saved.category,'acesso');
   assert.equal(saved.priority,'normal');
 });
+
+
+test('histórico administrativo é privado para a equipe, inclusive contra solicitante do sinal',async()=>{
+  const o=opening();await assertSucceeds(o.commit());
+  const old=(await getDoc(o.ticketRef)).data();
+  const result=triage('bob',a,o.tid,old,{...old,category:'rede',priority:'alta'});
+  await assertSucceeds(result.promise);
+  await assertSucceeds(getDoc(doc(database('bob'),result.eventRef.path)));
+  await assertFails(getDoc(doc(database('alice'),result.eventRef.path)));
+  await assertFails(getDoc(doc(database('mallory'),result.eventRef.path)));
+});
