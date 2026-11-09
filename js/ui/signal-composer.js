@@ -445,10 +445,10 @@ function requesterContext(ticket) {
 
 function ticketMarkup(ticket, compact = false) {
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
-  const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
+  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
+  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
   const status = requesterStatusLabels[ticket.status] ?? ticket.status ?? 'Enviado';
-  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
+  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
   const contextLabel = requesterContext(ticket);
   const activityAt = ticket.lastInteractionAt || ticket.updatedAt || ticket.createdAt;
 
