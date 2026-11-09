@@ -318,10 +318,10 @@ function centralContext(ticket) {
 
 function markup(ticket) {
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
+  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
-  const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
-  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
+  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
+  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
   const contextLabel = centralContext(ticket);
   const hasUnreadMessage = unreadMessageTicketIds.has(ticket.id);
   const interactionAt = interactionTimestamp(ticket);
