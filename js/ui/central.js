@@ -216,7 +216,7 @@ function renderCentral() {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       const ticket = tickets.find((item) => item.id === button.dataset.triageTicket);
-      if (ticket && canTriageTicket(currentContext, ticket)) onOpenTicket?.(ticket);
+      if (ticket && canTriageTicket(currentContext, ticket)) onOpenTicket?.(ticket, { focusTriage: true });
     });
   });
 
