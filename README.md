@@ -1,30 +1,27 @@
-# Sinal — Homologação (HML)
+# Sinal | Homologação (HML)
 
-## Versão em homologação
+## Versão em preparação: v1.7.1
 
-**v1.7.0-C — Anexos na abertura do sinal e Voltar Android na prévia** (25/10/2026).
+**v1.7.1 | Conversa Primeiro e Triagem Inteligente** (09/11/2026).
 
-- [Sprint 1.7.0-C](docs/sprints/SPRINT-1.7.0-C.md): o solicitante pode anexar um JPG/PNG/WebP ou PDF (até 10 MiB) no formulário **Mandar um sinal**.
-- O sinal é salvo antes da transferência. Se o upload falhar ou for cancelado, o sinal permanece criado e o usuário poderá enviar o arquivo pela conversa.
-- O botão físico **Voltar** do Android, ao visualizar uma imagem na conversa, agora fecha somente a prévia. A segunda ação de Voltar retorna aos dados do sinal.
-- Reutilização da infraestrutura privada de anexos da **1.7.0-B.1**. Sem mudança de Cloud Functions, regras Firebase ou esquema de dados.
-- Cache PWA renovado para `sinal-shell-hml-1.7.0-c-opening-attachments-preview-back`.
-- Código integrado pela [PR #43](https://github.com/Walterudisson/sinal-HML/pull/43), com testes automatizados aprovados.
+- Solicitante abre o sinal por mensagem única, com anexo opcional, sem informar título, categoria ou prioridade.
+- Título técnico automático e primeira mensagem criados no mesmo batch Firestore.
+- Central oferece filtro e indicador **Sem triagem**; equipe classifica, define prioridade e pode corrigir o título.
+- Histórico de triagem interno, transacional, auditável e protegido pelas Security Rules.
+- Correções de navegação Android preservadas; identificação em **Mais → HML v1.7.1** e renovação do cache PWA.
+- A implementação está isolada no [PR #45](https://github.com/Walterudisson/sinal-HML/pull/45). **Não foi publicada no HML.**
+- Testes automatizados no CI aprovados, sem substituir homologação manual.
 
-**Aguardando homologação funcional no Android e navegador.** Testes manuais de isolamento entre usuários/tenants da 1.7.0-B permanecem pendentes; não confundir aprovação de CI com validação real do isolamento multi-tenant.
+**Publicação obrigatoriamente coordenada:** as regras novas não aceitam o formulário anterior. Consultar o [roteiro de deploy HML](docs/sprints/DEPLOY-SPRINT-1.7.1-HML.md) antes de qualquer merge, deploy ou ação na `main`. A implantação das Rules requer a conta autorizada no Firebase `sinaldesk-hml`.
 
-## Conferência rápida
+### Materiais da sprint
+- [Especificação 1.7.1](docs/sprints/SPRINT-1.7.1.md)
+- [Testes de homologação 1.7.1](docs/sprints/HOMOLOGACAO-SPRINT-1.7.1.md)
+- [Plano técnico e resultados](docs/sprints/SPRINT-1.7.1-IMPLEMENTACAO.md)
 
-1. Acesse https://walterudisson.github.io/sinal-HML/ e confira `HML v1.7.0-C` em **Mais**, depois da publicação do GitHub Pages.
-2. Com o **Solicitante Teste**, abra um sinal sem arquivo e outro com imagem opcional; confirme que ambos aparecem em **Meus sinais**.
-3. Abra o sinal com imagem, entre na conversa, toque na imagem e pressione **Voltar** do Android: apenas a imagem fecha.
-4. Pressione **Voltar** novamente: a conversa fecha e exibe os detalhes do sinal.
-5. Faça um teste de cancelamento e confirme que o sinal não é apagado.
+## Versão atualmente publicada
 
-## Ambientes
-
-- **HML:** repositório `Walterudisson/sinal-HML`, Firebase `sinaldesk-hml`.
-- **PRD:** repositório `Walterudisson/sinal`, Firebase `sinaldesk`, versão 1.6.3.1. **PRD não foi alterado nesta sprint.**
+**HML v1.7.0-C**, homologação funcional consolidada. **PRD v1.6.3.1**, sem alterações.
 
 ## Histórico
 
