@@ -335,7 +335,10 @@ service cloud.firestore {
 
         // Eventos de triagem imutáveis, vinculados à mesma escrita do ticket.
         match /triageEvents/{eventId} {
-          allow read: if canReadTicket(tenantId, ticketId);
+          // Histórico administrativo: não disponibilizar os dados internos
+          // para o solicitante, mesmo sendo participante do sinal.
+          allow read: if supportMember(tenantId)
+            && canReadTicket(tenantId, ticketId);
           allow create: if supportMember(tenantId)
             && request.resource.data.keys().hasOnly([
               'type','fromTitle','toTitle','fromCategory','toCategory',
