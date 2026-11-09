@@ -1,6 +1,6 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { createTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { prepareConversationOpening, createConversationTicket, updateTicketTriage, observeTriageEvents, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { observeAttachments, uploadConversationAttachment, fetchPrivateAttachment } from './services/attachments.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
@@ -144,30 +144,50 @@ function initAuthenticatedUi() {
   initNavigation();
   initMySignalsFilters();
   initSignalComposer({
-    onSubmit: async (payload, { file, onProgress, onTask, onTicketCreated } = {}) => {
+    prepareAttempt: () => prepareConversationOpening(currentContext),
+    getSessionKey: () => currentContext
+      ? currentContext.tenant.id + ':' + currentContext.firebaseUser.uid : '',
+    onCreated: async ({ ticket, tenantId, requesterUid }) => {
+      // A confirmação não pode abrir dados de outra conta após logout/login.
+      if (!currentContext || currentContext.tenant.id !== tenantId
+        || currentContext.firebaseUser.uid !== requesterUid) return;
+      try {
+        const savedTicket = await getTicketById(currentContext, ticket.id);
+        openConversation(savedTicket, { view: 'conversation' });
+      } catch (_) {
+        // O sinal já foi confirmado; se caiu a conexão, priorizar a conversa
+        // com os dados em memória em vez de ocultar o protocolo.
+        openConversation(ticket, { view: 'conversation' });
+      }
+    },
+    onSubmit: async (payload, { attempt, file, onProgress, onTask, onTicketCreated } = {}) => {
       const context = currentContext;
-      // Criar o sinal antes de transferir o anexo: nenhuma falha de upload
-      // pode desfazer ou duplicar um sinal que já foi gravado no Firestore.
-      const ticket = await createTicket(context, payload);
+      // Sinal e primeira mensagem pública são uma gravação atômica.
+      // Reenvios com confirmação incerta reutilizam os IDs de attempt.
+      const ticket = await createConversationTicket(context, { message: payload.message, attempt });
       onTicketCreated?.(ticket.code);
       if (!file) {
-        showToast(`${ticket.code} foi enviado e já aparece em Meus sinais.`, 'success', { title: 'Sinal enviado' });
-        return;
+        showToast(ticket.code + ' enviado. Continue a conversa com o atendimento.', 'success', {
+          title: 'Sinal enviado'
+        });
+      } else {
+        try {
+          // O anexo é transferido APÓS gravar sinal e primeira mensagem.
+          // Falha/cancelamento de upload nunca desfaz a mensagem inicial.
+          await uploadConversationAttachment(context, ticket, file, { onProgress, onTask });
+          showToast(ticket.code + ' enviado com anexo.', 'success', { title: 'Sinal enviado' });
+        } catch (error) {
+          const canceled = error?.code === 'storage/canceled';
+          showToast(
+            canceled
+              ? ticket.code + ' foi enviado. O anexo foi cancelado; envie-o pela conversa.'
+              : ticket.code + ' foi enviado, mas o anexo falhou. Você pode reenviá-lo pela conversa.',
+            'warning',
+            { title: 'Sinal salvo sem anexo' }
+          );
+        }
       }
-      try {
-        // Reutiliza o protocolo privado de anexos da conversa; a prévia
-        // aparece na linha do tempo, sem alterações de Rules ou Functions.
-        await uploadConversationAttachment(context, ticket, file, { onProgress, onTask });
-        showToast(`${ticket.code} enviado com anexo. Você pode acompanhá-lo em Meus sinais.`, 'success', { title: 'Sinal enviado' });
-      } catch (error) {
-        const canceled = error?.code === 'storage/canceled';
-        showToast(
-          canceled
-            ? `${ticket.code} foi criado. O anexo foi cancelado; você poderá enviá-lo pela conversa.`
-            : `${ticket.code} foi criado, mas o anexo não foi enviado. Você poderá tentar novamente pela conversa.`,
-          'warning', { title: 'Sinal salvo sem anexo' }
-        );
-      }
+      return { ticket, tenantId: context.tenant.id, requesterUid: context.firebaseUser.uid };
     }
   });
   uiInitialized = true;
@@ -205,6 +225,14 @@ function ensureDetailInitialized(context) {
     onGetPrivateResolution: (ticketId) => getPrivateResolution(currentContext, ticketId),
     onObserveStatusEvents: (ticketId, onData, onError) =>
       observeStatusEvents(currentContext, ticketId, onData, onError),
+    onObserveTriageEvents: (ticketId, onData, onError) =>
+      observeTriageEvents(currentContext, ticketId, onData, onError),
+    onSaveTriage: async (ticket, changes) => {
+      await updateTicketTriage(currentContext, ticket, changes);
+      showToast('Categoria, prioridade e título atualizados.', 'success', {
+        title: 'Triagem salva'
+      });
+    },
     onConversationVisible: markVisibleConversationNotifications,
     onObserveAttachments: (ticketId, onData, onError) =>
       observeAttachments(currentContext, ticketId, onData, onError),
@@ -402,7 +430,7 @@ async function renderSignedIn(user) {
     unsubscribeMyTickets = observeMyTickets(
       context,
       (tickets) => {
-        renderTickets(tickets, openConversation);
+        renderTickets(tickets, ticket => openConversation(ticket, { view: 'conversation' }));
         updateHomeMyTickets(tickets);
         tickets.forEach(updateSelectedTicket);
       },

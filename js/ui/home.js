@@ -1,4 +1,5 @@
 import { escapeHtml, formatRelativeAge, priorityClasses, priorityLabels } from './signal-composer.js';
+import { needsQueueAttention, queuePriorityScore } from '../services/triage-domain.mjs';
 
 let currentContext = null;
 let myTickets = [];
@@ -114,8 +115,8 @@ function renderSupportHome() {
     });
 
   [...unassigned]
-    .filter((ticket) => ['urgente', 'alta'].includes(ticket.priority))
-    .sort((a, b) => priorityRank(b.priority) - priorityRank(a.priority) || activityMillis(a) - activityMillis(b))
+    .filter(needsQueueAttention)
+    .sort((a, b) => queuePriorityScore(b) - queuePriorityScore(a) || activityMillis(a) - activityMillis(b))
     .forEach((ticket) => {
       if (!seen.has(ticket.id)) {
         seen.add(ticket.id);
@@ -172,8 +173,8 @@ function notificationMarkup(item) {
 
 function supportNowMarkup(item) {
   const { ticket, kind } = item;
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
-  const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
+  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
+  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-amber-50 text-amber-800';
 
   if (kind === 'message') {
     return `<article class="home-action-card">
@@ -246,10 +247,6 @@ function bindHomeActions() {
       }
     });
   });
-}
-
-function priorityRank(priority) {
-  return ({ urgente: 4, alta: 3, normal: 2, baixa: 1 })[priority] ?? 0;
 }
 
 function setText(selector, value) {

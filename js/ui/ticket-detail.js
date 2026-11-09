@@ -5,6 +5,7 @@ import {
   forceOverlayClosed, openOverlayHistory, openOverlaySubstate, openOverlayNestedSubstate,
   requestOverlayClose, requestOverlaySubstateClose, requestOverlayNestedSubstateClose
 } from './overlay-history.js';
+import { canTriageTicket, pendingTriage, describeTriageEvent } from '../services/triage-domain.mjs';
 
 let currentContext = null;
 let selectedTicket = null;
@@ -16,6 +17,11 @@ let onResolve = null;
 let onReopen = null;
 let onGetPrivateResolution = null;
 let onObserveStatusEvents = null;
+let onObserveTriageEvents = null;
+let onSaveTriage = null;
+let unsubscribeTriageEvents = null;
+let triageSaving = false;
+let triageDirty = false;
 let privateRequestId = 0;
 let messagesSnapshotInitialized = false;
 let previousMessageIds = [];
@@ -244,6 +250,59 @@ async function loadPrivateResolution(ticket) {
   }
 }
 
+function renderTriageHistory(events) {
+  const list = document.querySelector('#detail-triage-history');
+  if (!list) return;
+  if (!Array.isArray(events) || events.length === 0) {
+    list.innerHTML = '<li>Nenhuma alteração registrada.</li>';
+    return;
+  }
+  list.innerHTML = events.map((event) => {
+    const changes = describeTriageEvent(event, categoryLabels, priorityLabels);
+    const label = event.type === 'classified' ? 'Classificado'
+      : event.type === 'title_changed' ? 'Título ajustado' : 'Classificação atualizada';
+    return '<li class="rounded-xl bg-white/80 p-2">' +
+      '<strong class="block">' + escapeHtml(label) + '</strong>' +
+      '<span class="block mt-1">' + escapeHtml(changes || 'Sem alterações visíveis') + '</span>' +
+      '<span class="block mt-1 text-slate-500">' + escapeHtml(event.actorName || 'Equipe') +
+      ' · ' + escapeHtml(formatDate(event.createdAt)) + '</span></li>';
+  }).join('');
+}
+
+function refreshTriagePanel(ticket) {
+  const panel = document.querySelector('#detail-triage-panel');
+  const support = ['admin','supervisor','agente'].includes(currentContext?.membership?.role);
+  panel.classList.toggle('hidden', !support);
+  if (!support) return;
+  const allowed = canTriageTicket(currentContext, ticket);
+  const title = document.querySelector('#detail-triage-title-input');
+  const category = document.querySelector('#detail-triage-category');
+  const priority = document.querySelector('#detail-triage-priority');
+  const submit = document.querySelector('#detail-triage-submit');
+  const label = document.querySelector('#detail-triage-status');
+  label.textContent = pendingTriage(ticket) ? 'Sem triagem' : 'Classificado';
+  label.className = pendingTriage(ticket)
+    ? 'ticket-badge bg-amber-100 text-amber-900'
+    : 'ticket-badge bg-emerald-100 text-emerald-900';
+  for (const field of [title, category, priority]) field.disabled = !allowed || triageSaving;
+  submit.disabled = !allowed || triageSaving;
+  if (!triageDirty) {
+    title.value = ticket.title || '';
+    category.value = ticket.category || '';
+    priority.value = ticket.priority || '';
+  }
+  const error = document.querySelector('#detail-triage-error');
+  if (!allowed) {
+    error.textContent = ticket.status === 'resolved'
+      ? 'Sinal resolvido: histórico disponível para consulta.'
+      : 'Somente o atendente responsável ou a administração pode alterar este sinal.';
+    error.classList.remove('hidden');
+  } else if (!triageSaving) {
+    error.textContent = '';
+    error.classList.add('hidden');
+  }
+}
+
 function renderStatusHistory(events) {
   currentStatusEvents = Array.isArray(events) ? events : [];
   const list = document.querySelector('#detail-status-history');
@@ -304,10 +363,54 @@ export function initTicketDetail(options) {
   onReopen = options.onReopen;
   onGetPrivateResolution = options.onGetPrivateResolution;
   onObserveStatusEvents = options.onObserveStatusEvents;
+  onObserveTriageEvents = options.onObserveTriageEvents;
+  onSaveTriage = options.onSaveTriage;
   onConversationVisible = options.onConversationVisible;
   onUploadAttachment = options.onUploadAttachment;
   onObserveAttachments = options.onObserveAttachments;
   onFetchAttachment = options.onFetchAttachment;
+
+  const triageForm = document.querySelector('#detail-triage-form');
+  for (const selector of ['#detail-triage-title-input','#detail-triage-category','#detail-triage-priority']) {
+    document.querySelector(selector).addEventListener('input', () => { triageDirty = true; });
+    document.querySelector(selector).addEventListener('change', () => { triageDirty = true; });
+  }
+  triageForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!selectedTicket || triageSaving || !canTriageTicket(currentContext, selectedTicket)) return;
+    const title = document.querySelector('#detail-triage-title-input').value.trim();
+    const category = document.querySelector('#detail-triage-category').value || null;
+    const priority = document.querySelector('#detail-triage-priority').value || null;
+    const error = document.querySelector('#detail-triage-error');
+    error.classList.add('hidden');
+    if (title.length < 3 || title.length > 120) {
+      error.textContent = 'O título deve conter de 3 a 120 caracteres.';
+      error.classList.remove('hidden');
+      return;
+    }
+    if ((category === null) !== (priority === null)) {
+      error.textContent = 'Defina categoria e prioridade juntas.';
+      error.classList.remove('hidden');
+      return;
+    }
+    const originalTicket = selectedTicket;
+    triageSaving = true;
+    refreshTriagePanel(originalTicket);
+    try {
+      await onSaveTriage?.(originalTicket, { title, category, priority });
+      triageDirty = false;
+      // O listener do ticket atualizará os dados oficiais em tempo real.
+      // Até lá, evita substituir o formulário pelos dados anteriores.
+    } catch (caught) {
+      error.textContent = caught?.code === 'triage/conflict'
+        ? 'O sinal mudou enquanto você editava. Feche e reabra para carregar os dados mais recentes.'
+        : caught?.message || 'Não foi possível salvar a triagem.';
+      error.classList.remove('hidden');
+    } finally {
+      triageSaving = false;
+      if (selectedTicket?.id === originalTicket.id) refreshTriagePanel(selectedTicket);
+    }
+  });
 
   const form = document.querySelector('#resolve-form');
   const internal = document.querySelector('#resolution-internal');
@@ -535,6 +638,8 @@ export function openTicketDetail(ticket, observeMessages, options = {}) {
     document.querySelector('#message-body').style.height = '';
   }
   selectedTicket = ticket;
+  triageDirty = false;
+  triageSaving = false;
   substateClosePending = false;
   followKeyboardViewport = false;
   setTicketView('details');
@@ -557,7 +662,14 @@ export function openTicketDetail(ticket, observeMessages, options = {}) {
   const scroller = document.querySelector('#ticket-detail-scroll');
   scroller.scrollTop = 0;
   requestAnimationFrame(() => {
-    if (selectedTicket?.id === ticket.id) scroller.scrollTop = 0;
+    if (selectedTicket?.id !== ticket.id) return;
+    if (options.focusTriage && canTriageTicket(currentContext, ticket)) {
+      const form = document.querySelector('#detail-triage-panel');
+      form.scrollIntoView({ block: 'start', behavior: 'instant' });
+      document.querySelector('#detail-triage-category').focus({ preventScroll: true });
+    } else {
+      scroller.scrollTop = 0;
+    }
   });
 
   unsubscribeMessages?.();
@@ -580,6 +692,15 @@ export function openTicketDetail(ticket, observeMessages, options = {}) {
     renderStatusHistory,
     () => renderStatusHistory([])
   );
+  unsubscribeTriageEvents?.();
+  unsubscribeTriageEvents = null;
+  renderTriageHistory([]);
+  if (['admin','supervisor','agente'].includes(currentContext?.membership?.role)) {
+    unsubscribeTriageEvents = onObserveTriageEvents?.(
+      ticket.id, events => { if (selectedTicket?.id === ticket.id) renderTriageHistory(events); },
+      () => { if (selectedTicket?.id === ticket.id) renderTriageHistory([]); }
+    );
+  }
 
   openOverlayHistory('ticket-detail', finalizeClose);
 
@@ -617,11 +738,16 @@ function finalizeClose() {
   unsubscribeMessages?.();
   unsubscribeAttachments?.();
   unsubscribeStatusEvents?.();
+  unsubscribeTriageEvents?.();
   activeUploadTask?.cancel();
   hideAttachmentPreview();
   unsubscribeMessages = null;
   unsubscribeAttachments = null;
   unsubscribeStatusEvents = null;
+  unsubscribeTriageEvents = null;
+  triageDirty = false;
+  triageSaving = false;
+  renderTriageHistory([]);
   latestMessages = [];
   latestAttachments = [];
   document.querySelector('#attachment-upload-status').classList.add('hidden');
@@ -659,8 +785,8 @@ function renderTicket(ticket) {
 
   const labels = isRequester ? requesterStatusLabels : statusLabels;
   const status = labels[ticket.status] ?? ticket.status ?? (isRequester ? 'Enviado' : 'Sinal recebido');
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
-  const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
+  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
+  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
 
   document.querySelector('#detail-code').textContent = ticket.code ?? '';
@@ -681,6 +807,7 @@ function renderTicket(ticket) {
   priorityEl.className = `ticket-badge ${priorityClass}`;
   priorityEl.textContent = priority;
   document.querySelector('#detail-category').textContent = category;
+  refreshTriagePanel(ticket);
 
   document.querySelector('#claim-ticket-button').classList.toggle('hidden', !canClaim);
   document.querySelector('#resolve-ticket-button').classList.toggle('hidden', !canResolve);

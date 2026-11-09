@@ -282,6 +282,7 @@
               <button data-central-filter="all" class="central-filter w-full sm:w-auto">Todos</button>
               <button data-central-filter="new" class="central-filter is-active w-full sm:w-auto">Novos</button>
               <button data-central-filter="attention" class="central-filter w-full sm:w-auto">Atenção <span id="central-attention-count" class="ml-1 opacity-70">0</span></button>
+              <button data-central-filter="triage" class="central-filter w-full sm:w-auto">Sem triagem <span id="central-triage-count" class="ml-1 opacity-70">0</span></button>
               <button data-central-filter="mine" class="central-filter w-full sm:w-auto">Meus</button>
               <button data-central-filter="unassigned" class="central-filter col-span-2 w-full sm:col-auto sm:w-auto">Sem responsável</button>
             </div>
@@ -297,6 +298,7 @@
                   <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Prioridade</span>
                   <select id="central-priority" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
                     <option value="all">Todas</option>
+                    <option value="pending">Não definida</option>
                     <option value="urgente">Urgente</option>
                     <option value="alta">Alta</option>
                     <option value="normal">Normal</option>
@@ -307,6 +309,7 @@
                   <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Categoria</span>
                   <select id="central-category" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
                     <option value="all">Todas</option>
+                    <option value="pending">Não definida</option>
                     <option value="acesso">Acesso</option>
                     <option value="equipamento">Equipamento</option>
                     <option value="rede">Rede</option>
@@ -486,52 +489,38 @@
       </section>
     </div>
 
-    <!-- Composer -->
+    <!-- Sprint 1.7.1-B: abertura conversacional, sem formulário técnico de ticket -->
     <div id="signal-composer" class="fixed inset-0 z-50 hidden" aria-hidden="true">
       <div data-close-signal-composer class="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"></div>
-      <section class="signal-composer-panel absolute inset-x-0 bottom-0 max-h-[96dvh] overflow-y-auto rounded-t-[1.75rem] bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:w-[min(92vw,640px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem]" role="dialog" aria-modal="true" aria-labelledby="signal-composer-title">
+      <section class="signal-composer-panel absolute inset-x-0 bottom-0 max-h-[96dvh] overflow-y-auto rounded-t-[1.75rem] bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:w-[min(92vw,580px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem]" role="dialog" aria-modal="true" aria-labelledby="signal-composer-title">
         <div class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
           <div>
-            <span class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-700">Novo atendimento</span>
-            <h2 id="signal-composer-title" class="mt-1 text-xl font-extrabold tracking-[-0.02em] text-slate-950">Mandar um sinal</h2>
+            <span class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-700">Um Sinal começa com uma mensagem</span>
+            <h2 id="signal-composer-title" class="mt-1 text-xl font-extrabold tracking-[-0.02em] text-slate-950">Mandar um Sinal</h2>
           </div>
           <button data-close-signal-composer type="button" class="ui-icon-button text-xl text-slate-500 hover:bg-slate-100" aria-label="Fechar">×</button>
         </div>
 
-        <form id="signal-form" class="space-y-5 px-5 py-6 sm:px-6" novalidate>
-          <div>
-            <label for="signal-title" class="mb-2 block text-sm font-bold text-slate-800">O que aconteceu?</label>
-            <input id="signal-title" name="title" type="text" maxlength="120" required placeholder="Ex.: Não consigo acessar o sistema"
-              class="min-h-12 w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100" />
-            <div class="mt-1.5 text-right text-xs text-slate-400"><span id="signal-title-count">0</span>/120</div>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label for="signal-category" class="mb-2 block text-sm font-bold text-slate-800">Categoria</label>
-              <select id="signal-category" name="category" required class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
-                <option value="">Selecione</option><option value="acesso">Acesso</option><option value="equipamento">Equipamento</option><option value="rede">Rede</option><option value="sistemas">Sistemas</option><option value="outro">Outro</option>
-              </select>
-            </div>
-            <div>
-              <label for="signal-priority" class="mb-2 block text-sm font-bold text-slate-800">Prioridade</label>
-              <select id="signal-priority" name="priority" required class="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
-                <option value="normal" selected>Normal</option><option value="baixa">Baixa</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
-              </select>
-            </div>
+        <form id="signal-form" class="space-y-4 px-5 py-5 sm:px-6" novalidate>
+          <div class="rounded-2xl bg-sky-50 p-4">
+            <p class="text-sm font-semibold leading-6 text-slate-800">Olá! 👋 Conte o que aconteceu ou do que você precisa.</p>
+            <p class="mt-1 text-xs leading-5 text-slate-600">Nossa equipe vai cuidar da classificação. Você só precisa mandar sua mensagem.</p>
           </div>
 
           <div>
-            <label for="signal-description" class="mb-2 block text-sm font-bold text-slate-800">Conte um pouco mais</label>
-            <textarea id="signal-description" name="description" rows="6" maxlength="4000" required
-              placeholder="Descreva o problema, quando começou e qualquer detalhe que possa ajudar."
-              class="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-base leading-6 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"></textarea>
-            <div class="mt-1.5 text-right text-xs text-slate-400"><span id="signal-description-count">0</span>/4000</div>
+            <label for="signal-message" class="mb-2 block text-sm font-bold text-slate-800">Sua mensagem</label>
+            <textarea id="signal-message" name="message" rows="5" maxlength="4000" minlength="3" required aria-describedby="signal-message-hint"
+              placeholder="Ex.: Não consigo entrar no sistema de patrimônio. Aparece uma mensagem de erro..."
+              class="min-h-32 w-full resize-y rounded-2xl border border-slate-300 px-4 py-3 text-base leading-6 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-100"></textarea>
+            <div id="signal-message-hint" class="mt-1.5 flex justify-between gap-2 text-xs text-slate-500">
+              <span>Escreva como se estivesse conversando com o suporte.</span>
+              <span class="shrink-0"><span id="signal-message-count">0</span>/4000</span>
+            </div>
           </div>
 
           <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
             <label for="signal-attachment-file" class="block text-sm font-bold text-slate-800">Anexo opcional</label>
-            <p class="mt-1 text-xs text-slate-500">Uma imagem (JPG, PNG, WebP) ou PDF de até 10 MiB. Você também pode anexar pela conversa depois.</p>
+            <p class="mt-1 text-xs text-slate-500">Uma imagem (JPG, PNG, WebP) ou PDF de até 10 MiB. Você também pode enviar pela conversa depois.</p>
             <input id="signal-attachment-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="sr-only" aria-label="Selecionar imagem ou PDF para o novo sinal" />
             <div class="mt-3 flex flex-wrap gap-2">
               <button id="signal-attachment-choose" type="button" class="min-h-11 rounded-xl border border-sky-200 bg-white px-4 text-sm font-bold text-sky-800">📎 Escolher arquivo</button>
@@ -545,13 +534,13 @@
             </div>
           </div>
 
-          <div id="signal-form-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"></div>
+          <div id="signal-form-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert" aria-live="assertive"></div>
 
-          <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+          <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
             <button data-close-signal-composer type="button" class="min-h-12 rounded-xl border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancelar</button>
             <button id="signal-submit-button" type="submit" class="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
               <svg id="signal-submit-spinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle><path class="opacity-90" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3Z"></path></svg>
-              <span id="signal-submit-label">Enviar sinal</span>
+              <span id="signal-submit-label">Mandar Sinal</span>
             </button>
           </div>
         </form>
@@ -611,6 +600,52 @@
               <button id="reopen-ticket-button" type="button" class="mt-3 hidden min-h-12 w-full rounded-xl border border-sky-300 bg-sky-50 px-5 text-sm font-extrabold text-sky-800 hover:bg-sky-100 sm:w-auto sm:min-w-44">Reabrir sinal</button>
               <p id="detail-action-help" class="mt-2 text-xs leading-5 text-slate-500"></p>
             </div>
+
+            <!-- Equipe: classificação e título técnico. Nunca mostrado ao solicitante. -->
+            <section id="detail-triage-panel" class="hidden rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:p-5" aria-labelledby="detail-triage-title">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 id="detail-triage-title" class="text-sm font-extrabold text-slate-950">Triagem do sinal</h3>
+                <span id="detail-triage-status" class="ticket-badge bg-amber-100 text-amber-900">Sem triagem</span>
+              </div>
+              <p class="mt-1 text-xs leading-5 text-slate-600">Categoria, prioridade e título são definidos pela equipe de atendimento.</p>
+              <form id="detail-triage-form" class="mt-3 space-y-3" novalidate>
+                <label class="block">
+                  <span class="mb-1 block text-xs font-bold text-slate-700">Título do sinal</span>
+                  <input id="detail-triage-title-input" type="text" maxlength="120" minlength="3" required class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base outline-none focus:border-sky-600" />
+                </label>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-bold text-slate-700">Categoria</span>
+                    <select id="detail-triage-category" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base">
+                      <option value="">Não definida</option>
+                      <option value="acesso">Acesso</option>
+                      <option value="equipamento">Equipamento</option>
+                      <option value="rede">Rede</option>
+                      <option value="sistemas">Sistemas</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </label>
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-bold text-slate-700">Prioridade</span>
+                    <select id="detail-triage-priority" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base">
+                      <option value="">Não definida</option>
+                      <option value="baixa">Baixa</option>
+                      <option value="normal">Normal</option>
+                      <option value="alta">Alta</option>
+                      <option value="urgente">Urgente</option>
+                    </select>
+                  </label>
+                </div>
+                <p id="detail-triage-error" class="hidden rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800" role="alert" aria-live="assertive"></p>
+                <button id="detail-triage-submit" type="submit" class="min-h-11 w-full rounded-xl bg-indigo-700 px-4 text-sm font-extrabold text-white hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">Salvar triagem</button>
+              </form>
+              <div class="mt-4 border-t border-amber-200 pt-3">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Histórico da triagem</h4>
+                <ol id="detail-triage-history" class="mt-2 space-y-2 text-xs text-slate-700" aria-live="polite">
+                  <li>Nenhuma alteração registrada.</li>
+                </ol>
+              </div>
+            </section>
 
             <button id="open-conversation-button" type="button" class="flex min-h-14 w-full items-center justify-between rounded-2xl border border-sky-200 bg-sky-50 p-4 text-left font-bold text-sky-900 hover:bg-sky-100"><span id="open-conversation-label">Abrir conversa</span><span aria-hidden="true">→</span></button>
 

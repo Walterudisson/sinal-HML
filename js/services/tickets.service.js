@@ -2,9 +2,11 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromServer,
   limit,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -14,6 +16,196 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 import { db } from '../config/firebase.js';
+import { generateSignalTitle, normalizeOpeningMessage, validateTriage } from './opening-domain.mjs';
+
+
+/**
+ * Reserva os IDs de um único envio. A interface deve guardar este objeto até
+ * confirmar o resultado; novas tentativas usam EXATAMENTE os mesmos IDs.
+ * O identificador nunca é derivado do texto nem do usuário.
+ */
+export function prepareConversationOpening(context) {
+  if (!context?.tenant?.id || !context?.firebaseUser?.uid) {
+    throw new Error('Sessão inválida para abrir um Sinal.');
+  }
+  const ticketRef = doc(collection(db, 'tenants', context.tenant.id, 'tickets'));
+  const messageRef = doc(collection(ticketRef, 'messages'));
+  return Object.freeze({
+    tenantId: context.tenant.id,
+    requesterUid: context.firebaseUser.uid,
+    ticketId: ticketRef.id,
+    messageId: messageRef.id
+  });
+}
+
+/**
+ * Cria ticket + primeira mensagem em um batch atômico.
+ * Em resposta incerta do servidor, uma consulta confirma a tentativa antes
+ * de exibir falha. Se for necessário reenviar, preservar o objeto `attempt`.
+ */
+export async function createConversationTicket(context, { message, attempt }) {
+  const body = normalizeOpeningMessage(message);
+  if (!attempt || attempt.tenantId !== context?.tenant?.id
+    || attempt.requesterUid !== context?.firebaseUser?.uid
+    || !/^[a-zA-Z0-9]{10,64}$/.test(attempt.ticketId || '')
+    || !/^[a-zA-Z0-9]{10,64}$/.test(attempt.messageId || '')) {
+    throw new Error('Tentativa de abertura inválida. Reinicie a abertura deste sinal.');
+  }
+  const profile = context.userProfile;
+  if (!profile?.displayName || !profile?.email) {
+    throw new Error('Perfil incompleto: nome e e-mail são necessários para o atendimento.');
+  }
+  const ticketRef = doc(db, 'tenants', attempt.tenantId, 'tickets', attempt.ticketId);
+  const messageRef = doc(ticketRef, 'messages', attempt.messageId);
+  const code = `S-${attempt.ticketId.slice(0, 6).toUpperCase()}`;
+  const payload = {
+    code,
+    title: generateSignalTitle(body),
+    description: body,
+    category: null,
+    priority: null,
+    status: 'open',
+    requesterUid: attempt.requesterUid,
+    requesterName: profile.displayName,
+    requesterEmail: profile.email,
+    createdByUid: attempt.requesterUid,
+    source: 'web',
+    assigneeUid: null,
+    teamId: null,
+    firstMessageId: attempt.messageId,
+    lastInteractionAt: serverTimestamp(),
+    lastInteractionType: 'message',
+    lastInteractionByUid: attempt.requesterUid,
+    lastInteractionMessageId: attempt.messageId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  const firstMessage = {
+    body,
+    visibility: 'public',
+    authorUid: attempt.requesterUid,
+    authorName: profile.displayName,
+    authorEmail: profile.email,
+    authorRole: context.membership.role,
+    createdAt: serverTimestamp()
+  };
+
+  const confirmExisting = async () => {
+    try {
+      const [ticket, first] = await Promise.all([
+        getDocFromServer(ticketRef), getDocFromServer(messageRef)
+      ]);
+      if (!ticket.exists() || !first.exists()) return null;
+      const saved = ticket.data();
+      const savedMessage = first.data();
+      if (saved.requesterUid !== attempt.requesterUid
+        || saved.firstMessageId !== attempt.messageId
+        || saved.description !== body
+        || savedMessage.body !== body
+        || savedMessage.authorUid !== attempt.requesterUid) return null;
+      return { id: ticket.id, ...saved };
+    } catch (_) {
+      return null;
+    }
+  };
+
+  // Evita tentar sobrescrever um sinal já confirmado em uma repetição da ação.
+  const confirmed = await confirmExisting();
+  if (confirmed) return confirmed;
+
+  const batch = writeBatch(db);
+  batch.set(ticketRef, payload);
+  batch.set(messageRef, firstMessage);
+  try {
+    await batch.commit();
+  } catch (error) {
+    const confirmedAfterError = await confirmExisting();
+    if (confirmedAfterError) return confirmedAfterError;
+    // A interface NÃO descarta attempt nem a mensagem se a resposta for incerta.
+    throw error;
+  }
+  return { id: ticketRef.id, ...payload };
+}
+
+/**
+ * Triagem audível e transacional: rejeita edição baseada em estado obsoleto.
+ * O ticket deve vir de snapshot atual (categoria, prioridade, título, status,
+ * responsável e updatedAt). O backend/Rules revalidam tudo.
+ */
+export async function updateTicketTriage(context, ticket, changes = {}) {
+  if (!ticket?.id || !context?.tenant?.id || !context?.firebaseUser?.uid) {
+    throw new Error('Contexto inválido para a triagem.');
+  }
+  const role = context.membership?.role;
+  if (!['admin', 'supervisor', 'agente'].includes(role)) {
+    throw new Error('Seu perfil não tem permissão para classificar sinais.');
+  }
+  const ticketRef = doc(db, 'tenants', context.tenant.id, 'tickets', ticket.id);
+  const eventRef = doc(collection(ticketRef, 'triageEvents'));
+  const actorName = context.userProfile?.displayName;
+  if (!actorName) throw new Error('Perfil do atendente incompleto.');
+
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(ticketRef);
+    if (!snapshot.exists()) throw new Error('Sinal não encontrado.');
+    const current = snapshot.data();
+    const stale = ['title','category','priority','assigneeUid','status'].some(key =>
+      (current[key] ?? null) !== (ticket[key] ?? null)
+    ) || (
+      current.updatedAt?.toMillis?.() !== ticket.updatedAt?.toMillis?.()
+    );
+    if (stale) {
+      const conflict = new Error('Sinal alterado por outra pessoa. Atualize os dados antes de classificar.');
+      conflict.code = 'triage/conflict';
+      throw conflict;
+    }
+    if (current.status === 'resolved') throw new Error('Sinais resolvidos não podem ser classificados.');
+    if (current.assigneeUid && current.assigneeUid !== context.firebaseUser.uid
+      && !['admin','supervisor'].includes(role)) {
+      throw new Error('Somente o responsável pode alterar a classificação deste sinal.');
+    }
+
+    const category = Object.hasOwn(changes,'category') ? changes.category : current.category;
+    const priority = Object.hasOwn(changes,'priority') ? changes.priority : current.priority;
+    const title = Object.hasOwn(changes,'title') ? String(changes.title ?? '').trim() : current.title;
+    validateTriage(category, priority);
+    if (title.length < 3 || title.length > 120) throw new Error('Título deve ter de 3 a 120 caracteres.');
+    if ((current.category != null && category === null)
+      || (current.priority != null && priority === null)) {
+      throw new Error('Não é permitido remover uma classificação já definida.');
+    }
+    if (current.title === title && current.category === category && current.priority === priority) {
+      throw new Error('Nenhuma alteração de triagem foi informada.');
+    }
+
+    const classified = current.category == null && category != null;
+    const titleOnly = current.category === category && current.priority === priority;
+    const type = classified ? 'classified' : titleOnly ? 'title_changed' : 'reclassified';
+    transaction.update(ticketRef, {
+      title, category, priority, updatedAt: serverTimestamp(),
+      lastTriageEventId: eventRef.id
+    });
+    transaction.set(eventRef, {
+      type,
+      fromTitle: current.title,
+      toTitle: title,
+      fromCategory: current.category,
+      toCategory: category,
+      fromPriority: current.priority,
+      toPriority: priority,
+      actorUid: context.firebaseUser.uid,
+      actorName,
+      createdAt: serverTimestamp()
+    });
+  });
+}
+
+export function observeTriageEvents(context, ticketId, onData, onError) {
+  const ref = collection(db, 'tenants', context.tenant.id, 'tickets', ticketId, 'triageEvents');
+  return onSnapshot(query(ref, orderBy('createdAt', 'asc'), limit(100)),
+    snapshot => onData(snapshot.docs.map(item => ({ id: item.id, ...item.data() }))),
+    onError);
+}
 
 export async function createTicket(context, input) {
   const { firebaseUser, userProfile, tenant } = context;

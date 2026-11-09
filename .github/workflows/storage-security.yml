@@ -21,6 +21,18 @@ on:
       - 'js/ui/overlay-history.js'
       - 'js/ui/signal-composer.js'
       - 'tests/overlay-preview-navigation-1.7.0-c.test.mjs'
+      - 'tests/sprint-1.7.1-a-*.test.*'
+      - 'tests/sprint-1.7.1-b.test.mjs'
+      - 'tests/sprint-1.7.1-b-ui.test.mjs'
+      - 'tests/sprint-1.7.1-c.test.mjs'
+      - 'js/services/triage-domain.mjs'
+      - 'js/config/version.js'
+      - 'service-worker.js'
+      - 'tests/sprint-1.7.1-release.test.mjs'
+      - 'js/ui/central.js'
+      - 'js/services/opening-attempt.mjs'
+      - 'js/services/opening-domain.mjs'
+      - 'js/services/tickets.service.js'
       - 'js/main.js'
       - 'index.html'
       - '.github/workflows/storage-security.yml'
@@ -54,10 +66,25 @@ jobs:
           node --check js/services/attachments.service.js
           node --check js/services/attachment-cancel.mjs
           node --check js/ui/ticket-detail.js
+          node --check js/ui/signal-composer.js
+          node --check js/services/opening-attempt.mjs
+          node --check js/services/triage-domain.mjs
+          node --check js/ui/central.js
+          node --check js/services/opening-domain.mjs
+          node --check js/services/tickets.service.js
+          node --check tests/sprint-1.7.1-a-emulator.test.cjs
       - name: Testar cancelamento de uploads no cliente
         run: node --test tests/attachment-cancel-1.7.0-b.test.mjs
       - name: Testar Voltar do Android no visualizador de imagens
         run: node --test tests/overlay-preview-navigation-1.7.0-c.test.mjs
+      - name: Testar domínio de abertura e triagem da Sprint 1.7.1-A
+        run: npm run test:1.7.1:domain
+      - name: Testar interface de abertura e navegacao Android da Sprint 1.7.1-B
+        run: npm run test:1.7.1:ui
+      - name: Verificar identificação de versão e cache PWA 1.7.1
+        run: node --test tests/sprint-1.7.1-release.test.mjs
+      - name: Testar triagem e fila da Sprint 1.7.1-C
+        run: npm run test:1.7.1:triage
       - name: Validar regras estáticas
         run: npm run test:storage:static
       - name: Validar testes existentes das funções

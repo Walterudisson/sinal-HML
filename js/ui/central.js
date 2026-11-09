@@ -1,6 +1,9 @@
 import {
   categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, formatRelativeAge, escapeHtml
 } from './signal-composer.js';
+import {
+  pendingTriage, canTriageTicket, needsQueueAttention, queuePriorityScore, matchesQueueFilter, matchesQueueProperty
+} from '../services/triage-domain.mjs';
 
 let currentContext = null;
 let tickets = [];
@@ -17,16 +20,10 @@ let stateRestored = false;
 const filterCopy = Object.freeze({
   all: ['Todos os sinais', 'Fila completa da organização.'],
   new: ['Novos sinais', 'Sinais recebidos que ainda não entraram em atendimento.'],
-  attention: ['Precisa de atenção', 'Sinais novos com prioridade alta ou urgente.'],
+  attention: ['Precisa de atenção', 'Novos sinais urgentes, de alta prioridade ou sem triagem.'],
+  triage: ['Sem triagem', 'Sinais abertos ou em atendimento aguardando categoria e prioridade.'],
   mine: ['Meus atendimentos', 'Sinais atualmente atribuídos a você.'],
   unassigned: ['Sem responsável', 'Sinais que ainda não possuem responsável.']
-});
-
-const priorityRank = Object.freeze({
-  urgente: 4,
-  alta: 3,
-  normal: 2,
-  baixa: 1
 });
 
 export function initCentral(options) {
@@ -127,8 +124,8 @@ function restoreCentralState() {
     if (!raw) return;
     const saved = JSON.parse(raw);
     if (filterCopy[saved.filter]) currentFilter = saved.filter;
-    if (['all','baixa','normal','alta','urgente'].includes(saved.priority)) currentPriority = saved.priority;
-    if (['all','acesso','equipamento','rede','sistemas','outro'].includes(saved.category)) currentCategory = saved.category;
+    if (['all','pending','baixa','normal','alta','urgente'].includes(saved.priority)) currentPriority = saved.priority;
+    if (['all','pending','acesso','equipamento','rede','sistemas','outro'].includes(saved.category)) currentCategory = saved.category;
     if (['priority','activity','newest','oldest'].includes(saved.sort)) currentSort = saved.sort;
     if (typeof saved.search === 'string') currentSearch = saved.search.slice(0, 120);
 
@@ -165,13 +162,15 @@ function renderCentral() {
 
   const stats = {
     new: tickets.filter((t) => t.status === 'open').length,
-    attention: tickets.filter(needsAttention).length,
+    attention: tickets.filter(needsQueueAttention).length,
+    triage: tickets.filter((t) => t.status !== 'resolved' && pendingTriage(t)).length,
     mine: tickets.filter((t) => t.assigneeUid === uid && t.status === 'in_progress').length,
     unassigned: tickets.filter((t) => !t.assigneeUid).length
   };
 
   document.querySelector('#central-new-count').textContent = String(stats.new);
   document.querySelector('#central-attention-count').textContent = String(stats.attention);
+  document.querySelector('#central-triage-count').textContent = String(stats.triage);
   document.querySelector('#central-mine-count').textContent = String(stats.mine);
   document.querySelector('#central-unassigned-count').textContent = String(stats.unassigned);
 
@@ -213,6 +212,14 @@ function renderCentral() {
     });
   });
 
+  list.querySelectorAll('[data-triage-ticket]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const ticket = tickets.find((item) => item.id === button.dataset.triageTicket);
+      if (ticket && canTriageTicket(currentContext, ticket)) onOpenTicket?.(ticket, { focusTriage: true });
+    });
+  });
+
   list.querySelectorAll('[data-open-conversation]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -242,9 +249,9 @@ function applyQueue(items, uid) {
   const search = normalize(currentSearch.trim());
 
   const filtered = items.filter((ticket) => {
-    if (!matchesBaseFilter(ticket, currentFilter, uid)) return false;
-    if (currentPriority !== 'all' && ticket.priority !== currentPriority) return false;
-    if (currentCategory !== 'all' && ticket.category !== currentCategory) return false;
+    if (!matchesQueueFilter(ticket, currentFilter, uid)) return false;
+    if (!matchesQueueProperty(ticket.priority, currentPriority)) return false;
+    if (!matchesQueueProperty(ticket.category, currentCategory)) return false;
 
     if (search) {
       const haystack = normalize([
@@ -262,18 +269,6 @@ function applyQueue(items, uid) {
   return [...filtered].sort(queueComparator);
 }
 
-function matchesBaseFilter(ticket, filter, uid) {
-  if (filter === 'new') return ticket.status === 'open';
-  if (filter === 'attention') return needsAttention(ticket);
-  if (filter === 'mine') return ticket.assigneeUid === uid && ticket.status === 'in_progress';
-  if (filter === 'unassigned') return !ticket.assigneeUid;
-  return true;
-}
-
-function needsAttention(ticket) {
-  return ticket.status === 'open' && ['urgente', 'alta'].includes(ticket.priority);
-}
-
 function queueComparator(a, b) {
   const aTime = timestampMillis(a.createdAt);
   const bTime = timestampMillis(b.createdAt);
@@ -284,7 +279,7 @@ function queueComparator(a, b) {
   if (currentSort === 'newest') return bTime - aTime;
   if (currentSort === 'oldest') return aTime - bTime;
 
-  const priorityDiff = (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0);
+  const priorityDiff = queuePriorityScore(b) - queuePriorityScore(a);
   if (priorityDiff !== 0) return priorityDiff;
 
   return aTime - bTime;
@@ -318,10 +313,10 @@ function centralContext(ticket) {
 
 function markup(ticket) {
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
+  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
-  const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
-  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'normal';
+  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
+  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
   const contextLabel = centralContext(ticket);
   const hasUnreadMessage = unreadMessageTicketIds.has(ticket.id);
   const interactionAt = interactionTimestamp(ticket);
@@ -340,6 +335,7 @@ function markup(ticket) {
             <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
             <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
             ${hasUnreadMessage ? '<span class="ticket-badge bg-rose-50 text-rose-700">Nova mensagem</span>' : ''}
+            ${pendingTriage(ticket) ? '<span class="ticket-badge bg-amber-50 text-amber-800">Sem triagem</span>' : ''}
           </div>
           <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
           <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
@@ -351,7 +347,12 @@ function markup(ticket) {
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          ${pendingTriage(ticket) && canTriageTicket(currentContext, ticket) ? `
+            <button data-triage-ticket="${escapeHtml(ticket.id)}" type="button"
+              class="min-h-11 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-extrabold text-amber-900 hover:bg-amber-100">
+              Classificar
+            </button>` : ''}
           ${ticket.status === 'open' && !ticket.assigneeUid ? `
             <button data-claim-ticket="${escapeHtml(ticket.id)}" type="button"
               class="min-h-11 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
