@@ -23,6 +23,7 @@ on:
       - 'tests/overlay-preview-navigation-1.7.0-c.test.mjs'
       - 'tests/sprint-1.7.1-a-*.test.*'
       - 'tests/sprint-1.7.1-b.test.mjs'
+      - 'tests/sprint-1.7.1-b-ui.test.mjs'
       - 'js/services/opening-attempt.mjs'
       - 'js/services/opening-domain.mjs'
       - 'js/services/tickets.service.js'
