@@ -24,6 +24,9 @@ on:
       - 'tests/sprint-1.7.1-a-*.test.*'
       - 'tests/sprint-1.7.1-b.test.mjs'
       - 'tests/sprint-1.7.1-b-ui.test.mjs'
+      - 'tests/sprint-1.7.1-c.test.mjs'
+      - 'js/services/triage-domain.mjs'
+      - 'js/ui/central.js'
       - 'js/services/opening-attempt.mjs'
       - 'js/services/opening-domain.mjs'
       - 'js/services/tickets.service.js'
@@ -62,6 +65,8 @@ jobs:
           node --check js/ui/ticket-detail.js
           node --check js/ui/signal-composer.js
           node --check js/services/opening-attempt.mjs
+          node --check js/services/triage-domain.mjs
+          node --check js/ui/central.js
           node --check js/services/opening-domain.mjs
           node --check js/services/tickets.service.js
           node --check tests/sprint-1.7.1-a-emulator.test.cjs
@@ -73,6 +78,8 @@ jobs:
         run: npm run test:1.7.1:domain
       - name: Testar interface de abertura e navegacao Android da Sprint 1.7.1-B
         run: npm run test:1.7.1:ui
+      - name: Testar triagem e fila da Sprint 1.7.1-C
+        run: npm run test:1.7.1:triage
       - name: Validar regras estáticas
         run: npm run test:storage:static
       - name: Validar testes existentes das funções
