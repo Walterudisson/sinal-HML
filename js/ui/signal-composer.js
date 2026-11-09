@@ -394,7 +394,7 @@ export function initSignalComposer({ onSubmit, onCreated, prepareAttempt, getSes
       if (shouldOpenConversation) {
         // Só abre o detalhe depois que a entrada do composer saiu do histórico.
         finishingSuccessfully = true;
-        closeComposer(true, () => onCreated?.(result.ticket));
+        closeComposer(true, () => onCreated?.(result));
       }
     } catch (error) {
       console.error('[Sinal][Ticket] Falha ao criar sinal:', error?.code || error);
