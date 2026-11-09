@@ -1,12 +1,12 @@
 # Publicação coordenada | Sprint 1.7.1 HML
 
 **Status: aguardando operação assistida.**  
-**Alvo exclusivo:** repositório \`Walterudisson/sinal-HML\`, GitHub Pages HML e Firebase \`sinaldesk-hml\`.  
-**Jamais executar no projeto PRD \`sinaldesk\`.**
+**Alvo exclusivo:** repositório `Walterudisson/sinal-HML`, GitHub Pages HML e Firebase `sinaldesk-hml`.  
+**Jamais executar no projeto PRD `sinaldesk`.**
 
 ## Por que há uma ordem obrigatória?
 
-Na versão 1.7.0-C, o formulário cria um documento \`ticket\` sem a primeira mensagem. Na 1.7.1, o Firestore exige a criação **atômica** do ticket e da primeira mensagem, com \`firstMessageId\`. As versões de frontend e Rules não são compatíveis durante o intervalo de migração.
+Na versão 1.7.0-C, o formulário cria um documento `ticket` sem a primeira mensagem. Na 1.7.1, o Firestore exige a criação **atômica** do ticket e da primeira mensagem, com `firstMessageId`. As versões de frontend e Rules não são compatíveis durante o intervalo de migração.
 
 Consequentemente, a publicação deve ocorrer em janela curta de manutenção HML, com operadores informados para não abrir sinais durante o intervalo. Não publicar automaticamente apenas uma das partes. A regra final é estrita por segurança; **não adicionar liberação de escrita legacy sem nova revisão de segurança**, pois permitiria ao solicitante escolher prioridade/categoria por API.
 
@@ -14,7 +14,8 @@ Consequentemente, a publicação deve ocorrer em janela curta de manutenção HM
 
 - [ ] PR #45 permanece em draft até revisão final, CI verde no último SHA e autorização explícita do responsável.
 - [ ] Cloud Shell autenticado no projeto HML, repositório local sem alterações não salvas.
-- [ ] \`main\` HML e PRD anotadas para verificação de reversão.
+- [ ] `main` HML e PRD anotadas para verificação de reversão.
+- [ ] No [Firebase Console HML](https://console.firebase.google.com/project/sinaldesk-hml/firestore/databases/-default-/rules), conferir a regra atualmente publicada e conservar seu conteúdo/versão para rollback; o arquivo `origin/main:firestore.rules` é **apenas uma referência do Git**, não uma garantia de identidade com as regras atualmente publicadas.
 - [ ] Operadores cientes de que HML pode rejeitar novas aberturas durante a curta migração.
 - [ ] Saber que serviço no PWA pode usar cache antigo; atualizar/reabrir o app.
 - [ ] Identificar que **não é necessário publicar Storage Rules/Functions** nesta sprint, apenas Firestore Rules e frontend GitHub Pages.
@@ -24,7 +25,7 @@ Consequentemente, a publicação deve ocorrer em janela curta de manutenção HM
 
 No Cloud Shell, na pasta do repositório HML:
 
-\`\`\`bash
+```bash
 cd ~/sinal-HML
 git status --short
 git fetch origin
@@ -32,29 +33,30 @@ git switch sprint/1.7.1-preparacao-conversa-triagem 2>/dev/null || git switch --
 git pull --ff-only origin sprint/1.7.1-preparacao-conversa-triagem
 git rev-parse --short HEAD
 firebase projects:list
-\`\`\`
+```
 
-Se \`git status --short\` exibir arquivos modificados, **pare e não descarte alterações**. A lista de projetos deve conter \`sinaldesk-hml\`. Não presumir que seleção padrão da CLI é HML: usar sempre \`--project sinaldesk-hml\`.
+Se `git status --short` exibir arquivos modificados, **pare e não descarte alterações**. A lista de projetos deve conter `sinaldesk-hml`. Não presumir que seleção padrão da CLI é HML: usar sempre `--project sinaldesk-hml`.
 
 ## Passo 2. Preparar rollback local e conferir Rules
 
-\`\`\`bash
+```bash
 git show origin/main:firestore.rules > /tmp/sinal-hml-firestore-1.7.0-c.rules
 git show origin/main:js/config/version.js
 git diff --stat origin/main...HEAD
 grep "APP_VERSION" js/config/version.js
 grep "sinal-shell-hml-" service-worker.js
-\`\`\`
+```
 
-Deve exibir \`APP_VERSION = '1.7.1'\`. Verificar CI verde antes de continuar.
+Deve exibir `APP_VERSION = '1.7.1'`. Verificar CI verde antes de continuar.
+**Cópia importante:** o arquivo `/tmp/sinal-hml-firestore-1.7.0-c.rules` contém as regras da `main` do Git, não necessariamente o ruleset ativo no Firebase. Se houver divergência, interromper e conciliar antes de publicar.
 
 ## Passo 3. Iniciar manutenção e publicar apenas Firestore Rules
 
 **Executar exclusivamente depois da conferência e com operador disponível para merge imediato**:
 
-\`\`\`bash
+```bash
 firebase deploy --only firestore:rules --project sinaldesk-hml
-\`\`\`
+```
 
 Guardar o log. Em caso de erro, **não mesclar** PR #45. Após êxito, a interface HML antiga pode rejeitar aberturas até que a nova chegue ao GitHub Pages; não deixar o intervalo se prolongar sem executar o passo 4 ou rollback.
 
@@ -66,22 +68,22 @@ Não confundir merge de PR #44, somente documental, com PR #45.
 
 ## Passo 5. Conferir publicação e realizar smoke test
 
-1. Abrir \`https://walterudisson.github.io/sinal-HML/\` e conferir **Mais → HML v1.7.1**. Em Android PWA, fechar/reabrir e atualizar cache se necessário.
+1. Abrir `https://walterudisson.github.io/sinal-HML/` e conferir **Mais → HML v1.7.1**. Em Android PWA, fechar/reabrir e atualizar cache se necessário.
 2. Solicitante Teste: criar um sinal **sem anexo**, com mensagem única, e verificar a conversa imediata e o protocolo.
 3. Solicitante Teste: criar um sinal com imagem; conferir anexo e conversa.
 4. Atendente Teste: Central → **Sem triagem** → **Classificar**; definir categoria e prioridade e salvar.
 5. Verificar histórico de triagem e visibilidade de respostas. Confirmar que um solicitante não vê o painel administrativo.
 6. Confirmar que sinais 1.7.0-C antigos permanecem acessíveis. Testar Voltar Android e notificações.
-7. Completar o roteiro \`HOMOLOGACAO-SPRINT-1.7.1.md\`, inclusive negativas no emulador e cenários reais multi-tenant quando disponíveis.
+7. Completar o roteiro `HOMOLOGACAO-SPRINT-1.7.1.md`, inclusive negativas no emulador e cenários reais multi-tenant quando disponíveis.
 
 ## Rollback seguro em HML
 
-**Se o deploy das Rules ocorrer, mas o frontend novo não for publicado:** reimplantar as **regras antigas** a partir de uma cópia comprovadamente idêntica à \`main\` pré-merge:
+**Se o deploy das Rules ocorrer, mas o frontend novo não for publicado:** primeiro confirmar que a cópia da `main` pré-merge é **idêntica ao ruleset que estava ativo no Firebase**. Só então reimplantar:
 
-\`\`\`bash
+```bash
 cp /tmp/sinal-hml-firestore-1.7.0-c.rules firestore.rules
 firebase deploy --only firestore:rules --project sinaldesk-hml
-\`\`\`
+```
 
 **Atenção:** esse comando modifica o arquivo de trabalho local. Preservar a cópia antiga; restaurar o arquivo da branch antes de novos commits/ações. Se já houve merge e publicação de frontend 1.7.1, o rollback exige **também** restaurar o frontend 1.7.0-C em GitHub Pages, coordenando a ordem para evitar incompatibilidade. **Não executar rollback isolado** sem orientação e verificação do SHA.
 
