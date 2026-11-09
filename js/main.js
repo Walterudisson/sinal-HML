@@ -1,6 +1,6 @@
 import { observeAuth, login, logout, requestPasswordReset } from './services/auth.service.js';
 import { loadUserContext } from './services/context.service.js';
-import { prepareConversationOpening, createConversationTicket, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
+import { prepareConversationOpening, createConversationTicket, updateTicketTriage, observeTriageEvents, claimTicket, resolveTicket, reopenTicket, getPrivateResolution, observeStatusEvents, getTicketById, observeMyTickets, observeCentralTickets } from './services/tickets.service.js';
 import { observeMessages, sendMessage } from './services/messages.service.js';
 import { observeAttachments, uploadConversationAttachment, fetchPrivateAttachment } from './services/attachments.service.js';
 import { initNavigation, isSupportRole, renderContext, showToast } from './ui/app-shell.js';
@@ -225,6 +225,14 @@ function ensureDetailInitialized(context) {
     onGetPrivateResolution: (ticketId) => getPrivateResolution(currentContext, ticketId),
     onObserveStatusEvents: (ticketId, onData, onError) =>
       observeStatusEvents(currentContext, ticketId, onData, onError),
+    onObserveTriageEvents: (ticketId, onData, onError) =>
+      observeTriageEvents(currentContext, ticketId, onData, onError),
+    onSaveTriage: async (ticket, changes) => {
+      await updateTicketTriage(currentContext, ticket, changes);
+      showToast('Categoria, prioridade e título atualizados.', 'success', {
+        title: 'Triagem salva'
+      });
+    },
     onConversationVisible: markVisibleConversationNotifications,
     onObserveAttachments: (ticketId, onData, onError) =>
       observeAttachments(currentContext, ticketId, onData, onError),
