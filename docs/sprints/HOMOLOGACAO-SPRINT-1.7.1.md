@@ -1,12 +1,12 @@
 # Homologação da Sprint 1.7.1 | Conversa Primeiro e Triagem Inteligente
 
 **Roteiro proposto para HML.** Não executar antes da implantação controlada da sprint.  
-**Ambientes:** HML \`sinaldesk-hml\`; PRD intocada.  
+**Ambientes:** HML `sinaldesk-hml`; PRD intocada.  
 **Perfis:** Solicitante Teste, Atendente Teste, Superadmin e, quando disponíveis, admin/supervisor e membro de outra organização. A ausência de outro tenant não autoriza aprovar isolamento real.
 
 ## Preparação
 
-- [ ] Conferir identificação \`HML v1.7.1\` após publicação autorizada.
+- [ ] Conferir identificação `HML v1.7.1` após publicação autorizada.
 - [ ] Confirmar CI, Firebase Emulator Suite e Rules corretas em HML.
 - [ ] Manter um sinal antigo com categoria e prioridade existentes.
 - [ ] Manter sinal criado na 1.7.0-C com anexo para regressão.
@@ -54,7 +54,7 @@
 | SEC-171-06 | Outro tenant tenta ler/escrever sinal/mensagem/anexo | **permission-denied** |
 | SEC-171-07 | Criar ticket sem primeira mensagem, ou primeira mensagem sem ticket válido | **permission-denied** ou transação abortada |
 | SEC-171-08 | Concorrência em duas classificações | Não perde alterações nem aceita sobrescrita silenciosa |
-| SEC-171-09 | Forjar metadados de anexos \`ready\` ou URL pública | Bloqueado |
+| SEC-171-09 | Forjar metadados de anexos `ready` ou URL pública | Bloqueado |
 | SEC-171-10 | Verificar notificações de abertura/resposta | Sem duplicidade introduzida pela primeira mensagem |
 
 ## D. Regressões e gates
