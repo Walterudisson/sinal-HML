@@ -15,7 +15,8 @@ export function normalizeOpeningMessage(message) {
 export function generateSignalTitle(message) {
   const body = normalizeOpeningMessage(message);
   // Somente o primeiro parágrafo serve de título, preservando a mensagem original.
-  const firstLine = body.split(/\r?\n/).find(line => line.trim().length > 0) || body;
+  const firstLine = body.split(/\r?\n/).find(line => line.trim().length >= MIN_OPENING_LENGTH)
+    || body.replace(/\s+/g, ' ');
   const oneLine = firstLine.replace(/\s+/g, ' ').trim();
   if (oneLine.length <= MAX_AUTO_TITLE_LENGTH) return oneLine;
   const prefix = oneLine.slice(0, MAX_AUTO_TITLE_LENGTH + 1);
