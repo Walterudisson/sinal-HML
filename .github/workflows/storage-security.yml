@@ -81,7 +81,7 @@ jobs:
         run: npm run test:1.7.1:domain
       - name: Testar interface de abertura e navegacao Android da Sprint 1.7.1-B
         run: npm run test:1.7.1:ui
-      - name: Verificar identificação de versão e cache PWA 1.7.1
+      - name: Verificar identificação de versão e cache PWA do hotfix 1.7.1.1
         run: node --test tests/sprint-1.7.1-release.test.mjs
       - name: Testar triagem e fila da Sprint 1.7.1-C
         run: npm run test:1.7.1:triage
