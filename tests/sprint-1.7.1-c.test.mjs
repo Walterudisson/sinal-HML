@@ -68,6 +68,7 @@ test('Central possui filtro, contador, ordem e ação classificar',()=>{
   assert.match(central,/matchesQueueFilter\(ticket, currentFilter, uid\)/);
   assert.match(central,/queuePriorityScore\(b\) - queuePriorityScore\(a\)/);
   assert.match(central,/data-triage-ticket/);
+  assert.match(central,/onOpenTicket\?\.\(ticket, \{ focusTriage: true \}\)/);
   assert.match(html,/data-central-filter="triage"/);
   assert.match(html,/id="central-triage-count"/);
   assert.match(html,/id="central-priority"[\s\S]*?<option value="pending">Não definida<\/option>/);
@@ -84,6 +85,7 @@ test('painel de triagem não integra a conversa e não fica disponível ao solic
   assert.match(html,/id="detail-triage-history"/);
   assert.match(detail,/panel\.classList\.toggle\('hidden', !support\)/);
   assert.match(detail,/canTriageTicket\(currentContext, ticket\)/);
+  assert.match(detail,/options\.focusTriage && canTriageTicket\(currentContext, ticket\)/);
   assert.match(detail,/unsubscribeTriageEvents\?\.\(\)/);
   assert.match(detail,/onObserveTriageEvents\?\.\(/);
   assert.match(detail,/await onSaveTriage\?\.\(originalTicket, \{ title, category, priority \}\)/);
