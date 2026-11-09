@@ -282,6 +282,7 @@
               <button data-central-filter="all" class="central-filter w-full sm:w-auto">Todos</button>
               <button data-central-filter="new" class="central-filter is-active w-full sm:w-auto">Novos</button>
               <button data-central-filter="attention" class="central-filter w-full sm:w-auto">Atenção <span id="central-attention-count" class="ml-1 opacity-70">0</span></button>
+              <button data-central-filter="triage" class="central-filter w-full sm:w-auto">Sem triagem <span id="central-triage-count" class="ml-1 opacity-70">0</span></button>
               <button data-central-filter="mine" class="central-filter w-full sm:w-auto">Meus</button>
               <button data-central-filter="unassigned" class="central-filter col-span-2 w-full sm:col-auto sm:w-auto">Sem responsável</button>
             </div>
@@ -297,6 +298,7 @@
                   <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Prioridade</span>
                   <select id="central-priority" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
                     <option value="all">Todas</option>
+                    <option value="pending">Não definida</option>
                     <option value="urgente">Urgente</option>
                     <option value="alta">Alta</option>
                     <option value="normal">Normal</option>
@@ -307,6 +309,7 @@
                   <span class="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">Categoria</span>
                   <select id="central-category" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100">
                     <option value="all">Todas</option>
+                    <option value="pending">Não definida</option>
                     <option value="acesso">Acesso</option>
                     <option value="equipamento">Equipamento</option>
                     <option value="rede">Rede</option>
