@@ -601,6 +601,52 @@
               <p id="detail-action-help" class="mt-2 text-xs leading-5 text-slate-500"></p>
             </div>
 
+            <!-- Equipe: classificação e título técnico. Nunca mostrado ao solicitante. -->
+            <section id="detail-triage-panel" class="hidden rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:p-5" aria-labelledby="detail-triage-title">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 id="detail-triage-title" class="text-sm font-extrabold text-slate-950">Triagem do sinal</h3>
+                <span id="detail-triage-status" class="ticket-badge bg-amber-100 text-amber-900">Sem triagem</span>
+              </div>
+              <p class="mt-1 text-xs leading-5 text-slate-600">Categoria, prioridade e título são definidos pela equipe de atendimento.</p>
+              <form id="detail-triage-form" class="mt-3 space-y-3" novalidate>
+                <label class="block">
+                  <span class="mb-1 block text-xs font-bold text-slate-700">Título do sinal</span>
+                  <input id="detail-triage-title-input" type="text" maxlength="120" minlength="3" required class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base outline-none focus:border-sky-600" />
+                </label>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-bold text-slate-700">Categoria</span>
+                    <select id="detail-triage-category" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base">
+                      <option value="">Não definida</option>
+                      <option value="acesso">Acesso</option>
+                      <option value="equipamento">Equipamento</option>
+                      <option value="rede">Rede</option>
+                      <option value="sistemas">Sistemas</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </label>
+                  <label class="block">
+                    <span class="mb-1 block text-xs font-bold text-slate-700">Prioridade</span>
+                    <select id="detail-triage-priority" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base">
+                      <option value="">Não definida</option>
+                      <option value="baixa">Baixa</option>
+                      <option value="normal">Normal</option>
+                      <option value="alta">Alta</option>
+                      <option value="urgente">Urgente</option>
+                    </select>
+                  </label>
+                </div>
+                <p id="detail-triage-error" class="hidden rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800" role="alert" aria-live="assertive"></p>
+                <button id="detail-triage-submit" type="submit" class="min-h-11 w-full rounded-xl bg-indigo-700 px-4 text-sm font-extrabold text-white hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">Salvar triagem</button>
+              </form>
+              <div class="mt-4 border-t border-amber-200 pt-3">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Histórico da triagem</h4>
+                <ol id="detail-triage-history" class="mt-2 space-y-2 text-xs text-slate-700" aria-live="polite">
+                  <li>Nenhuma alteração registrada.</li>
+                </ol>
+              </div>
+            </section>
+
             <button id="open-conversation-button" type="button" class="flex min-h-14 w-full items-center justify-between rounded-2xl border border-sky-200 bg-sky-50 p-4 text-left font-bold text-sky-900 hover:bg-sky-100"><span id="open-conversation-label">Abrir conversa</span><span aria-hidden="true">→</span></button>
 
             <section id="detail-public-resolution" class="hidden rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
