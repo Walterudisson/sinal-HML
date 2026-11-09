@@ -69,3 +69,30 @@ A interface ainda usa o formulário legado na branch e não chama `createConvers
 **Limites de validação:** os sete testes B incluem inspeções estáticas, testes de lógica pura e simulações de DOM/histórico. Não substituem homologação real em navegador/Android e Firebase HML. A tentativa permanece em memória, não persistida em disco após recarregamento; queda/recarga durante confirmação incerta deve ser contemplada no endurecimento de recuperação do MVP. A fase C precisa implementar classificação e filtros antes de qualquer publicação da branch. Não promover as Rules isoladamente: o frontend publicado em HML ainda utiliza o formulário anterior.
 
 **Próxima entrega:** 1.7.1-C, Central e Triagem, incluindo histórico visível e regressão dos tickets antigos e novos. Gate final de merge/deploy HML exige aprovação explícita.
+
+
+## Estado da fase 1.7.1-C em 09/11/2026
+
+**Central e triagem implementadas em branch, CI aprovada. Código ainda não foi implantado no Firebase HML nem mesclado à `main`.**
+
+- `js/services/triage-domain.mjs`: critérios puros de classificação pendente, permissões conforme responsável/papel, filtro e prioridade de fila e representação das alterações.
+- `js/ui/central.js`: filtro e contador **Sem triagem**, filtros por categoria/prioridade não definida, ordenação explícita (`urgente > alta > pendente > normal > baixa`), destaque em Atenção e botão **Classificar**, que abre o formulário diretamente.
+- `js/ui/ticket-detail.js`: formulário exclusivo da equipe, atualização por `updateTicketTriage`, exibição do histórico em tempo real, controle de estado obsoleto e navegação por atalho. Agentes não responsáveis não podem classificar sinal já atribuído; admin/supervisor podem corrigir.
+- `index.html`: painel de triagem acessível pela ficha técnica e opções de filtro; a abertura por mensagem única da fase B permanece inalterada.
+- `js/ui/home.js`: inclui sinais novos sem classificação entre as demandas de atenção, sem inventar prioridade Normal.
+- `js/main.js`: integra persistência transacional de categoria/prioridade/título e acompanhamento de eventos.
+- `firestore.rules`: leitura de `triageEvents` restrita a suporte autorizado, impedindo que o solicitante consulte o histórico interno por acesso direto.
+- `tests/sprint-1.7.1-c.test.mjs`: **8/8 testes de regras puras e integração estrutural**; `tests/sprint-1.7.1-a-emulator.test.cjs`: **17/17 testes de segurança reais**, incluindo negação de leitura dos eventos de triagem para solicitante/tenant estranho.
+- Scripts e GitHub Actions atualizados; regressões anteriores de criação, anexos e Functions sem falhas.
+
+**Evidência de CI:** [GitHub Actions #42636190614](https://github.com/Walterudisson/sinal-HML/actions/runs/42636190614), status **success**. Inclui também 7/7 testes da 1.7.1-B, 4/4 de domínio da 1.7.1-A, 16/16 de Storage no emulador, 6/6 de revogação de acesso e 22/22 de funções; outras verificações estáticas/anteriores igualmente aprovadas.
+
+### Gates remanescentes
+
+1. Revisão final e autorização específica para merge em `main` HML.
+2. Planejar **publicação coordenada de frontend e Firestore Rules em HML**: a nova Rule de abertura é incompatível com o antigo formulário isoladamente. Não efetuar deploy parcial em ambiente compartilhado com usuários de teste ativos sem janela controlada.
+3. Homologação manual em navegador e Android: abertura, anexos, conversa, triagem, histórico, filtros, troca de contas e comportamento do Voltar.
+4. Verificação real de isolamento multi-tenant com conta de outra organização e limpeza de objetos de Storage pendentes da 1.7.0-C; testes em emulador não substituem evidências reais de implantação.
+5. Depois da homologação explícita, planejar qualquer promoção para PRD em decisão separada. **Não alterar PRD automaticamente.**
+
+**Nota sobre testes:** validação automatizada e integração com Emulator não são equivalentes à homologação funcional em HML publicado.
