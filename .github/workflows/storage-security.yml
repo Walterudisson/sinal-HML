@@ -26,6 +26,9 @@ on:
       - 'tests/sprint-1.7.1-b-ui.test.mjs'
       - 'tests/sprint-1.7.1-c.test.mjs'
       - 'js/services/triage-domain.mjs'
+      - 'js/config/version.js'
+      - 'service-worker.js'
+      - 'tests/sprint-1.7.1-release.test.mjs'
       - 'js/ui/central.js'
       - 'js/services/opening-attempt.mjs'
       - 'js/services/opening-domain.mjs'
@@ -78,6 +81,8 @@ jobs:
         run: npm run test:1.7.1:domain
       - name: Testar interface de abertura e navegacao Android da Sprint 1.7.1-B
         run: npm run test:1.7.1:ui
+      - name: Verificar identificação de versão e cache PWA 1.7.1
+        run: node --test tests/sprint-1.7.1-release.test.mjs
       - name: Testar triagem e fila da Sprint 1.7.1-C
         run: npm run test:1.7.1:triage
       - name: Validar regras estáticas
