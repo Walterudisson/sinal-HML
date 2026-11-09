@@ -2,7 +2,7 @@ import {
   categoryLabels, priorityLabels, priorityClasses, statusLabels, formatDate, formatRelativeAge, escapeHtml
 } from './signal-composer.js';
 import {
-  pendingTriage, needsQueueAttention, queuePriorityScore, matchesQueueFilter, matchesQueueProperty
+  pendingTriage, canTriageTicket, needsQueueAttention, queuePriorityScore, matchesQueueFilter, matchesQueueProperty
 } from '../services/triage-domain.mjs';
 
 let currentContext = null;
@@ -212,6 +212,14 @@ function renderCentral() {
     });
   });
 
+  list.querySelectorAll('[data-triage-ticket]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const ticket = tickets.find((item) => item.id === button.dataset.triageTicket);
+      if (ticket && canTriageTicket(currentContext, ticket)) onOpenTicket?.(ticket);
+    });
+  });
+
   list.querySelectorAll('[data-open-conversation]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -339,7 +347,12 @@ function markup(ticket) {
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          ${pendingTriage(ticket) && canTriageTicket(currentContext, ticket) ? `
+            <button data-triage-ticket="${escapeHtml(ticket.id)}" type="button"
+              class="min-h-11 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-extrabold text-amber-900 hover:bg-amber-100">
+              Classificar
+            </button>` : ''}
           ${ticket.status === 'open' && !ticket.assigneeUid ? `
             <button data-claim-ticket="${escapeHtml(ticket.id)}" type="button"
               class="min-h-11 rounded-xl bg-indigo-700 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60">
