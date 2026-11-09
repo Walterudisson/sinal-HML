@@ -104,3 +104,11 @@ test('classificação é transacional, auditável e não sobrescreve o estado an
   assert.match(rules,/match \/triageEvents\/\{eventId\}/);
   assert.match(rules,/allow update, delete: if false;/);
 });
+
+test('a tela Início também destaca novos sinais sem triagem e não inventa prioridade',()=>{
+  const home=source('../js/ui/home.js');
+  assert.match(home,/\.filter\(needsQueueAttention\)/);
+  assert.match(home,/queuePriorityScore\(b\) - queuePriorityScore\(a\)/);
+  assert.match(home,/ticket\.priority \?\? 'Sem triagem'/);
+  assert.doesNotMatch(home,/priorityLabels\[ticket\.priority\] \?\? ticket\.priority \?\? 'Normal'/);
+});
