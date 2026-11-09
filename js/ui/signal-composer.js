@@ -1,7 +1,7 @@
 import { openOverlayHistory, requestOverlayClose } from './overlay-history.js';
 import { validateAttachment } from '../services/attachments.service.js';
-
-const MIN_SIGNAL_TEXT_LENGTH = 3;
+import { normalizeOpeningMessage } from '../services/opening-domain.mjs';
+import { createOpeningAttemptController } from '../services/opening-attempt.mjs';
 
 const categoryLabels = Object.freeze({
   acesso: 'Acesso',
@@ -154,13 +154,11 @@ function renderMySignals() {
   bindMySignalCards(list, filtered);
 }
 
-export function initSignalComposer({ onSubmit }) {
+export function initSignalComposer({ onSubmit, onCreated, prepareAttempt, getSessionKey }) {
   const composer = document.querySelector('#signal-composer');
   const form = document.querySelector('#signal-form');
-  const titleInput = document.querySelector('#signal-title');
-  const descriptionInput = document.querySelector('#signal-description');
-  const titleCount = document.querySelector('#signal-title-count');
-  const descriptionCount = document.querySelector('#signal-description-count');
+  const messageInput = document.querySelector('#signal-message');
+  const messageCount = document.querySelector('#signal-message-count');
   const submitButton = document.querySelector('#signal-submit-button');
   const submitLabel = document.querySelector('#signal-submit-label');
   const submitSpinner = document.querySelector('#signal-submit-spinner');
@@ -175,16 +173,19 @@ export function initSignalComposer({ onSubmit }) {
   const attachmentCancel = document.querySelector('#signal-attachment-cancel');
   const openButtons = [...document.querySelectorAll('[data-open-signal-composer]')];
   const closeButtons = [...document.querySelectorAll('[data-close-signal-composer]')];
+  const attempts = createOpeningAttemptController(prepareAttempt);
   let submitting = false;
   let slowTimer = null;
   let networkMessage = false;
   let selectedFile = null;
   let activeUploadTask = null;
   let abandoned = false;
+  let finishingSuccessfully = false;
+  let openedSessionKey = null;
 
   function syncSelectedAttachment() {
     attachmentName.textContent = selectedFile
-      ? `${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MiB)`
+      ? selectedFile.name + ' (' + (selectedFile.size / 1024 / 1024).toFixed(2) + ' MiB)'
       : 'Nenhum arquivo selecionado.';
     attachmentRemove.classList.toggle('hidden', !selectedFile);
   }
@@ -215,10 +216,11 @@ export function initSignalComposer({ onSubmit }) {
   function setSubmitting(isSubmitting) {
     submitting = isSubmitting;
     submitButton.disabled = isSubmitting || !navigator.onLine;
+    messageInput.disabled = isSubmitting;
     submitSpinner.classList.toggle('hidden', !isSubmitting);
     submitLabel.textContent = isSubmitting
       ? (navigator.onLine ? 'Enviando...' : 'Aguardando conexão...')
-      : (navigator.onLine ? 'Enviar sinal' : 'Sem conexão');
+      : (navigator.onLine ? 'Mandar Sinal' : 'Sem conexão');
     attachmentChoose.disabled = isSubmitting;
     attachmentRemove.disabled = isSubmitting;
     openButtons.forEach(button => { button.disabled = isSubmitting; });
@@ -227,11 +229,10 @@ export function initSignalComposer({ onSubmit }) {
 
   function syncNetworkStatus() {
     setSubmitting(submitting);
-
     if (!navigator.onLine) {
       showConnectionMessage(submitting
-        ? 'Sua conexão caiu durante o envio. Mantenha o Sinal aberto e aguarde a confirmação quando a internet voltar. Não envie novamente.'
-        : 'Você está sem conexão. Seu texto foi mantido. Reconecte-se para enviar o sinal.');
+        ? 'Sua conexão caiu durante o envio. Mantenha o Sinal aberto e aguarde a confirmação. Não envie novamente.'
+        : 'Você está sem conexão. A mensagem foi mantida; reconecte-se para enviá-la.');
     } else if (submitting && networkMessage) {
       showConnectionMessage('Conexão restabelecida. Aguardando a confirmação do envio. Não envie novamente.');
     } else if (networkMessage && !submitting) {
@@ -243,18 +244,43 @@ export function initSignalComposer({ onSubmit }) {
   window.addEventListener('online', syncNetworkStatus);
 
   function finalizeClose() {
-    if (submitting) {
+    // Android Voltar pode fechar o composer durante o envio.
+    // A escrita do ticket não é cancelável; o anexo, sim.
+    if (submitting && !finishingSuccessfully) {
       abandoned = true;
       activeUploadTask?.cancel();
     }
+    finishingSuccessfully = false;
     composer.classList.add('hidden');
     composer.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('overlay-open');
     lastFocusedElement?.focus?.();
   }
 
+  function resetComposer() {
+    form.reset();
+    attachmentFile.value = '';
+    selectedFile = null;
+    activeUploadTask = null;
+    attachmentStatus.classList.add('hidden');
+    attachmentProgress.value = 0;
+    attachmentCancel.disabled = false;
+    syncSelectedAttachment();
+    messageCount.textContent = '0';
+    attempts.reset();
+    clearError();
+  }
+
   function openComposer() {
     if (!composer.classList.contains('hidden')) return;
+    const sessionKey = getSessionKey();
+    if (!sessionKey) return;
+    if (openedSessionKey !== sessionKey) {
+      // Não reutilizar rascunho ou ID reservado por outra conta ou tenant.
+      if (submitting) return;
+      resetComposer();
+      openedSessionKey = sessionKey;
+    }
 
     lastFocusedElement = document.activeElement;
     abandoned = false;
@@ -263,51 +289,17 @@ export function initSignalComposer({ onSubmit }) {
     composer.classList.remove('hidden');
     composer.setAttribute('aria-hidden', 'false');
     document.body.classList.add('overlay-open');
-
     openOverlayHistory('composer', finalizeClose);
-    window.setTimeout(() => titleInput.focus(), 40);
+    window.setTimeout(() => messageInput.focus(), 40);
   }
 
-  function closeComposer(force = false) {
+  function closeComposer(force = false, afterClose = null) {
     if (submitting && !force) return;
-    requestOverlayClose('composer', finalizeClose);
+    requestOverlayClose('composer', finalizeClose, afterClose);
   }
 
-  function resetComposer() {
-    form.reset();
-    document.querySelector('#signal-priority').value = 'normal';
-    attachmentFile.value = '';
-    selectedFile = null;
-    activeUploadTask = null;
-    attachmentStatus.classList.add('hidden');
-    attachmentProgress.value = 0;
-    syncSelectedAttachment();
-    titleCount.textContent = '0';
-    descriptionCount.textContent = '0';
-    clearError();
-  }
-
-  function validateSignalText() {
-    const title = titleInput.value.trim();
-    const description = descriptionInput.value.trim();
-
-    if (title.length < MIN_SIGNAL_TEXT_LENGTH) {
-      showError('O título precisa ter pelo menos 3 caracteres.');
-      titleInput.focus();
-      return null;
-    }
-
-    if (description.length < MIN_SIGNAL_TEXT_LENGTH) {
-      showError('A descrição precisa ter pelo menos 3 caracteres.');
-      descriptionInput.focus();
-      return null;
-    }
-
-    return { title, description };
-  }
-
-  openButtons.forEach((button) => button.addEventListener('click', openComposer));
-  closeButtons.forEach((button) => button.addEventListener('click', () => closeComposer()));
+  openButtons.forEach(button => button.addEventListener('click', openComposer));
+  closeButtons.forEach(button => button.addEventListener('click', () => closeComposer()));
   attachmentChoose.addEventListener('click', () => {
     if (!submitting) attachmentFile.click();
   });
@@ -339,27 +331,19 @@ export function initSignalComposer({ onSubmit }) {
     attachmentProgressLabel.textContent = 'Cancelando anexo...';
   });
 
-  composer.addEventListener('keydown', (event) => {
+  composer.addEventListener('keydown', event => {
     if (event.key === 'Escape') closeComposer();
   });
 
-  titleInput.addEventListener('input', () => {
-    titleCount.textContent = String(titleInput.value.length);
+  messageInput.addEventListener('input', () => {
+    messageCount.textContent = String(messageInput.value.length);
     if (!errorBox.classList.contains('hidden')) {
       if (navigator.onLine && !submitting) clearError();
       else syncNetworkStatus();
     }
   });
 
-  descriptionInput.addEventListener('input', () => {
-    descriptionCount.textContent = String(descriptionInput.value.length);
-    if (!errorBox.classList.contains('hidden')) {
-      if (navigator.onLine && !submitting) clearError();
-      else syncNetworkStatus();
-    }
-  });
-
-  form.addEventListener('submit', async (event) => {
+  form.addEventListener('submit', async event => {
     event.preventDefault();
     if (submitting) return;
     clearError();
@@ -368,52 +352,57 @@ export function initSignalComposer({ onSubmit }) {
       syncNetworkStatus();
       return;
     }
-
     if (!form.reportValidity()) return;
 
-    const text = validateSignalText();
-    if (!text) return;
-
-    const payload = {
-      title: text.title,
-      category: document.querySelector('#signal-category').value,
-      priority: document.querySelector('#signal-priority').value,
-      description: text.description
-    };
+    let message;
+    let attempt;
+    try {
+      message = normalizeOpeningMessage(messageInput.value);
+      if (selectedFile) validateAttachment(selectedFile);
+      // Resposta incerta: reutilizar ticketId e messageId da tentativa anterior.
+      attempt = attempts.reserve(message, getSessionKey());
+    } catch (error) {
+      showError(error?.message || 'Confira a mensagem antes de enviar.');
+      messageInput.focus();
+      return;
+    }
 
     try {
       setSubmitting(true);
       slowTimer = window.setTimeout(() => {
         if (submitting && navigator.onLine) {
-          showConnectionMessage('O envio está demorando. Verifique a conexão e mantenha o Sinal aberto até a confirmação. Não envie novamente.');
+          showConnectionMessage('O envio está demorando. Aguarde a confirmação para não criar um sinal duplicado.');
         }
       }, 8000);
-      await onSubmit(payload, {
+
+      const result = await onSubmit({ message }, {
+        attempt,
         file: selectedFile,
         onTask: task => {
           activeUploadTask = task;
           if (abandoned) task.cancel();
         },
-        onProgress: percentage => showUploadProgress(percentage, `Enviando anexo... ${percentage}%`),
+        onProgress: percentage => showUploadProgress(percentage, 'Enviando anexo... ' + percentage + '%'),
         onTicketCreated: code => {
-          if (selectedFile) showUploadProgress(0, `${code} criado. Preparando anexo...`);
+          if (selectedFile) showUploadProgress(0, code + ' criado. Preparando anexo...');
         }
       });
+
       activeUploadTask = null;
+      const shouldOpenConversation = !abandoned && Boolean(result?.ticket);
       resetComposer();
-      closeComposer(true);
+      if (shouldOpenConversation) {
+        // Só abre o detalhe depois que a entrada do composer saiu do histórico.
+        finishingSuccessfully = true;
+        closeComposer(true, () => onCreated?.(result.ticket));
+      }
     } catch (error) {
-      console.error('[Sinal][Ticket] Falha ao criar sinal:', error);
-
-      const isPermissionError =
-        error?.code === 'permission-denied' ||
-        /insufficient permissions|permission denied/i.test(error?.message || '');
-
-      showError(
-        isPermissionError
-          ? 'Não foi possível enviar este sinal. Reabra o Sinal e tente novamente. Se o problema continuar, procure o suporte.'
-          : 'Não foi possível enviar seu sinal agora. Tente novamente.'
-      );
+      console.error('[Sinal][Ticket] Falha ao criar sinal:', error?.code || error);
+      const permissionError = error?.code === 'permission-denied'
+        || /insufficient permissions|permission denied/i.test(error?.message || '');
+      showError(permissionError
+        ? 'Não foi possível autorizar este envio. Seu texto foi preservado. Confira seu acesso e tente novamente.'
+        : 'Não conseguimos confirmar o envio. Sua mensagem foi preservada. Ao tentar novamente, verificaremos a mesma tentativa para evitar duplicidade.');
     } finally {
       window.clearTimeout(slowTimer);
       slowTimer = null;
