@@ -659,8 +659,8 @@ function renderTicket(ticket) {
 
   const labels = isRequester ? requesterStatusLabels : statusLabels;
   const status = labels[ticket.status] ?? ticket.status ?? (isRequester ? 'Enviado' : 'Sinal recebido');
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Normal';
-  const priorityClass = priorityClasses[ticket.priority] ?? priorityClasses.normal;
+  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
+  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
 
   document.querySelector('#detail-code').textContent = ticket.code ?? '';
