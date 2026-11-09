@@ -214,3 +214,62 @@ test('outro tenant não lê ticket, mensagem ou histórico',async()=>{
   await assertFails(getDoc(doc(database('mallory'),mp(a,o.tid,o.mid))));
   await assertFails(getDoc(doc(database('mallory'),ep(a,o.tid,nextId('event')))));
 });
+
+
+test('sinal sem triagem pode ser assumido e respondido sem alterar classificação',async()=>{
+  const o=opening();await assertSucceeds(o.commit());
+  const db=database('bob'),tid=o.tid,eid=nextId('status');
+  const ticketRef=doc(db,tp(a,tid)),eventRef=doc(db,tp(a,tid)+'/statusEvents/'+eid);
+  const claim=writeBatch(db);
+  claim.update(ticketRef,{
+    status:'in_progress',assigneeUid:'bob',assigneeName:'bob',
+    assigneeEmail:'bob@test.invalid',updatedAt:serverTimestamp(),lastEventId:eid
+  });
+  claim.set(eventRef,{
+    type:'claimed',from:'open',to:'in_progress',
+    actorUid:'bob',actorName:'bob',createdAt:serverTimestamp()
+  });
+  await assertSucceeds(claim.commit());
+  const messageId=nextId('reply'),msgRef=doc(db,mp(a,tid,messageId));
+  const reply=writeBatch(db);
+  reply.set(msgRef,{
+    body:'Estamos verificando seu problema.',visibility:'public',
+    authorUid:'bob',authorName:'bob',authorEmail:'bob@test.invalid',
+    authorRole:'agente',createdAt:serverTimestamp()
+  });
+  reply.update(ticketRef,{
+    lastInteractionAt:serverTimestamp(),lastInteractionType:'message',
+    lastInteractionByUid:'bob',lastInteractionMessageId:messageId
+  });
+  await assertSucceeds(reply.commit());
+  const afterReply=(await getDoc(ticketRef)).data();
+  assert.equal(afterReply.category,null);
+  assert.equal(afterReply.priority,null);
+  assert.equal(afterReply.status,'in_progress');
+  const carolDb=database('carol'),foreignMsgId=nextId('reply');
+  const foreign=writeBatch(carolDb);
+  foreign.set(doc(carolDb,mp(a,tid,foreignMsgId)),{
+    body:'Resposta não autorizada',visibility:'public',
+    authorUid:'carol',authorName:'carol',authorEmail:'carol@test.invalid',
+    authorRole:'supervisor',createdAt:serverTimestamp()
+  });
+  foreign.update(doc(carolDb,tp(a,tid)),{
+    lastInteractionAt:serverTimestamp(),lastInteractionType:'message',
+    lastInteractionByUid:'carol',lastInteractionMessageId:foreignMsgId
+  });
+  await assertFails(foreign.commit());
+});
+
+test('classificações concorrentes não sobrescrevem histórico desatualizado',async()=>{
+  const o=opening();await assertSucceeds(o.commit());
+  const original=(await getDoc(o.ticketRef)).data();
+  await assertSucceeds(triage('bob',a,o.tid,original,{
+    ...original,category:'acesso',priority:'normal'
+  }).promise);
+  await assertFails(triage('carol',a,o.tid,original,{
+    ...original,category:'rede',priority:'urgente'
+  }).promise);
+  const saved=(await getDoc(o.ticketRef)).data();
+  assert.equal(saved.category,'acesso');
+  assert.equal(saved.priority,'normal');
+});
