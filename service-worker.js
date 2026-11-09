@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sinal-shell-hml-1.7.1-conversa-triagem';
+const CACHE_NAME = 'sinal-shell-hml-1.7.1.1-central-mobile';
 const APP_SHELL = [
   './offline.html',
   './manifest.webmanifest',
