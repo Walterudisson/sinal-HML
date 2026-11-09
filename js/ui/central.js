@@ -319,6 +319,10 @@ function markup(ticket) {
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
   const contextLabel = centralContext(ticket);
   const hasUnreadMessage = unreadMessageTicketIds.has(ticket.id);
+  const triagePending = pendingTriage(ticket);
+  const priorityBadge = triagePending
+    ? '<span class="ticket-badge bg-amber-50 text-amber-800">Sem triagem</span>'
+    : `<span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>`;
   const interactionAt = interactionTimestamp(ticket);
   const isMine =
     ticket.status === 'in_progress' &&
@@ -333,9 +337,8 @@ function markup(ticket) {
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code)}</span>
             <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
-            <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
+            ${priorityBadge}
             ${hasUnreadMessage ? '<span class="ticket-badge bg-rose-50 text-rose-700">Nova mensagem</span>' : ''}
-            ${pendingTriage(ticket) ? '<span class="ticket-badge bg-amber-50 text-amber-800">Sem triagem</span>' : ''}
           </div>
           <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title)}</h3>
           <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
@@ -347,8 +350,8 @@ function markup(ticket) {
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          ${pendingTriage(ticket) && canTriageTicket(currentContext, ticket) ? `
+        <div class="central-ticket-actions flex flex-wrap items-center gap-2">
+          ${triagePending && canTriageTicket(currentContext, ticket) ? `
             <button data-triage-ticket="${escapeHtml(ticket.id)}" type="button"
               class="min-h-11 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-extrabold text-amber-900 hover:bg-amber-100">
               Classificar
