@@ -662,7 +662,14 @@ export function openTicketDetail(ticket, observeMessages, options = {}) {
   const scroller = document.querySelector('#ticket-detail-scroll');
   scroller.scrollTop = 0;
   requestAnimationFrame(() => {
-    if (selectedTicket?.id === ticket.id) scroller.scrollTop = 0;
+    if (selectedTicket?.id !== ticket.id) return;
+    if (options.focusTriage && canTriageTicket(currentContext, ticket)) {
+      const form = document.querySelector('#detail-triage-panel');
+      form.scrollIntoView({ block: 'start', behavior: 'instant' });
+      document.querySelector('#detail-triage-category').focus({ preventScroll: true });
+    } else {
+      scroller.scrollTop = 0;
+    }
   });
 
   unsubscribeMessages?.();
