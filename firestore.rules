@@ -16,6 +16,9 @@ service cloud.firestore {
     function messagePath(tenantId, ticketId, messageId) {
       return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId)/messages/$(messageId);
     }
+    function triageEventPath(tenantId, ticketId, eventId) {
+      return /databases/$(database)/documents/tenants/$(tenantId)/tickets/$(ticketId)/triageEvents/$(eventId);
+    }
 
     function activeUser() {
       return signedIn() && exists(userPath()) && get(userPath()).data.status == 'active';
@@ -46,6 +49,7 @@ service cloud.firestore {
 
     function canReplyToTicket(tenantId, ticketId) {
       return activeMember(tenantId)
+        && exists(ticketPath(tenantId, ticketId))
         && get(ticketPath(tenantId, ticketId)).data.status != 'resolved'
         && (
           get(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
@@ -95,33 +99,56 @@ service cloud.firestore {
         allow read: if activeMember(tenantId)
           && (resource.data.requesterUid == request.auth.uid || supportMember(tenantId));
 
+        // 1.7.1-A: o solicitante abre por mensagem, sem escolher triagem.
+        // A primeira mensagem deve ser criada no MESMO batch do ticket.
         allow create: if activeMember(tenantId)
           && request.resource.data.keys().hasOnly([
             'code','title','description','category','priority','status',
             'requesterUid','requesterName','requesterEmail','createdByUid',
-            'source','assigneeUid','teamId','createdAt','updatedAt'
+            'source','assigneeUid','teamId','createdAt','updatedAt',
+            'firstMessageId','lastInteractionAt','lastInteractionType',
+            'lastInteractionByUid','lastInteractionMessageId'
+          ])
+          && request.resource.data.keys().hasAll([
+            'code','title','description','category','priority','status',
+            'requesterUid','requesterName','requesterEmail','createdByUid',
+            'source','assigneeUid','teamId','createdAt','updatedAt',
+            'firstMessageId','lastInteractionAt','lastInteractionType',
+            'lastInteractionByUid','lastInteractionMessageId'
           ])
           && request.resource.data.code is string
           && request.resource.data.code.size() >= 3
           && request.resource.data.code.size() <= 20
           && request.resource.data.title is string
           && request.resource.data.title.size() >= 3
-          && request.resource.data.title.size() <= 120
+          && request.resource.data.title.size() <= 80
           && request.resource.data.description is string
           && request.resource.data.description.size() >= 3
           && request.resource.data.description.size() <= 4000
-          && request.resource.data.category in ['acesso','equipamento','rede','sistemas','outro']
-          && request.resource.data.priority in ['baixa','normal','alta','urgente']
+          && request.resource.data.category == null
+          && request.resource.data.priority == null
           && request.resource.data.status == 'open'
           && request.resource.data.requesterUid == request.auth.uid
           && request.resource.data.createdByUid == request.auth.uid
-          && request.resource.data.requesterName is string
-          && request.resource.data.requesterEmail is string
+          && request.resource.data.requesterName == get(userPath()).data.displayName
+          && request.resource.data.requesterEmail == get(userPath()).data.email
           && request.resource.data.source == 'web'
           && request.resource.data.assigneeUid == null
           && request.resource.data.teamId == null
           && request.resource.data.createdAt == request.time
-          && request.resource.data.updatedAt == request.time;
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.firstMessageId is string
+          && request.resource.data.firstMessageId.size() >= 10
+          && request.resource.data.lastInteractionAt == request.time
+          && request.resource.data.lastInteractionType == 'message'
+          && request.resource.data.lastInteractionByUid == request.auth.uid
+          && request.resource.data.lastInteractionMessageId == request.resource.data.firstMessageId
+          && getAfter(messagePath(tenantId, ticketId,
+            request.resource.data.firstMessageId)).data.body == request.resource.data.description
+          && getAfter(messagePath(tenantId, ticketId,
+            request.resource.data.firstMessageId)).data.authorUid == request.auth.uid
+          && getAfter(messagePath(tenantId, ticketId,
+            request.resource.data.firstMessageId)).data.createdAt == request.time;
 
         // Atribuição e resolução são transições distintas, vinculadas ao histórico.
         allow update: if (supportMember(tenantId) && (
@@ -193,6 +220,61 @@ service cloud.firestore {
           && getAfter(messagePath(
             tenantId, ticketId, request.resource.data.lastInteractionMessageId
           )).data.createdAt == request.time
+        ) || (
+          // Alteração de título/classificação da equipe com evento imutável.
+          supportMember(tenantId)
+          && resource.data.status != 'resolved'
+          && (
+            get(memberPath(tenantId)).data.role in ['admin', 'supervisor']
+            || resource.data.assigneeUid == null
+            || resource.data.assigneeUid == request.auth.uid
+          )
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title','category','priority','updatedAt','lastTriageEventId'
+          ])
+          && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'title','category','priority'
+          ])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 120
+          && (
+            (request.resource.data.category == null && request.resource.data.priority == null)
+            || (
+              request.resource.data.category in ['acesso','equipamento','rede','sistemas','outro']
+              && request.resource.data.priority in ['baixa','normal','alta','urgente']
+            )
+          )
+          && (resource.data.category == null || request.resource.data.category != null)
+          && (resource.data.priority == null || request.resource.data.priority != null)
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.lastTriageEventId is string
+          && request.resource.data.lastTriageEventId.size() >= 10
+          && request.resource.data.lastTriageEventId != resource.data.get('lastTriageEventId', '')
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.actorUid == request.auth.uid
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.createdAt == request.time
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.fromTitle == resource.data.title
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.toTitle == request.resource.data.title
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.fromCategory == resource.data.category
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.toCategory == request.resource.data.category
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.fromPriority == resource.data.priority
+          && getAfter(triageEventPath(
+            tenantId, ticketId, request.resource.data.lastTriageEventId
+          )).data.toPriority == request.resource.data.priority
         );
 
         allow delete: if false;
@@ -251,6 +333,44 @@ service cloud.firestore {
           allow update, delete: if false;
         }
 
+        // Eventos de triagem imutáveis, vinculados à mesma escrita do ticket.
+        match /triageEvents/{eventId} {
+          allow read: if canReadTicket(tenantId, ticketId);
+          allow create: if supportMember(tenantId)
+            && request.resource.data.keys().hasOnly([
+              'type','fromTitle','toTitle','fromCategory','toCategory',
+              'fromPriority','toPriority','actorUid','actorName','createdAt'
+            ])
+            && request.resource.data.keys().hasAll([
+              'type','fromTitle','toTitle','fromCategory','toCategory',
+              'fromPriority','toPriority','actorUid','actorName','createdAt'
+            ])
+            && request.resource.data.type in ['classified','reclassified','title_changed']
+            && request.resource.data.actorUid == request.auth.uid
+            && request.resource.data.actorName == get(userPath()).data.displayName
+            && request.resource.data.createdAt == request.time
+            && get(ticketPath(tenantId, ticketId)).data.status != 'resolved'
+            && getAfter(ticketPath(tenantId, ticketId)).data.lastTriageEventId == eventId
+            && getAfter(ticketPath(tenantId, ticketId)).data.updatedAt == request.time
+            && request.resource.data.fromTitle == get(ticketPath(tenantId, ticketId)).data.title
+            && request.resource.data.toTitle == getAfter(ticketPath(tenantId, ticketId)).data.title
+            && request.resource.data.fromCategory == get(ticketPath(tenantId, ticketId)).data.category
+            && request.resource.data.toCategory == getAfter(ticketPath(tenantId, ticketId)).data.category
+            && request.resource.data.fromPriority == get(ticketPath(tenantId, ticketId)).data.priority
+            && request.resource.data.toPriority == getAfter(ticketPath(tenantId, ticketId)).data.priority
+            && (
+              (request.resource.data.fromCategory == null
+                && request.resource.data.toCategory != null
+                && request.resource.data.type == 'classified')
+              || (request.resource.data.fromCategory != null
+                && request.resource.data.type == 'reclassified')
+              || (request.resource.data.fromCategory == request.resource.data.toCategory
+                && request.resource.data.fromPriority == request.resource.data.toPriority
+                && request.resource.data.type == 'title_changed')
+            );
+          allow update, delete: if false;
+        }
+
         // Anexos: metadados visíveis apenas a quem pode ler o sinal.
         // Cliente pode criar somente um pedido pendente; apenas backend poderá
         // confirmar que o arquivo realmente existe e liberar sua apresentação.
@@ -287,7 +407,19 @@ service cloud.firestore {
         match /messages/{messageId} {
           allow read: if canReadTicket(tenantId, ticketId);
 
-          allow create: if canReplyToTicket(tenantId, ticketId)
+          allow create: if (
+            canReplyToTicket(tenantId, ticketId)
+            || (
+              activeMember(tenantId)
+              && !exists(ticketPath(tenantId, ticketId))
+              && getAfter(ticketPath(tenantId, ticketId)).data.createdAt == request.time
+              && getAfter(ticketPath(tenantId, ticketId)).data.firstMessageId == messageId
+              && getAfter(ticketPath(tenantId, ticketId)).data.requesterUid == request.auth.uid
+              && getAfter(ticketPath(tenantId, ticketId)).data.description == request.resource.data.body
+              && getAfter(ticketPath(tenantId, ticketId)).data.category == null
+              && getAfter(ticketPath(tenantId, ticketId)).data.priority == null
+            )
+          )
             && request.resource.data.keys().hasOnly([
               'body','visibility','authorUid','authorName',
               'authorEmail','authorRole','createdAt'
