@@ -126,3 +126,54 @@ test('hotfix 1.7.1.1: Central usa só uma badge Sem triagem e separa ações no 
   assert.match(css,/@media \(max-width: 639px\) \{[\s\S]*?\.central-ticket \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(css,/\.central-ticket-actions \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
+
+
+test('paleta v1.7.1.2 define prioridades sem ambiguidades e triagem com destaque próprio', async () => {
+  const {
+    getClassificationBadge, priorityClasses, triagePendingClass,
+    statusBadgeClass, statusClasses, newMessageBadgeClass
+  } = await import('../js/ui/ticket-palette.mjs');
+  assert.deepEqual(getClassificationBadge(mk()), {
+    label:'Sem triagem', classes:'bg-violet-50 text-violet-800'
+  });
+  assert.equal(getClassificationBadge(mk({priority:'alta'})).label,'Sem triagem',
+    'prioridade sem categoria não equivale à triagem concluída');
+  for (const [priority, category, label, classes] of [
+    ['baixa','acesso','Baixa','bg-slate-100 text-slate-700'],
+    ['normal','rede','Normal','bg-cyan-50 text-cyan-800'],
+    ['alta','rede','Alta','bg-orange-50 text-orange-800'],
+    ['urgente','sistemas','Urgente','bg-rose-50 text-rose-800']
+  ]) {
+    assert.deepEqual(getClassificationBadge(mk({priority,category})),{label,classes});
+  }
+  assert.equal(triagePendingClass,'bg-violet-50 text-violet-800');
+  assert.equal(priorityClasses.alta,'bg-orange-50 text-orange-800');
+  assert.equal(newMessageBadgeClass,'bg-teal-50 text-teal-800');
+  assert.equal(statusBadgeClass('open'),'bg-blue-50 text-blue-700');
+  assert.equal(statusBadgeClass('in_progress'),'bg-indigo-50 text-indigo-800');
+  assert.equal(statusBadgeClass('waiting_requester'),'bg-yellow-50 text-yellow-800');
+  assert.equal(statusBadgeClass('resolved'),'bg-emerald-50 text-emerald-800');
+  assert.equal(statusBadgeClass('unknown'),statusClasses.open);
+});
+
+test('paleta v1.7.1.2 é compartilhada por Central, Início, Meus Sinais e Detalhes',()=>{
+  const central=source('../js/ui/central.js');
+  const composer=source('../js/ui/signal-composer.js');
+  const detail=source('../js/ui/ticket-detail.js');
+  const home=source('../js/ui/home.js');
+  const css=source('../css/app.css');
+  for (const [name, file] of [
+    ['Central',central],['Meus Sinais',composer],['Detalhes',detail],['Início',home]
+  ]) {
+    assert.match(file,/getClassificationBadge\(ticket\)/,name);
+  }
+  for (const file of [central,composer,detail]) {
+    assert.match(file,/statusBadgeClass\(ticket\.status\)/);
+  }
+  assert.match(central,/newMessageBadgeClass/);
+  assert.doesNotMatch(central,/badge bg-amber-50 text-amber-800/);
+  assert.match(detail,/text-xs font-semibold text-slate-600/,
+    'Classificado no painel técnico é texto auxiliar, não etiqueta verde');
+  assert.match(css,/\.ticket-smart\.priority-pending::before \{ background: #8b5cf6; \}/);
+  assert.match(css,/\.ticket-smart\.priority-alta::before \{ background: #f97316; \}/);
+});
