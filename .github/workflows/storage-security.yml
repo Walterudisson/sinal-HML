@@ -11,6 +11,8 @@ on:
       - 'functions/access-revocation.js'
       - 'functions/access-revocation.test.cjs'
       - 'functions/index.js'
+      - 'functions/notification-routing.js'
+      - 'functions/notification-routing.test.cjs'
       - 'functions/attachment-security.js'
       - 'functions/attachment-security.test.cjs'
       - 'functions/package.json'
@@ -64,6 +66,8 @@ jobs:
       - name: Verificar sintaxe do frontend e funções
         run: |
           node --check functions/index.js
+          node --check functions/notification-routing.js
+          node --check functions/notification-routing.test.cjs
           node --check functions/attachment-security.js
           node --check js/main.js
           node --check js/services/attachments.service.js
