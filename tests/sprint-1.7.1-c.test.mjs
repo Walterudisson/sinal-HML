@@ -175,5 +175,7 @@ test('paleta v1.7.1.2 é compartilhada por Central, Início, Meus Sinais e Detal
   assert.match(detail,/text-xs font-semibold text-slate-600/,
     'Classificado no painel técnico é texto auxiliar, não etiqueta verde');
   assert.match(css,/\.ticket-smart\.priority-pending::before \{ background: #8b5cf6; \}/);
+  assert.match(central,/const priorityKey = classification\.label === 'Sem triagem' \? 'pending' : ticket\.priority;/);
+  assert.match(composer,/const priorityKey = classification\.label === 'Sem triagem' \? 'pending' : ticket\.priority;/);
   assert.match(css,/\.ticket-smart\.priority-alta::before \{ background: #f97316; \}/);
 });
