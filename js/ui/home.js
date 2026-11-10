@@ -1,4 +1,5 @@
-import { escapeHtml, formatRelativeAge, priorityClasses, priorityLabels } from './signal-composer.js';
+import { escapeHtml, formatRelativeAge } from './signal-composer.js';
+import { getClassificationBadge } from './ticket-palette.mjs';
 import { needsQueueAttention, queuePriorityScore } from '../services/triage-domain.mjs';
 
 let currentContext = null;
@@ -173,8 +174,7 @@ function notificationMarkup(item) {
 
 function supportNowMarkup(item) {
   const { ticket, kind } = item;
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
-  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-amber-50 text-amber-800';
+  const classification = getClassificationBadge(ticket);
 
   if (kind === 'message') {
     return `<article class="home-action-card">
@@ -192,7 +192,7 @@ function supportNowMarkup(item) {
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class="home-action-kicker">${escapeHtml(ticket.code || '')}</span>
-          <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
+          <span class="ticket-badge ${classification.classes}">${escapeHtml(classification.label)}</span>
         </div>
         <strong class="home-action-title">${escapeHtml(ticket.title || 'Sinal')}</strong>
         <span class="home-action-meta">Sem responsável · aberto ${escapeHtml(formatRelativeAge(ticket.createdAt))}</span>
