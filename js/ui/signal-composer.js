@@ -434,7 +434,7 @@ function ticketMarkup(ticket, compact = false) {
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
   const classification = getClassificationBadge(ticket);
   const status = requesterStatusLabels[ticket.status] ?? ticket.status ?? 'Enviado';
-  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
+  const priorityKey = classification.label === 'Sem triagem' ? 'pending' : ticket.priority;
   const contextLabel = requesterContext(ticket);
   const activityAt = ticket.lastInteractionAt || ticket.updatedAt || ticket.createdAt;
 
