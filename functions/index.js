@@ -1,5 +1,6 @@
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { buildStatusNotice, createNotificationOnce } = require('./status-notifications');
+const { newTicketNoticeId, buildMessageNotice } = require('./notification-routing');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -14,6 +15,8 @@ exports.notifyNewTicket = onDocumentCreated({ document: 'tenants/{tenantId}/tick
   if (!event.data) return;
   const { tenantId, ticketId } = event.params;
   const ticket = event.data.data();
+  const notificationId = newTicketNoticeId(ticketId);
+  if (!notificationId) return;
   const members = await db.collection(`tenants/${tenantId}/members`).where('status', '==', 'active').get();
   const recipients = members.docs
     .filter((doc) => SUPPORT_ROLES.has(doc.data().role) && doc.id !== ticket.createdByUid)
@@ -23,29 +26,27 @@ exports.notifyNewTicket = onDocumentCreated({ document: 'tenants/{tenantId}/tick
     tenantId, uid, type: 'new_ticket', actorUid: ticket.createdByUid,
     title: 'Novo sinal recebido',
     body: `${ticket.requesterName || 'Solicitante'}: ${ticket.title || ticket.code}`,
-    ticketId, ticketCode: ticket.code
+    ticketId, ticketCode: ticket.code, notificationId
   })));
 });
 
 exports.notifyNewMessage = onDocumentCreated({ document: 'tenants/{tenantId}/tickets/{ticketId}/messages/{messageId}', region: 'southamerica-east1' }, async (event) => {
   if (!event.data) return;
-  const { tenantId, ticketId } = event.params;
+  const { tenantId, ticketId, messageId } = event.params;
   const message = event.data.data();
   const ticketSnap = await db.doc(`tenants/${tenantId}/tickets/${ticketId}`).get();
   if (!ticketSnap.exists) return;
   const ticket = ticketSnap.data();
 
-  let recipientUid = null;
-  if (message.authorUid === ticket.requesterUid) recipientUid = ticket.assigneeUid || null;
-  else if (message.authorUid === ticket.assigneeUid) recipientUid = ticket.requesterUid || null;
-  if (!recipientUid || recipientUid === message.authorUid) return;
+  const notice = buildMessageNotice(ticket, message, { ticketId, messageId });
+  if (!notice) return;
 
   const preview = String(message.body || '').replace(/\s+/g, ' ').trim().slice(0, 140);
   await createAndPush({
-    tenantId, uid: recipientUid, type: 'new_message', actorUid: message.authorUid,
+    tenantId, uid: notice.uid, type: 'new_message', actorUid: message.authorUid,
     title: `${message.authorName || 'Alguém'} respondeu`,
     body: preview || `Nova mensagem em ${ticket.code}`,
-    ticketId, ticketCode: ticket.code
+    ticketId, ticketCode: ticket.code, notificationId: notice.notificationId
   });
 });
 
