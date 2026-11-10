@@ -1,6 +1,7 @@
 import {
-  categoryLabels, priorityLabels, priorityClasses, statusLabels, requesterStatusLabels, formatDate, escapeHtml
+  categoryLabels, priorityLabels, statusLabels, requesterStatusLabels, formatDate, escapeHtml
 } from './signal-composer.js';
+import { getClassificationBadge, statusBadgeClass, triagePendingClass } from './ticket-palette.mjs';
 import {
   forceOverlayClosed, openOverlayHistory, openOverlaySubstate, openOverlayNestedSubstate,
   requestOverlayClose, requestOverlaySubstateClose, requestOverlayNestedSubstateClose
@@ -282,8 +283,8 @@ function refreshTriagePanel(ticket) {
   const label = document.querySelector('#detail-triage-status');
   label.textContent = pendingTriage(ticket) ? 'Sem triagem' : 'Classificado';
   label.className = pendingTriage(ticket)
-    ? 'ticket-badge bg-amber-100 text-amber-900'
-    : 'ticket-badge bg-emerald-100 text-emerald-900';
+    ? `ticket-badge ${triagePendingClass}`
+    : 'text-xs font-semibold text-slate-600';
   for (const field of [title, category, priority]) field.disabled = !allowed || triageSaving;
   submit.disabled = !allowed || triageSaving;
   if (!triageDirty) {
@@ -785,8 +786,7 @@ function renderTicket(ticket) {
 
   const labels = isRequester ? requesterStatusLabels : statusLabels;
   const status = labels[ticket.status] ?? ticket.status ?? (isRequester ? 'Enviado' : 'Sinal recebido');
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
-  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
+  const classification = getClassificationBadge(ticket);
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
 
   document.querySelector('#detail-code').textContent = ticket.code ?? '';
@@ -800,12 +800,12 @@ function renderTicket(ticket) {
   document.querySelector('#open-conversation-label').textContent = isRequester ? 'Conversar com o atendimento' : 'Conversar com o solicitante';
 
   const statusEl = document.querySelector('#detail-status');
-  statusEl.className = ticket.status === 'in_progress' ? 'ticket-badge bg-indigo-50 text-indigo-700' : 'ticket-badge bg-emerald-50 text-emerald-700';
+  statusEl.className = `ticket-badge ${statusBadgeClass(ticket.status)}`;
   statusEl.textContent = status;
 
   const priorityEl = document.querySelector('#detail-priority');
-  priorityEl.className = `ticket-badge ${priorityClass}`;
-  priorityEl.textContent = priority;
+  priorityEl.className = `ticket-badge ${classification.classes}`;
+  priorityEl.textContent = classification.label;
   document.querySelector('#detail-category').textContent = category;
   refreshTriagePanel(ticket);
 
