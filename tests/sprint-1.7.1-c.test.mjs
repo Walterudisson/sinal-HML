@@ -112,3 +112,16 @@ test('a tela Início também destaca novos sinais sem triagem e não inventa pri
   assert.match(home,/ticket\.priority \?\? 'Sem triagem'/);
   assert.doesNotMatch(home,/priorityLabels\[ticket\.priority\] \?\? ticket\.priority \?\? 'Normal'/);
 });
+
+
+test('hotfix 1.7.1.1: Central usa só uma badge Sem triagem e separa ações no mobile', () => {
+  const central=source('../js/ui/central.js'),css=source('../css/app.css');
+  const markup=central.slice(central.indexOf('function markup(ticket)'));
+  assert.match(markup,/const triagePending = pendingTriage\(ticket\);/);
+  assert.match(markup,/const priorityBadge = triagePending[\s\S]*?Sem triagem[\s\S]*?priorityClass/);
+  assert.match(markup,/\$\{priorityBadge\}/);
+  assert.doesNotMatch(markup,/\$\{pendingTriage\(ticket\) \? '<span class="ticket-badge/);
+  assert.match(markup,/class="central-ticket-actions /);
+  assert.match(css,/@media \(max-width: 639px\) \{[\s\S]*?\.central-ticket \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(css,/\.central-ticket-actions \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+});
