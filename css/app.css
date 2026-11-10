@@ -159,9 +159,10 @@ body.composer-open { overflow: hidden; }
   background: #94a3b8;
 }
 
+.ticket-smart.priority-pending::before { background: #8b5cf6; }
 .ticket-smart.priority-baixa::before { background: #94a3b8; }
-.ticket-smart.priority-normal::before { background: #38bdf8; }
-.ticket-smart.priority-alta::before { background: #f59e0b; }
+.ticket-smart.priority-normal::before { background: #0891b2; }
+.ticket-smart.priority-alta::before { background: #f97316; }
 .ticket-smart.priority-urgente::before { background: #e11d48; }
 
 .ticket-title-clamp {

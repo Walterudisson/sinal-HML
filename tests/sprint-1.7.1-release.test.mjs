@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = path => readFileSync(new URL(path, import.meta.url),'utf8');
 
-test('HML identifica hotfix 1.7.1.1 sem afetar arquivo de versão de PRD',()=>{
+test('HML identifica paleta 1.7.1.2 sem afetar arquivo de versão de PRD',()=>{
   const version=read('../js/config/version.js');
-  assert.match(version,/export const APP_VERSION = '1\.7\.1\.1';/);
+  assert.match(version,/export const APP_VERSION = '1\.7\.1\.2';/);
   const context=read('../js/config/firebase.js');
   assert.match(context,/projectId: 'sinaldesk-hml'/);
   assert.match(context,/name: 'HML'/);
@@ -13,7 +13,7 @@ test('HML identifica hotfix 1.7.1.1 sem afetar arquivo de versão de PRD',()=>{
 
 test('PWA mantém estratégia de cache e usa uma nova versão de shell',()=>{
   const worker=read('../service-worker.js');
-  assert.match(worker,/sinal-shell-hml-1\.7\.1\.1-central-mobile/);
+  assert.match(worker,/sinal-shell-hml-1\.7\.1\.2-paleta-etiquetas/);
   assert.match(worker,/fetch\(new Request\(request, \{ cache: 'no-store' \}\)\)/);
   assert.match(worker,/self\.skipWaiting\(\)/);
   assert.match(worker,/self\.clients\.claim\(\)/);

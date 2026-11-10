@@ -30,6 +30,9 @@ on:
       - 'service-worker.js'
       - 'tests/sprint-1.7.1-release.test.mjs'
       - 'js/ui/central.js'
+      - 'js/ui/ticket-palette.mjs'
+      - 'js/ui/home.js'
+      - 'css/app.css'
       - 'js/services/opening-attempt.mjs'
       - 'js/services/opening-domain.mjs'
       - 'js/services/tickets.service.js'
@@ -70,6 +73,8 @@ jobs:
           node --check js/services/opening-attempt.mjs
           node --check js/services/triage-domain.mjs
           node --check js/ui/central.js
+          node --check js/ui/ticket-palette.mjs
+          node --check js/ui/home.js
           node --check js/services/opening-domain.mjs
           node --check js/services/tickets.service.js
           node --check tests/sprint-1.7.1-a-emulator.test.cjs
@@ -81,7 +86,7 @@ jobs:
         run: npm run test:1.7.1:domain
       - name: Testar interface de abertura e navegacao Android da Sprint 1.7.1-B
         run: npm run test:1.7.1:ui
-      - name: Verificar identificação de versão e cache PWA do hotfix 1.7.1.1
+      - name: Verificar identificação de versão e cache PWA 1.7.1.2
         run: node --test tests/sprint-1.7.1-release.test.mjs
       - name: Testar triagem e fila da Sprint 1.7.1-C
         run: npm run test:1.7.1:triage

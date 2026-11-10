@@ -1,14 +1,15 @@
 # Sinal | Homologação (HML)
 
-## Versão em preparação: v1.7.1
+## Versão em HML: v1.7.1.2
 
-**v1.7.1 | Conversa Primeiro e Triagem Inteligente** (09/11/2026).
+**v1.7.1 | Conversa Primeiro e Triagem Inteligente** (09/11/2026), com hotfix v1.7.1.1 e padronização visual v1.7.1.2.
 
 - Solicitante abre o sinal por mensagem única, com anexo opcional, sem informar título, categoria ou prioridade.
 - Título técnico automático e primeira mensagem criados no mesmo batch Firestore.
 - Central oferece filtro e indicador **Sem triagem**; equipe classifica, define prioridade e pode corrigir o título.
 - Histórico de triagem interno, transacional, auditável e protegido pelas Security Rules.
-- Correções de navegação Android preservadas; identificação em **Mais → HML v1.7.1** e renovação do cache PWA.
+- Correções de navegação Android preservadas; identificação em **Mais → HML v1.7.1.2** e renovação do cache PWA.
+- Etiquetas de status/prioridade com paleta uniforme na Central, Meus Sinais, Início e detalhes; **Sem triagem** violeta e **Alta** laranja, sem selo redundante **Classificado** nos cards.
 - A implementação está isolada no [PR #45](https://github.com/Walterudisson/sinal-HML/pull/45). **Não foi publicada no HML.**
 - Testes automatizados no CI aprovados, sem substituir homologação manual.
 
