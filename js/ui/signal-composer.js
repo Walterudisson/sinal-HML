@@ -2,6 +2,7 @@ import { openOverlayHistory, requestOverlayClose } from './overlay-history.js';
 import { validateAttachment } from '../services/attachments.service.js';
 import { normalizeOpeningMessage } from '../services/opening-domain.mjs';
 import { createOpeningAttemptController } from '../services/opening-attempt.mjs';
+import { priorityLabels, priorityClasses, getClassificationBadge, statusBadgeClass } from './ticket-palette.mjs';
 
 const categoryLabels = Object.freeze({
   acesso: 'Acesso',
@@ -9,20 +10,6 @@ const categoryLabels = Object.freeze({
   rede: 'Rede',
   sistemas: 'Sistemas',
   outro: 'Outro'
-});
-
-const priorityLabels = Object.freeze({
-  baixa: 'Baixa',
-  normal: 'Normal',
-  alta: 'Alta',
-  urgente: 'Urgente'
-});
-
-const priorityClasses = Object.freeze({
-  baixa: 'bg-slate-100 text-slate-700',
-  normal: 'bg-sky-50 text-sky-700',
-  alta: 'bg-amber-50 text-amber-800',
-  urgente: 'bg-rose-50 text-rose-700'
 });
 
 const statusLabels = Object.freeze({
@@ -445,8 +432,7 @@ function requesterContext(ticket) {
 
 function ticketMarkup(ticket, compact = false) {
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
-  const priority = priorityLabels[ticket.priority] ?? ticket.priority ?? 'Sem triagem';
-  const priorityClass = priorityClasses[ticket.priority] ?? 'bg-slate-100 text-slate-600';
+  const classification = getClassificationBadge(ticket);
   const status = requesterStatusLabels[ticket.status] ?? ticket.status ?? 'Enviado';
   const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
   const contextLabel = requesterContext(ticket);
@@ -457,8 +443,8 @@ function ticketMarkup(ticket, compact = false) {
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400">${escapeHtml(ticket.code ?? 'Sinal')}</span>
-          <span class="ticket-badge ${ticket.status === 'in_progress' ? 'bg-indigo-50 text-indigo-700' : ticket.status === 'resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}">${escapeHtml(status)}</span>
-          <span class="ticket-badge ${priorityClass}">${escapeHtml(priority)}</span>
+          <span class="ticket-badge ${statusBadgeClass(ticket.status)}">${escapeHtml(status)}</span>
+          <span class="ticket-badge ${classification.classes}">${escapeHtml(classification.label)}</span>
         </div>
         <h3 class="ticket-title-clamp mt-2 text-sm font-extrabold text-slate-950 sm:text-base">${escapeHtml(ticket.title ?? '')}</h3>
         <p class="ticket-smart-context">${escapeHtml(contextLabel)}</p>
