@@ -316,7 +316,7 @@ function markup(ticket) {
   const status = statusLabels[ticket.status] ?? ticket.status ?? 'Sinal recebido';
   const classification = getClassificationBadge(ticket);
   const category = categoryLabels[ticket.category] ?? ticket.category ?? 'Sem categoria';
-  const priorityKey = ['baixa', 'normal', 'alta', 'urgente'].includes(ticket.priority) ? ticket.priority : 'pending';
+  const priorityKey = classification.label === 'Sem triagem' ? 'pending' : ticket.priority;
   const contextLabel = centralContext(ticket);
   const hasUnreadMessage = unreadMessageTicketIds.has(ticket.id);
   const triagePending = pendingTriage(ticket);
