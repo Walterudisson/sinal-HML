@@ -379,3 +379,51 @@ Eventos iniciais:
 **Status:** Implementada na Sprint 1.3
 
 O Sinal passa a possuir manifest, Service Worker, instalação standalone, tela offline e integração com Web Push. A permissão de notificações só é solicitada após ação explícita do usuário.
+
+
+---
+
+## DP-022 — Visão e público inicial do Sinal
+
+**Status:** Aprovada em 08/11/2026.
+
+O Sinal será uma **plataforma SaaS de atendimento corporativo multidisciplinar**, não restrita ao help desk de TI. A primeira aplicação e a prioridade de maturação do produto serão o **suporte de TI**. A arquitetura deverá permitir futura utilização por patrimônio, manutenção, logística, RH e outros departamentos, sem impor configurações departamentais complexas ao solicitante.
+
+Princípio de produto: **para quem solicita, uma conversa; para quem atende, uma ferramenta de gestão**. Preferir simplicidade na superfície e controles operacionais nos bastidores.
+
+## DP-023 — Modelo A: abertura de sinal por mensagem
+
+**Status:** Aprovada em 08/11/2026. Implementação planejada para a Sprint 1.7.1.
+
+O solicitante abre um sinal por meio de uma **única mensagem obrigatória** e anexo opcional, sem campos obrigatórios de título, categoria ou prioridade. O título será gerado pelo aplicativo. Categoria e prioridade serão definidas pela equipe de atendimento, com controles de permissão e histórico. A abertura deve conduzir naturalmente à conversa do sinal e preservar a rastreabilidade do protocolo.
+
+A implementação deverá cuidar da consistência entre sinal e primeira mensagem, da compatibilidade com sinais antigos, da fila de sinais sem triagem e da validação no backend. A especificação detalhada e os testes serão fechados antes de programar.
+
+## DP-024 — Autonomia administrativa como critério do MVP
+
+**Status:** Aprovada em 08/11/2026. Implementação planejada para a Sprint 1.7.2.
+
+O MVP deve incluir menu de **Administração de Usuários** para os administradores autorizados de cada organização, permitindo no mínimo cadastrar, listar, editar, atribuir papel e desativar usuários, além de providenciar primeiro acesso/recuperação de senha. Não haverá cadastro público, e o administrador de um tenant não poderá gerenciar usuários ou conceder privilégios globais de outro tenant.
+
+O fluxo de provisionamento de credenciais deverá ser seguro e privilegiado no backend. Os administradores não terão acesso às senhas permanentes.
+
+## DP-025 — Prioridades de entrega do MVP
+
+**Status:** Aprovada em 08/11/2026.
+
+As prioridades absolutas são a **Sprint 1.7.1** (Conversa Primeiro e Triagem) e a **Sprint 1.7.2** (Administração de Usuários). A **Sprint 1.8.0** consolidará o MVP com regressão, segurança, isolamento multi-tenant e preparação de release. A ampliação para funções administrativas avançadas, SLA, conhecimento, indicadores, automações e planos seguirá no ciclo 2.0.0 conforme detalhamento futuro.
+
+Nenhuma dessas decisões autoriza promoção automática de HML para PRD. A homologação funcional e os testes de segurança continuam obrigatórios.
+
+## DP-026 — Radar estratégico de inovações
+
+**Status:** Aprovada como diretriz de roadmap em 08/11/2026; sem implementação ou data comprometida.
+
+Preservar explicitamente as seguintes iniciativas para exploração futura, sem desviar recursos das Sprints 1.7.1 e 1.7.2:
+
+- **Sinal Coletivo:** vincular múltiplas solicitações a um incidente principal e atualizar pessoas afetadas.
+- **Sinal por QR Code:** iniciar atendimento a partir de ativo, equipamento, sala ou local identificado.
+- **Sinal Proativo:** publicar avisos e atualizações antes que os usuários precisem abrir sinais.
+- **Widget Sinal:** incorporar a outros sistemas corporativos um ponto de entrada contextual, inicialmente com botão flutuante, evoluindo depois para conversa incorporada e autenticação integrada quando apropriado.
+
+Esses recursos serão avaliados em etapas futuras quanto a segurança, esforço, custo e valor ao cliente.
